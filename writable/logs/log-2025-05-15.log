@@ -1,0 +1,84 @@
+CRITICAL - 2025-05-15 03:48:22 --> CodeIgniter\View\Exceptions\ViewException: Invalid file: "admin/form.php"
+[Method: GET, Route: admin/tariff]
+in SYSTEMPATH\Exceptions\FrameworkException.php on line 39.
+ 1 SYSTEMPATH\View\View.php(212): CodeIgniter\Exceptions\FrameworkException::forInvalidFile('admin/form.php')
+ 2 SYSTEMPATH\Common.php(1173): CodeIgniter\View\View->render('admin/form', [], true)
+ 3 APPPATH\Controllers\Admin\Tariff.php(11): view('admin/form')
+ 4 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Admin\Tariff->index()
+ 5 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin\Tariff))
+ 6 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH\Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH\Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2025-05-15 03:48:36 --> CodeIgniter\View\Exceptions\ViewException: Invalid file: "admin/form.php"
+[Method: GET, Route: admin/tariff]
+in SYSTEMPATH\Exceptions\FrameworkException.php on line 39.
+ 1 SYSTEMPATH\View\View.php(212): CodeIgniter\Exceptions\FrameworkException::forInvalidFile('admin/form.php')
+ 2 SYSTEMPATH\Common.php(1173): CodeIgniter\View\View->render('admin/form', [], true)
+ 3 APPPATH\Controllers\Admin\Tariff.php(11): view('admin/form')
+ 4 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Admin\Tariff->index()
+ 5 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin\Tariff))
+ 6 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH\Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH\Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2025-05-15 03:48:37 --> CodeIgniter\View\Exceptions\ViewException: Invalid file: "admin/form.php"
+[Method: GET, Route: admin/tariff]
+in SYSTEMPATH\Exceptions\FrameworkException.php on line 39.
+ 1 SYSTEMPATH\View\View.php(212): CodeIgniter\Exceptions\FrameworkException::forInvalidFile('admin/form.php')
+ 2 SYSTEMPATH\Common.php(1173): CodeIgniter\View\View->render('admin/form', [], true)
+ 3 APPPATH\Controllers\Admin\Tariff.php(11): view('admin/form')
+ 4 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Admin\Tariff->index()
+ 5 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin\Tariff))
+ 6 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH\Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH\Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2025-05-15 03:48:38 --> CodeIgniter\View\Exceptions\ViewException: Invalid file: "admin/form.php"
+[Method: GET, Route: admin/tariff]
+in SYSTEMPATH\Exceptions\FrameworkException.php on line 39.
+ 1 SYSTEMPATH\View\View.php(212): CodeIgniter\Exceptions\FrameworkException::forInvalidFile('admin/form.php')
+ 2 SYSTEMPATH\Common.php(1173): CodeIgniter\View\View->render('admin/form', [], true)
+ 3 APPPATH\Controllers\Admin\Tariff.php(11): view('admin/form')
+ 4 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Admin\Tariff->index()
+ 5 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin\Tariff))
+ 6 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH\Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH\Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2025-05-15 03:48:38 --> CodeIgniter\View\Exceptions\ViewException: Invalid file: "admin/form.php"
+[Method: GET, Route: admin/tariff]
+in SYSTEMPATH\Exceptions\FrameworkException.php on line 39.
+ 1 SYSTEMPATH\View\View.php(212): CodeIgniter\Exceptions\FrameworkException::forInvalidFile('admin/form.php')
+ 2 SYSTEMPATH\Common.php(1173): CodeIgniter\View\View->render('admin/form', [], true)
+ 3 APPPATH\Controllers\Admin\Tariff.php(11): view('admin/form')
+ 4 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Admin\Tariff->index()
+ 5 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin\Tariff))
+ 6 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH\Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH\Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2025-05-15 03:48:39 --> CodeIgniter\View\Exceptions\ViewException: Invalid file: "admin/form.php"
+[Method: GET, Route: admin/tariff]
+in SYSTEMPATH\Exceptions\FrameworkException.php on line 39.
+ 1 SYSTEMPATH\View\View.php(212): CodeIgniter\Exceptions\FrameworkException::forInvalidFile('admin/form.php')
+ 2 SYSTEMPATH\Common.php(1173): CodeIgniter\View\View->render('admin/form', [], true)
+ 3 APPPATH\Controllers\Admin\Tariff.php(11): view('admin/form')
+ 4 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Admin\Tariff->index()
+ 5 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin\Tariff))
+ 6 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH\Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH\Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2025-05-15 09:53:31 --> CodeIgniter\View\Exceptions\ViewException: Invalid file: "admin/add_bed.php"
+[Method: GET, Route: admin/beds]
+in SYSTEMPATH\Exceptions\FrameworkException.php on line 39.
+ 1 SYSTEMPATH\View\View.php(212): CodeIgniter\Exceptions\FrameworkException::forInvalidFile('admin/add_bed.php')
+ 2 SYSTEMPATH\Common.php(1173): CodeIgniter\View\View->render('admin/add_bed', [], true)
+ 3 APPPATH\Controllers\Admin\Beds.php(11): view('admin/add_bed')
+ 4 SYSTEMPATH\CodeIgniter.php(933): App\Controllers\Admin\Beds->index()
+ 5 SYSTEMPATH\CodeIgniter.php(507): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Admin\Beds))
+ 6 SYSTEMPATH\CodeIgniter.php(354): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 7 SYSTEMPATH\Boot.php(334): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH\Boot.php(67): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+ 9 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))

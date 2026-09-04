@@ -1,0 +1,10 @@
+<svg id="Cyclorama_walls" data-name="Cyclorama walls" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="80" height="72.12" viewBox="0 0 80 72.12">
+  <defs>
+    <clipPath id="clip-path">
+      <rect id="Rectangle_8943" data-name="Rectangle 8943" width="80" height="72.12" fill="none"/>
+    </clipPath>
+  </defs>
+  <g id="Group_22962" data-name="Group 22962" transform="translate(0 0)" clip-path="url(#clip-path)">
+    <path id="Path_55706" data-name="Path 55706" d="M.6,72.12a.6.6,0,0,1-.445-1.01l6.459-7.053C9.716,60.683,13.1,53.781,14,48.987a29.759,29.759,0,0,0,.447-5.046V6.46H12.423a.6.6,0,0,1-.6-.6V.6a.6.6,0,0,1,.6-.6H67.578a.6.6,0,0,1,.6.6V5.856a.6.6,0,0,1-.6.6H65.555V43.94A29.81,29.81,0,0,0,66,48.978a31.139,31.139,0,0,0,7.381,15.083l6.459,7.047A.6.6,0,0,1,79.4,72.12ZM15.653,43.94A30.836,30.836,0,0,1,7.51,64.878L1.976,70.914H78.025l-5.533-6.035a30.824,30.824,0,0,1-8.143-20.937V6.46h-48.7ZM13.027,5.254H66.975V1.207H13.027Z" transform="translate(0 0)" fill="#050605"/>
+  </g>
+</svg>

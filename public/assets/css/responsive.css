@@ -1,0 +1,583 @@
+
+.pay-form-main  .row{
+margin-left:0;
+margin-right:0
+}
+.pay-form-main  .row .col-lg-2, .pay-form-main  .row .col-lg-auto{
+	padding-left:0;
+padding-right:0
+}
+@media only screen and (max-width: 1299px) and (min-width: 1200px){
+    
+   
+}
+
+@media only screen and (max-width: 1199px) and (min-width: 992px){
+.main-menu ul.sub-menu li ul.sub-menu {
+    left: auto;
+    right: 100%;
+}
+    .hero-style1 .hero-title{
+        font-size: 45px;
+    }
+	
+	.header-layout2 .main-menu>ul>li>a {
+   
+    padding: 11px 12px;
+     
+}
+.header-layout2 .will-sticky .sticky-active .main-menu>ul>li>a {
+   padding: 11px 12px;
+}
+.as-btn.style7 {
+ 
+    padding: 17.5px 30px;
+}
+.marquee li {
+    
+font-size: 39px;}
+
+.marquee li:before {
+ 
+    bottom: 18px;
+}
+
+.title-area .sec-title {
+  font-size: 40px;
+}
+.gallery-img img {
+ 
+    height: 239px;
+   
+}
+.rooleft .gallery-img img {
+    height: 190px !important;
+}
+
+.pay-form-main  .row{
+margin-left:0;
+margin-right:0
+}
+.pay-form-main  .row .col-lg-2, .pay-form-main  .row .col-lg-auto{
+	padding-left:0;
+padding-right:0
+}
+.home-three .single-offer-thumb img {
+    
+    height: 250px;
+}
+.Aboutarea-sec .row .col-lg-5 {
+    width: 50%
+}
+.Aboutarea-sec .row .col-lg-4 {
+    width: 50%;
+}
+.About-a-img {
+    position: relative;
+    padding-left: 30px;
+    margin-bottom: 30px;
+}
+.About-a-des {
+    padding-left: 0px;
+    padding-right: 20px;
+    position: relative;
+    margin-top: 30px;
+}
+.Aboutarea-sec .row .col-lg-3 {
+    width: 100%
+}
+.Aboutarea-sec .row .col-lg-3 .row .col-lg-12 {
+    width: 50%
+}
+.th-product .product-img img {
+   
+    height: 21vw;
+   
+}
+    .breadcumb-wrapper {
+        padding: 190px 0 82px;
+    }
+	.pay-form-main .RContactpage-form input, .pay-form-main .RContactpage-form select {
+   
+    padding: 0 5px 0 5px;
+    padding-right: 5px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.pay-form-main .RContactpage-form .radio-toolbar input[type="radio"] ~ label {
+    font-size: 14px;
+    padding: 17px 9px !important;
+    margin-right: 9px;
+}
+}
+
+
+
+@media only screen and (max-width: 991.98px) {
+
+   .sso-c-auto{
+	   display:none!important
+   }
+    .Aboutarea-sec .row .col-lg-5 {
+    width: 100%
+ 
+}
+.Aboutarea-sec .row .col-lg-4 {
+    width: 50%;
+}
+.Aboutarea-sec .row .col-lg-3 {
+    width: 50%;
+}
+.About-a-des {
+    padding-left: 0px;
+    padding-right: 0px;
+    position: relative;
+	
+	margin-bottom:30px
+}
+    .taxi-tab .as-btn {
+        font-size: 15px;
+        padding: 15px 15px;
+    }
+	.th-product .product-img img {
+ 
+    height: 200px;
+    
+}
+.home-three .single-offer-thumb img {
+    
+    height: 250px;
+}
+.title-area .sec-title {
+   
+    font-size: 33px;
+ 
+}
+.prop h3 {
+    font-size: 22px;
+    margin-bottom: 0px;
+}
+
+.rrtyu{
+	margin-top:30px
+}
+.Prin-3 {
+    position: relative;
+    padding-left: 0px;
+}
+.Proprietor-sec {
+    position: relative;
+    padding: 60px 0 0px;
+}
+    .gallery-img img {
+               height: 200px;
+        object-fit: cover;
+        min-height: 200px;
+    }
+	.footer-widget .footer-logo {
+    margin-bottom: 29px;
+    text-align: left !important;
+}
+.header-layout2 .as-menu-toggle {
+    margin: 0px 0;
+}
+.as-menu-toggle {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+}
+.header-top-six {
+ 
+    margin-top: 0;
+}
+
+.marquee li {
+    
+font-size: 33px;}
+
+.marquee li:before {
+ 
+    bottom: 14px;
+}
+    .breadcumb-title {
+        font-size: 35px;
+    }
+	.breadcumb-intitle {
+  
+    font-size: 26px;
+	}
+	
+	.breadcumb-wrapper {
+        padding: 183px 0 50px;
+    }
+	
+	.mi-order2{
+		order:2
+	}
+		
+	.mi-order1{
+		order:1
+	}
+	.mis-a-des {
+    padding: 30px 0 30px 0px;
+    position: relative;
+}
+.vis-a-des {
+     padding: 30px 0 0px 0px;
+    position: relative;
+}
+.rooleft {
+    position: relative;
+    padding-right: 0px;
+}
+.pay-form-main .row {
+    margin-left:-10px;
+    margin-right: -10px;
+}
+.pay-form-main .row .col-lg-2, .pay-form-main .row .col-lg-auto {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+.booking_counts span {
+    font-weight: 500;
+    font-size: 16px;
+    margin-bottom: 15px;
+    display: block;
+}
+.pay-form-main .RContactpage-form .form-group {
+margin-bottom: 7px;}
+.packagetable {
+  
+    overflow: auto;
+}
+.ff-content {
+    position: relative;
+    margin-top: 30px;
+}
+.adm-sec {
+ 
+    padding: 30px 20px;
+}
+.style-eight .service-content h3 {
+    font-size: 22px;
+ 
+    margin-bottom: 1px;
+
+}
+.style-eight .service-content p {
+    margin-bottom: 0px;
+    margin-top: 0px;
+   
+    font-size: 15px;
+ 
+   
+    line-height: 26px;
+}
+.bann-img {
+    width: 100%;
+    height: 81vh !important;
+    object-fit: cover;
+}
+.hero-text{
+	max-width:80%
+}
+    .counter-card {
+        /* display: -webkit-inline-box; */
+        /* display: -webkit-inline-flex; */
+            /*display: -ms-inline-flexbox; */
+        /* display: inline-flex; */
+        text-align: left;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: -ms-flexbox;
+        display: flex
+;
+        gap: 30px;
+    }
+	.ppghgh {
+    z-index: 1;
+    position: relative;
+    text-align: left !important;
+}
+.ppghgh p {
+    position: relative;
+    color: #fff;
+    font-weight: 400;
+}
+.ppghgh .title-area {
+   
+    text-align: left !important;
+}
+.Aboutarea-secinner {
+    padding: 50px 0 20px;
+   
+}
+}
+
+@media only screen and (max-width: 767.98px) {
+    .hero-style1 .hero-title {
+        font-size: 40px;
+        line-height: 1.25;
+    }
+   
+        .Aboutarea-sec .row .col-lg-4 {
+        width: 100%;
+    }
+	.Aboutarea-sec .row .col-lg-3{
+		  width: 100%;
+	}
+	.About-a-img{
+		margin-bottom:30px
+	}
+	#WelcomeSec {
+    position: relative;
+    padding: 60px 0px 30px;}
+	    .taxi-tab .as-btn {
+        font-size: 14px;
+        padding: 15px 8px;
+    }
+	.product-tagoff span {
+    font-size: 13px;
+	}
+	.product-tagoff {
+  
+    line-height: 17px;
+    width: 55px;
+    height: 55px;
+	}
+	.th-product {
+   
+    padding: 10px 10px 90px;}
+	    .th-product .product-img img {
+        height: 186px;
+    }
+	.Prin-1{
+		margin-bottom:30px
+	}
+	
+	.footer-layout3 .widget-area .col-sm-4{
+		width:50%
+	}
+	.footer-layout3 .widget-area .col-sm-5{
+		width:50%
+	}
+	.footer-layout3 .widget-area {
+    padding-top: 51px;
+    padding-bottom: 20px;
+}
+.fixedRit-sticky {
+ 
+    bottom: 20px;
+}
+.fixedRit ul a {
+ 
+    height: 42px;
+    width: 35px;
+}
+.hero-text{
+	max-width:100%
+}
+.Banner-slide {
+    
+    bottom: 60px;
+}
+
+    .marquee li:before {
+        bottom: 16px;
+        width: 10px;
+        height: 10px;
+    }
+	.footer-widget.widget_nav_menu a {
+ 
+    margin-bottom: 7px;
+	}
+	.footer-widget.widget_meta, .footer-widget.widget_pages, .footer-widget.widget_archive, .footer-widget.widget_categories, .footer-widget.widget_nav_menu {
+    margin-bottom: 25px;
+}
+
+.header-layout2 .header-logo img {
+    height: 80px;
+}
+.header-layout2 .will-sticky .sticky-active .header-logo img {
+    height: 80px;
+}
+    .breadcumb-wrapper {
+        padding: 149px 0 50px;
+    }
+	.Aboutarea-secinner {
+    padding: 50px 0 20px;
+   
+}
+.room-inner-sec .product-content {
+    position: relative;
+    padding: 10px 10px 0;
+}
+.Booking-right {
+    padding-left: 0;
+}
+}
+@media only screen and (max-width: 575.98px)  {
+		.footer-layout3 .widget-area .col-sm-4{
+		width:100%
+	}
+	.footer-layout3 .widget-area .col-sm-5{
+		width:100%
+	}
+       .title-area .sec-title {
+        font-size: 29px;
+    }
+	    .hero-style1 .hero-title {
+        font-size: 30px;
+        line-height: 1.25;
+    }
+	    .marquee li {
+        font-size: 29px;
+    }
+	    .marquee li:before {
+        bottom: 12px;
+    }
+	    .breadcumb-intitle {
+        font-size: 20px;
+    }
+	    .breadcumb-title {
+        font-size: 30px;
+    }
+	    .breadcumb-wrapper {
+        padding: 141px 0 30px;
+    }
+	.room-ss-title {
+    font-size: 25px;
+	}
+	.room-ff-box {
+    position: relative;
+    width: 100%;
+    margin-bottom: 30px;
+    text-align: left;
+}
+.room-ff-box-icon {
+    text-align: left;
+
+}
+.room-ff-box h3 {
+text-align: left;}
+.about-imgt .aa-img-three {
+    position: relative;
+    bottom: 0px;
+    left: 0;
+    z-index: 1;
+    max-width: 100%;
+    border-radius: 10px;
+}
+.about-imgt .aa-img-two {
+    position: relative;
+    bottom: 0;
+    right: 0;
+    z-index: 1;
+    max-width: 100%;
+    border-radius: 10px;
+	
+	margin-bottom:30px
+}
+.about-imgt .aa-img-one {
+    margin-right: auto;
+    max-width: 100%;
+    display: block;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+.about-imgt {
+    position: relative;
+    padding-bottom: 0;
+    z-index: 1;
+}
+    .hero-text {
+        max-width: 100%;
+        font-size: 14px;
+        font-weight: 500;
+    }
+	    .bann-img {
+        width: 100%;
+        height: 64vh !important;
+        object-fit: cover;
+    }
+	.Ceworkforce-box h3 {
+    margin-bottom: 0;
+    font-size: 24px;}
+	.marquee-section {
+    position: relative;
+    padding: 12px 0;
+	}
+	    .breadcumb-intitle {
+        font-size: 19px;
+        line-height: 27px;
+    }
+	.room-ff-box h3 {
+ 
+    font-size: 15px;
+  
+}
+.booking_step_heading h2 {
+font-size: 18px;}
+.booking_counts h4 {
+    font-weight: 600;
+    margin-top: 10px;
+font-size: 17px;}
+.grand_total td {
+    font-size: 22px;
+}
+.pay-form select, .pay-form .form-control, .pay-form .form-select, .pay-form textarea, .pay-form input {
+   
+    padding: 0 10px 0 10px;
+    padding-right: 10px;
+}
+.pay-form textarea{
+	  padding: 10px 10px 10px 10px;
+    padding-right: 10px;
+}
+.footer-logo img {
+    height: 96px;
+}
+.as-menu-wrapper .mobile-logo img {
+    height: 100px;
+}
+.Contactpage-form select, .Contactpage-form .form-control, .Contactpage-form .form-select, .Contactpage-form textarea, .Contactpage-form input {
+    padding: 0 10px 0 10px;
+    padding-right: 10px;
+}
+.Contactpage-form textarea{
+	  padding: 10px 10px 10px 10px;
+    padding-right: 10px;
+}
+.booki-box3 h3 {
+    margin-top: 0px;
+    font-weight: 700;
+    font-size: 20px;
+    margin-bottom: 10px;
+    padding: 0 15px;
+}
+.pps-1 {
+font-size: 26px;}
+}
+
+
+
+@media only screen and (max-width: 374.98px)  {
+	
+	    .hero-style1 .hero-title {
+        font-size: 25px;
+        line-height: 1.25;
+    }
+	.bann-img {
+        width: 100%;
+        height: 69vh !important;
+        object-fit: cover;
+    }
+	.as-menu-wrapper .as-menu-area {
+ 
+    max-width: 255px;
+	}
+}
+
+
+
+

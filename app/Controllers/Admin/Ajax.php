@@ -133,7 +133,7 @@ class Ajax extends BaseController
             }
 
            
-            $rooms = $this->common_model->FetchWhere('saiyoojyam_rooms', ['rooms_building' => $id]);
+            $rooms = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms', ['rooms_building' => $id], 'rooms_name', 'ASC');
 
             $available_rooms = [];
 

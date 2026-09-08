@@ -43,7 +43,8 @@
   .legend-paid { background: #eafaf1; border: 1px solid #2e7d32; }
   .legend-unpaid { background: #fdecea; border: 1px solid #c0392b; }
   .legend-partial { background: #fff3cd; border: 1px solid #b57f00; }
-  .legend-vacated { background: #e0e0e0; border: 1px solid #777; }
+  .legend-advance { background: #e6f7fb; border: 1px solid #03c3ec; }
+  .legend-vacated { background: #eceff1; border: 1px solid #78909c; }
 
   #yearSelect {
     display: inline-block;
@@ -106,11 +107,34 @@
     font-weight: 500;
   }
 
+  .advance {
+    background: #e6f7fb;
+    color: #03c3ec;
+    font-weight: 500;
+  }
+
   .vacated {
     background: #e0e0e0;
     color: #555;
     font-style: italic;
     font-weight: 500;
+  }
+
+  tr.row-vacated td {
+    background: #eceff1 !important;
+    color: #78909c;
+    font-style: italic;
+  }
+
+  tr.row-vacated td a {
+    color: inherit;
+    opacity: .8;
+  }
+
+  .paid a, .partial a, .unpaid a, .advance a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
   }
 
   #pos_adjust {
@@ -152,8 +176,9 @@
 <div id="legend">
   <div class="legend-item"><span class="legend-color legend-paid"></span> Paid </div>
   <div class="legend-item"><span class="legend-color legend-partial"></span> Partial</div>
+  <div class="legend-item"><span class="legend-color legend-advance"></span> Advance</div>
   <div class="legend-item"><span class="legend-color legend-unpaid"></span> Unpaid</div>
- <!-- <div class="legend-item"><span class="legend-color legend-vacated"></span> Vacated</div>-->
+  <div class="legend-item"><span class="legend-color legend-vacated"></span> Checked Out</div>
 </div>
 
 <div style="text-align: center;">
@@ -193,8 +218,14 @@
  <tbody class="tbody_data">
   
 <?php foreach($inmates as $inmate){ ?> 
-  <tr>
-    <td><?php echo $inmate->inmates_name; ?></td>
+  <tr <?php if($inmate->inmates_status == 'checked_out'){ echo 'class="row-vacated"'; } ?>>
+    <td>
+      <?php echo $inmate->inmates_name; ?>
+      <br/><small class="text-muted"><?php echo $inmate->inmates_uid; ?></small>
+      <?php if($inmate->inmates_check_out_date == '0000-00-00' || empty($inmate->inmates_check_out_date)){ ?>
+        <br/><a href="<?php echo base_url();?>Admin/Inmates/CheckOut/<?php echo $inmate->inmates_id;?>" onclick="return confirm('Check out this inmate?');" style="font-size:12px;color:#fff;background:#e74c3c;padding:2px 8px;border-radius:4px;text-decoration:none;display:inline-block;">Check Out</a>
+      <?php } ?>
+    </td>
 
     <?php  
     
@@ -216,30 +247,50 @@
 
       $currentYear  = (int)date('Y');
 
-      $yearToShow = $year;
-      
+      $yearToShow = $currentYear;
+
+      $ciDate = strtotime($inmate->inmates_check_in_date);
+
+      $ciYear = (int)date('Y', $ciDate);
+
+      $ciMonth = (int)date('m', $ciDate);
+
       for ($m = 1; $m <= 12; $m++) {
+
+        if(($yearToShow > $currentYear) || (($yearToShow < $ciYear) || ($yearToShow == $ciYear && $m < $ciMonth))){
+
+          echo '<td></td>';
+
+          continue;
+
+        }
 
         if (isset($invoiceMonths[$m])) {
 
           if ($invoiceMonths[$m]['status'] == 1) {
 
-            echo '<td class="paid">₹'.$invoiceMonths[$m]['amount'].'</td>';
+            echo '<td class="paid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invoiceMonths[$m]['amount'].'</a></td>';
 
           } 
           
           elseif($invoiceMonths[$m]['status'] == 2) {
 
-            echo '<td class="partial">₹'.$invoiceMonths[$m]['amount'].'</td>';
+            echo '<td class="partial"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invoiceMonths[$m]['amount'].'</a></td>';
 
-          } 
+          }
+
+          elseif($invoiceMonths[$m]['status'] == 3) {
+
+            echo '<td class="advance"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invoiceMonths[$m]['amount'].'</a></td>';
+
+          }
           
           else{
                   
             //if ($m <= $currentMonth) {
             if($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
 
-              echo '<td class="unpaid">---</td>';
+              echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
               
             } 
             else {
@@ -255,7 +306,7 @@
               
           if ($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
 
-            echo '<td class="unpaid">---</td>'; 
+            echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>'; 
 
           } 
           

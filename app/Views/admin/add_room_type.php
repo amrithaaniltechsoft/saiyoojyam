@@ -99,6 +99,8 @@
                   },
                   errorClass: "text-danger", 
                   submitHandler: function (currentForm) {
+                    var btn = $(currentForm).find('button[type="submit"]');
+                    btn.prop('disabled', true);
                     $.ajax({
                       url: "<?php echo base_url(); ?>Admin/RoomTypes/Add",
                       type: "POST",
@@ -107,9 +109,19 @@
 
                         var data = JSON.parse(response);
 
-                        alertify.success(data.msg).delay(3).dismissOthers();
+                        if(data.status == "true"){
 
-                        form[0].reset(); // Reset the form
+                          alertify.success(data.msg).delay(3).dismissOthers();
+
+                          form[0].reset(); // Reset the form
+
+                        }else{
+
+                          alertify.error(data.msg).delay(3).dismissOthers();
+
+                        }
+
+                        btn.prop('disabled', false);
 
                       }
                     });

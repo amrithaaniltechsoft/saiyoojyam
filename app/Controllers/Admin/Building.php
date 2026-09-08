@@ -19,7 +19,21 @@ class Building extends BaseController
 
             $insert_data = $this->request->getPost();
 
-            
+            $insert_data['building_name'] = preg_replace('/\s+/', ' ', trim($insert_data['building_name']));
+
+            $existing = $this->common_model->SingleRowTrimmed('saiyoojyam_building','building_name',$insert_data['building_name']);
+
+            if(!empty($existing)){
+
+                $response['status'] = "false";
+
+                $response['msg'] = "Building name already exists";
+
+                echo json_encode($response);
+
+                return;
+                
+            }
 
             $insert_data['building_slug'] = $this->common_model->CreateSlug($insert_data['building_name'],'building_name','saiyoojyam_building');
             
@@ -52,7 +66,24 @@ class Building extends BaseController
 
             $update_data = $this->request->getPost();
 
-             
+            $update_data['building_name'] = preg_replace('/\s+/', ' ', trim($update_data['building_name']));
+
+            $existing = $this->common_model->SingleRowTrimmed('saiyoojyam_building','building_name',$update_data['building_name']);
+
+            if(!empty($existing) && $existing->building_id != $id){
+
+                $flashdata = array(
+                    'type' => 'error',
+                    'msg'  => 'Building name already exists',
+                );
+
+                $this->session->setFlashdata('alert',$flashdata);
+
+                return redirect()->to(site_url('Admin/Building/Edit/'.$id));
+
+            }
+
+              
             if($data['building']->building_slug==$this->request->getPost('building_name'))
             {
                 $slug = $data['building']->building_slug;

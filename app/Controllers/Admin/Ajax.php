@@ -314,9 +314,19 @@ class Ajax extends BaseController
 
             foreach($inmates as $inmate){
                
-                $response['year_html'] .="<tr>
+                $response['year_html'] .="<tr";
 
-                    <td>".$inmate->inmates_name."</td>";
+                    if($inmate->inmates_status == 'checked_out'){
+                        $response['year_html'] .= ' class="row-vacated"';
+                    }
+
+                    $response['year_html'] .=">
+
+                    <td>".$inmate->inmates_name."<br/><small class=\"text-muted\">".$inmate->inmates_uid."</small>";
+                    if($inmate->inmates_check_out_date == '0000-00-00' || empty($inmate->inmates_check_out_date)){
+                        $response['year_html'] .= '<br/><a href="'.base_url().'Admin/Inmates/CheckOut/'.$inmate->inmates_id.'" onclick="return confirm(\'Check out this inmate?\');" style="font-size:12px;color:#fff;background:#e74c3c;padding:2px 8px;border-radius:4px;text-decoration:none;display:inline-block;">Check Out</a>';
+                    }
+                    $response['year_html'] .="</td>";
 
                     $invoiceMonths = [];
 
@@ -337,31 +347,52 @@ class Ajax extends BaseController
 
                     $currentYear  = (int)date('Y');
 
-                    $yearToShow = $year;
+                    $yearToShow = (int)$current_year;
+
+                    $ciDate = strtotime($inmate->inmates_check_in_date);
+
+                    $ciYear = (int)date('Y', $ciDate);
+
+                    $ciMonth = (int)date('m', $ciDate);
+
+                    $upToNow = function($m) use ($yearToShow, $currentYear, $currentMonth){
+                        return $yearToShow < $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth);
+                    };
 
                     for ($m = 1; $m <= 12; $m++) {
-                        
+
+                        if($yearToShow < $ciYear || ($yearToShow == $ciYear && $m < $ciMonth)){
+
+                            $response['year_html'] .='<td></td>';
+
+                            continue;
+
+                        }
+
                         if(isset($invoiceMonths[$m])) {
 
 
                             if($invoiceMonths[$m]['status'] == 1){
                
-                                //$status = "paid";
-
-                                $response['year_html'] .='<td class="paid">₹'.$invoiceMonths[$m]['amount'].'</td>';
+                                $response['year_html'] .='<td class="paid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invoiceMonths[$m]['amount'].'</a></td>';
 
                             }
             
                             elseif($invoiceMonths[$m]['status'] == 2){
+                
+                                $response['year_html'] .='<td class="partial"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invoiceMonths[$m]['amount'].'</a></td>';
                
-                                $response['year_html'] .='<td class="partial">₹'.$invoiceMonths[$m]['amount'].'</td>';
-              
+                            }
+                            elseif($invoiceMonths[$m]['status'] == 3){
+                
+                                $response['year_html'] .='<td class="advance"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invoiceMonths[$m]['amount'].'</a></td>';
+               
                             }
                             else{
 
-                                if($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)){
+                                if($upToNow($m)){
 
-                                    $response['year_html'] .='<td class="unpaid">---</td>';
+                                    $response['year_html'] .='<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
 
                                 }else{
 
@@ -372,19 +403,15 @@ class Ajax extends BaseController
                         }
                         else{
 
-                            if ($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
+                            if ($upToNow($m)) {
 
-                                $response['year_html'] .='<td class="unpaid">---</td>';
+                                $response['year_html'] .='<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
 
                             }else{
 
                                 $response['year_html'] .='<td></td>';
                             }
                         }
-                        /*else{
-
-                           $response['year_html'] .='<td class=""></td>';
-                        }*/
 
                     }
 

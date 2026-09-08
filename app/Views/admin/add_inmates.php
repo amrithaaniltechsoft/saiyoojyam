@@ -31,14 +31,12 @@
                         
 
 
-                        <div class="row mb-6">
+<div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Name</label>
                           <div class="col-sm-10">
                             <input type="text" class="form-control" name="inmates_name" id="basic-default-name" placeholder="e.g., Rahul Sharma" required/>
                           </div>
                         </div>
-
-                         
 
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Age</label>
@@ -212,10 +210,19 @@
                 
                 $(document).ready(function () {
                   var form = $('#add_form');
+
+                  $.validator.addMethod('checkOutAfterJoin', function(value, element) {
+                    var join = $('.join_in_date_clz').val();
+                    if(!join || !value){ return true; }
+                    return new Date(value) > new Date(join);
+                  }, 'Check out date must be after the check in date');
+
                   form.validate({
                     rules: {
                     
                       required: 'required',
+
+                      inmates_check_out_date: { checkOutAfterJoin: true },
                     },
                     messages: {
                     
@@ -231,6 +238,9 @@
                     submitHandler: function (currentForm,event) {
                       event.preventDefault(); 
                       
+                      var btn = $(currentForm).find('button[type="submit"]');
+                      btn.prop('disabled', true);
+                      
                       var formData = new FormData(currentForm);
                       $.ajax({
                         url: "<?php echo base_url(); ?>Admin/Inmates/Add",
@@ -242,9 +252,19 @@
 
                           var data = JSON.parse(response);
 
-                          alertify.success(data.msg).delay(3).dismissOthers();
+                          if(data.status === true || data.status === "true"){
 
-                          form[0].reset(); // Reset the form
+                            alertify.success(data.msg).delay(3).dismissOthers();
+
+                            form[0].reset(); // Reset the form
+
+                          }else{
+
+                            alertify.error(data.msg).delay(3).dismissOthers();
+
+                          }
+
+                          btn.prop('disabled', false);
 
                         }
                       });
@@ -324,6 +344,34 @@
 
                   $('.build_clz').val('');
                   $('.room_clz').val('');
+
+                  var join = $(this).val();
+
+                  var coInput = $('.check_out_date_clz');
+
+                  if(join){
+
+                    var d = new Date(join);
+
+                    d.setDate(d.getDate() + 1);
+
+                    var next = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+                    coInput.attr('min', next).attr('max', '');
+
+                    var co = coInput.val();
+
+                    if(co && new Date(co) <= new Date(join)){
+
+                      coInput.val('');
+
+                    }
+
+                  }else{
+
+                    coInput.removeAttr('min');
+
+                  }
 
                 });
 

@@ -25,7 +25,22 @@ class RoomTypes extends BaseController
         if ($this->request->getMethod() === 'POST') {
 
             $insert_data = $this->request->getPost();
-            
+
+            $insert_data['room_type_name'] = preg_replace('/\s+/', ' ', trim($insert_data['room_type_name']));
+
+            $existing = $this->common_model->SingleRowTrimmedWhere('saiyoojyam_room_type','room_type_name',$insert_data['room_type_name'],array('room_type_building_id' => $insert_data['room_type_building_id']));
+
+            if(!empty($existing)){
+
+                $response['status'] = "false";
+
+                $response['msg'] = "Room type already exists";
+
+                echo json_encode($response);
+                return;
+
+            }
+
             $insert_data['room_type_slug'] = $this->common_model->CreateSlug($insert_data['room_type_name'],'room_type_name','saiyoojyam_room_type');
             
             $insert_data['room_type_created_at'] = date('Y-m-d'); 

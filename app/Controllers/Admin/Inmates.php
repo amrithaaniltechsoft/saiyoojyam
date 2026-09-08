@@ -10,16 +10,154 @@ use DateTime;
 
 class Inmates extends BaseController
 {
-    public function index(){
+    public function index($uri_status = null){
 
-        $data['pagedata'] = $this->common_model->FetchAllOrder('saiyoojyam_inmates','inmates_id','ASC');
+        $this->common_model->AutoCheckoutInmates();
+
+        $ref = $this->request->getGet('ref');
+
+        $check_in = $this->request->getGet('check_in');
+
+        $check_out = $this->request->getGet('check_out');
+
+        $conditions = array();
+
+        $payMap = array('paid' => 1, 'unpaid' => 0, 'partial' => 2, 'advance' => 3);
+
+        $status = $this->request->getGet('status');
+
+        $pay = $this->request->getGet('pay');
+
+        if(empty($status) && empty($pay) && !empty($uri_status)){
+
+            if(preg_match('/^(active|checked_out)_(paid|unpaid|partial|advance)$/', $uri_status, $m)){
+
+                $status = $m[1];
+
+                $pay = $m[2];
+
+            }
+            elseif(array_key_exists($uri_status, $payMap)){
+
+                $pay = $uri_status;
+
+            }
+            else{
+
+                $status = $uri_status;
+
+            }
+
+        }
+
+        if(!empty($pay) && !empty($status)){
+
+            $data['pagedata'] = $this->common_model->InmatesByPaymentStatus($payMap[$pay], $status);
+
+        }
+        elseif(!empty($pay)){
+
+            $data['pagedata'] = $this->common_model->InmatesByPaymentStatus($payMap[$pay]);
+
+        }
+        else{
+
+            if(!empty($status) && in_array($status, array('active','checked_out'), true)){
+
+                $conditions['inmates_status'] = $status;
+
+            }
+
+            if(!empty($ref)){
+
+                $conditions['inmates_uid'] = $ref;
+
+            }
+
+            if(!empty($check_in)){
+
+                $conditions['inmates_check_in_date'] = $check_in;
+
+            }
+
+            if(!empty($check_out)){
+
+                $conditions['inmates_check_out_date'] = $check_out;
+
+            }
+
+            if(!empty($conditions)){
+
+                $data['pagedata'] = $this->common_model->FetchInmatesActiveFirst($conditions);
+
+            }else{
+
+                $data['pagedata'] = $this->common_model->FetchInmatesActiveFirst();
+
+            }
+
+        }
 
         $data['rooms_data'] = $this->common_model->FetchAll('saiyoojyam_rooms');
 
         $data['buildings'] = $this->common_model->FetchAll('saiyoojyam_building');
 
+        $data['room_types'] = $this->common_model->FetchAll('saiyoojyam_room_type');
+
+        $data['reffers'] = $this->common_model->FetchAllOrder('saiyoojyam_inmates','inmates_uid','ASC');
+
+        $data['active_ref'] = $ref;
+
+        $data['active_check_in'] = $check_in;
+
+        $data['active_check_out'] = $check_out;
+
+        $data['active_status'] = $status;
+
+        $data['active_pay'] = $pay;
+
         
         return view('admin/view_inmates',$data);
+    }
+
+
+    public function View($id){
+
+        $joins = array(
+            array(
+                'table' => 'saiyoojyam_building',
+                'pk'    => 'building_id',
+                'fk'    => 'inmates_building',
+            ),
+            array(
+                'table' => 'saiyoojyam_room_type',
+                'pk'    => 'room_type_id',
+                'fk'    => 'inmates_room_type',
+            ),
+            array(
+                'table' => 'saiyoojyam_rooms',
+                'pk'    => 'rooms_id',
+                'fk'    => 'inmates_rooms',
+            ),
+        );
+
+        $data['inmate'] = $this->common_model->SingleRowJoin('saiyoojyam_inmates',array('inmates_id' => $id),$joins);
+
+        if(empty($data['inmate'])){
+
+            $flashdata = array(
+                'type' => 'error',
+                'msg'  => 'Inmate not found',
+            );
+
+            $this->session->setFlashdata('alert',$flashdata);
+
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
+
+        $data['duration'] = $this->common_model->SingleRow('saiyoojyam_duration_of_stay',array('duration_id' => $data['inmate']->inmates_duration_of_stay));
+
+        return view('admin/view_inmate',$data);
     }
 
     
@@ -65,6 +203,17 @@ class Inmates extends BaseController
             }else{
 
                 $check_out_date = "0000-00-00";
+            }
+
+            if($check_out_date != '0000-00-00' && strtotime($check_out_date) <= strtotime($check_in_date)){
+
+                $response['status'] = false;
+
+                $response['msg'] = 'Check out date must be after the check in date';
+
+                echo json_encode($response);
+
+                return;
             }
             
             
@@ -114,7 +263,160 @@ class Inmates extends BaseController
 
         return view('admin/add_inmates',$data);
     }
+
+
+    public function Edit($id){
+
+        $data['inmate'] = $this->common_model->SingleRow('saiyoojyam_inmates',array('inmates_id' => $id));
+
+        if(empty($data['inmate'])){
+
+            $flashdata = array(
+                'type' => 'error',
+                'msg'  => 'Inmate not found',
+            );
+
+            $this->session->setFlashdata('alert',$flashdata);
+
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
+
+        if ($this->request->getMethod() === 'POST') {
+
+            // Get the uploaded files
+            $idProof = $this->request->getFile('inmates_id_proof');
+            $photo = $this->request->getFile('inmates_photo');
+
+            $idProofName = $data['inmate']->inmates_id_proof;
+            $photoName = $data['inmate']->inmates_photo;
+
+            // Upload directory
+            $uploadPath = WRITEPATH . 'uploads/inmates/';
+
+            if (!is_dir($uploadPath)) {
+                mkdir($uploadPath, 0777, true);
+            }
+
+            // Handle ID Proof upload
+            if ($idProof && $idProof->isValid() && !$idProof->hasMoved()) {
+                $idProofName = $idProof->getRandomName();
+                $idProof->move($uploadPath, $idProofName);
+            }
+
+            // Handle Photo upload
+            if ($photo && $photo->isValid() && !$photo->hasMoved()) {
+                $photoName = $photo->getRandomName();
+                $photo->move($uploadPath, $photoName);
+            }
+
+            // Collect other form inputs
+            $check_in_date = $this->request->getPost('inmates_check_in_date');
+
+            if(!empty($this->request->getPost('inmates_check_out_date'))){
+                $check_out_date = $this->request->getPost('inmates_check_out_date');
+            }else{
+                $check_out_date = "0000-00-00";
+            }
+
+            if($check_out_date != '0000-00-00' && strtotime($check_out_date) <= strtotime($check_in_date)){
+
+                $response['status'] = false;
+
+                $response['msg'] = 'Check out date must be after the check in date';
+
+                echo json_encode($response);
+
+                return;
+            }
+
+            $update_data = [
+
+                'inmates_name'             => $this->request->getPost('inmates_name'),
+                'inmates_age'              => $this->request->getPost('inmates_age'),
+                'inmates_building'         => $this->request->getPost('inmates_building'),
+                'inmates_room_type'        => $this->request->getPost('inmates_room_type'),
+                'inmates_rooms'            => $this->request->getPost('inmates_rooms'),
+                'inmates_check_in_date'    => date('Y-m-d',strtotime($check_in_date)),
+                'inmates_check_out_date'   => date('Y-m-d',strtotime($check_out_date)),
+                'inmates_duration_of_stay' => $this->request->getPost('inmates_duration_of_stay'),
+                'inmates_phone_no'         => $this->request->getPost('inmates_phone_no'),
+                'inmates_whats_app_number' => $this->request->getPost('inmates_whats_app_number'),
+                'inmates_guardian_name'    => $this->request->getPost('inmates_guardian_name'),
+                'inmates_relation'         => $this->request->getPost('inmates_relation'),
+                'inmates_guardian_contact' => $this->request->getPost('inmates_guardian_contact'),
+                'inmates_id_proof'         => $idProofName,
+                'inmates_photo'            => $photoName,
+                'inmates_place_of_work'    => $this->request->getPost('place_of_work'),
+            ];
+
+            $this->common_model->EditData($update_data,array('inmates_id' => $id),'saiyoojyam_inmates');
+
+            $flashdata = array(
+                'type' => 'success',
+                'msg'  => 'Data Updated Successfully',
+            );
+
+            $this->session->setFlashdata('alert',$flashdata);
+
+            return redirect()->to(site_url('Admin/Inmates/Edit/'.$id));
+
+        }
+
+        $data['duration'] = $this->common_model->FetchAllOrder('saiyoojyam_duration_of_stay','duration_stay','ASC');
+
+        $data['building'] = $this->common_model->FetchAllOrder('saiyoojyam_building','building_name','ASC');
+
+        $data['rooms'] = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms',array('rooms_building' => $data['inmate']->inmates_building),'rooms_name','ASC');
+
+        return view('admin/edit_inmates',$data);
+    }
     
+
+
+    public function Image($id, $type){
+
+        $inmate = $this->common_model->SingleRow('saiyoojyam_inmates',array('inmates_id' => $id));
+
+        if(empty($inmate)){
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
+
+        if($type == 'proof'){
+            $file = $inmate->inmates_id_proof;
+        }else{
+            $file = $inmate->inmates_photo;
+        }
+
+        $filePath = WRITEPATH . 'uploads/inmates/' . $file;
+
+        if(!empty($file) && is_file($filePath)){
+
+            $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+            $mime = 'application/octet-stream';
+
+            if(in_array($ext, array('jpg','jpeg'))){
+                $mime = 'image/jpeg';
+            }
+            elseif($ext == 'png'){
+                $mime = 'image/png';
+            }
+            elseif($ext == 'gif'){
+                $mime = 'image/gif';
+            }
+            elseif($ext == 'webp'){
+                $mime = 'image/webp';
+            }
+
+            header('Content-Type: '.$mime);
+
+            readfile($filePath);
+
+            exit;
+        }
+
+        return redirect()->to(site_url().'Admin/Inmates');
+    }
 
 
     public function Receipt($id){
@@ -998,5 +1300,115 @@ class Inmates extends BaseController
     }
 
 
-   
+    public function Delete($id){
+
+        $inmate = $this->common_model->SingleRow('saiyoojyam_inmates',array('inmates_id' => $id));
+
+        if(empty($inmate)){
+
+            $flashdata = array(
+                'type' => 'error',
+                'msg'  => 'Inmate not found',
+            );
+
+            $this->session->setFlashdata('alert',$flashdata);
+
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
+
+        $invoice = $this->common_model->SingleRow('saiyoojyam_invoice',array('invoice_inmates' => $id));
+
+        if(!empty($invoice)){
+
+            $flashdata = array(
+                'type' => 'error',
+                'msg'  => 'Cannot delete: Inmate has payment/invoice history',
+            );
+
+            $this->session->setFlashdata('alert',$flashdata);
+
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
+
+        $this->common_model->DeleteData('saiyoojyam_inmates',array('inmates_id' => $id));
+
+        $uploadPath = WRITEPATH . 'uploads/inmates/';
+
+        if(!empty($inmate->inmates_id_proof) && is_file($uploadPath.$inmate->inmates_id_proof)){
+            @unlink($uploadPath.$inmate->inmates_id_proof);
+        }
+
+        if(!empty($inmate->inmates_photo) && is_file($uploadPath.$inmate->inmates_photo)){
+            @unlink($uploadPath.$inmate->inmates_photo);
+        }
+
+        $flashdata = array(
+            'type' => 'success',
+            'msg'  => 'Inmate Deleted Successfully',
+        );
+
+        $this->session->setFlashdata('alert',$flashdata);
+
+        return redirect()->to(site_url().'Admin/Inmates');
+    }
+
+
+    public function CheckOut($id){
+
+        $inmate = $this->common_model->SingleRow('saiyoojyam_inmates',array('inmates_id' => $id));
+
+        if(empty($inmate)){
+
+            $flashdata = array(
+                'type' => 'error',
+                'msg'  => 'Inmate not found',
+            );
+
+            $this->session->setFlashdata('alert',$flashdata);
+
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
+
+        if(!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00'){
+
+            $flashdata = array(
+                'type' => 'error',
+                'msg'  => 'Inmate is already checked out',
+            );
+
+            $this->session->setFlashdata('alert',$flashdata);
+
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
+
+        $min_check_out_date = date('Y-m-d', strtotime('+1 month', strtotime($inmate->inmates_check_in_date)));
+
+        if(date('Y-m-d') < $min_check_out_date){
+
+            $flashdata = array(
+                'type' => 'error',
+                'msg'  => 'Check out is allowed only after one month from the check in date ('.$min_check_out_date.')',
+            );
+
+            $this->session->setFlashdata('alert',$flashdata);
+
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
+
+        $this->common_model->EditData(array(
+            'inmates_check_out_date' => date('Y-m-d'),
+            'inmates_status'         => 'checked_out',
+        ),array('inmates_id' => $id),'saiyoojyam_inmates');
+
+        $flashdata = array(
+            'type' => 'success',
+            'msg'  => 'Inmate Checked Out Successfully',
+        );
+
+        $this->session->setFlashdata('alert',$flashdata);
+
+        return redirect()->to(site_url().'Admin/Inmates');
+    }
+
+
 }

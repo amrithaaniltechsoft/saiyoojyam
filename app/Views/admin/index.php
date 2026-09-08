@@ -240,10 +240,13 @@ ul a {
   background-color: #e8f4ff;
 }
 
-/* Selected day (optional, if you handle this via JS) */
-.calendar .calendar-body .day.selected {
+/* Selected day (highlighted on click, must match plugin DOM: .calendar table td .day) */
+.calendar .day.selected {
   background-color: #007bff;
   color: white;
+  border: 2px solid #0056b3;
+}
+.calendar .day.selected:hover {
   border: 2px solid #0056b3;
 }
 
@@ -360,8 +363,8 @@ ul a {
                   <!-- small box -->
                   <div class="small-box" style="">
                     <div class="inner">
-                      <h3 style=""><?php echo $total_inmates;?></h3>
-                      <p>Total Inmates</p>
+                      <h3 style=""><?php echo $active_inmates;?></h3>
+                      <p>Active Inmates</p>
                     </div>
                     <div class="icon">
                       <!-- <i class="fa fa-shopping-cart"></i>-->
@@ -408,6 +411,7 @@ ul a {
                 <!------>
                 
                 <div class="col-lg-6" style="padding-top: 30px;">
+                  <h6 class="mb-3" id="avail_rooms_label">Available Rooms (<?php echo date('d-m-Y'); ?>)</h6>
                   <div class="room-grid room_available">
                     
                     <?php foreach($available_rooms as $rooms){ ?> 
@@ -452,7 +456,9 @@ ul a {
                     onDateSelect: function(date, events) {
                       const clickedDate = date.toLocaleDateString('en-CA');  
                       console.log("Clicked date:", clickedDate);
-                      
+
+                      $('#avail_rooms_label').text('Available Rooms (' + clickedDate.split('-').reverse().join('-') + ')');
+
                       $.ajax({
                         url: "<?php echo base_url(); ?>Admin/Ajax/AvaliableRoom",
                         type: "POST",
@@ -474,6 +480,12 @@ ul a {
                       //$('#clicked_date').val(clickedDate); 
                     }
                   });
+
+                  container.on('click', '.day', function (e) {
+                    $('.calendar .day').removeClass('selected');
+                    $(this).addClass('selected');
+                  });
+
                   $calendar = container.data('plugin_simpleCalendar');
               });
             </script>

@@ -318,6 +318,36 @@
                     <div class="text-truncate" data-i18n="Notifications">Rental Calander </div>
                   </a>
                 </li>
+
+                <li class="menu-item">
+                  <a href="<?=  base_url();?>Admin/Inmates/index/active" class="menu-link">
+                    <div class="text-truncate" data-i18n="Notifications">Active Inmates</div>
+                  </a>
+                </li>
+
+                <li class="menu-item">
+                  <a href="<?=  base_url();?>Admin/Inmates/index/checked_out" class="menu-link">
+                    <div class="text-truncate" data-i18n="Notifications">Inactive Inmates</div>
+                  </a>
+                </li>
+
+                <li class="menu-item">
+                  <a href="<?=  base_url();?>Admin/Inmates/index/paid" class="menu-link">
+                    <div class="text-truncate" data-i18n="Notifications">Paid</div>
+                  </a>
+                </li>
+
+                <li class="menu-item">
+                  <a href="<?=  base_url();?>Admin/Inmates/index/unpaid" class="menu-link">
+                    <div class="text-truncate" data-i18n="Notifications">Unpaid</div>
+                  </a>
+                </li>
+
+                <li class="menu-item">
+                  <a href="<?=  base_url();?>Admin/Inmates/index/partial" class="menu-link">
+                    <div class="text-truncate" data-i18n="Notifications">Partially Paid</div>
+                  </a>
+                </li>
                 
               </ul>
             </li>

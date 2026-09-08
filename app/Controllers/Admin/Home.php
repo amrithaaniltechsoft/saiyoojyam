@@ -40,8 +40,8 @@ class Home extends BaseController
             //todays check out's
             $data['todays_check_out'] = $this->common_model->checkWhereCount('saiyoojyam_inmates',array('inmates_check_out_date' => $todays_date));            
 
-            //total inmates
-            $data['total_inmates']    = $this->common_model->FetchTotalInmates('saiyoojyam_inmates',array('inmates_check_out_date' => $todays_date)); 
+            //total active inmates
+            $data['active_inmates']    = $this->common_model->checkWhereCount('saiyoojyam_inmates',array('inmates_status' => 'active')); 
 
            
 

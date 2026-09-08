@@ -96,9 +96,17 @@
 
                           var data = JSON.parse(response);
 
-                          alertify.success(data.msg).delay(3).dismissOthers();
+                          if(data.status == "true"){
 
-                          form[0].reset(); // Reset the form
+                            alertify.success(data.msg).delay(3).dismissOthers();
+
+                            form[0].reset(); // Reset the form
+
+                          }else{
+
+                            alertify.error(data.msg).delay(3).dismissOthers();
+
+                          }
 
                         }
                       });

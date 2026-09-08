@@ -91,6 +91,25 @@ class CommonModel extends Model
         ->getRow();
     }
 
+    public function SingleRowTrimmed($table,$col,$value)
+    {
+        $query = $this->db->table($table)
+        ->where('TRIM('.$col.') =', $value)
+        ->get();
+
+        return $query->getRow();
+    }
+
+    public function SingleRowTrimmedWhere($table,$col,$value,$extra_cond)
+    {
+        $query = $this->db->table($table)
+        ->where('TRIM('.$col.') =', $value)
+        ->where($extra_cond)
+        ->get();
+
+        return $query->getRow();
+    }
+
     public function SingleRowArray($table,$cond)
     {
         return $this->db
@@ -685,6 +704,55 @@ class CommonModel extends Model
     }
 
 
+    //fetch inmates active first then name ascending
+    public function FetchInmatesActiveFirst($cond = array()){
+
+        $query = $this->db->table('saiyoojyam_inmates');
+
+        if(!empty($cond)){
+
+            $query->where($cond);
+
+        }
+
+        $query->orderBy('CASE WHEN inmates_status = "active" THEN 0 ELSE 1 END', 'ASC', false)
+            ->orderBy('inmates_name', 'ASC');
+
+        return $query->get()->getResult();
+    }
+
+
+    //fetch inmates by latest invoice payment status
+    public function InmatesByPaymentStatus($status, $inmate_status = null){
+
+        if($status == 0){
+
+            $latest = 'i.inmates_id IN (SELECT inv.invoice_inmates FROM saiyoojyam_invoice inv WHERE inv.invoice_id = (SELECT MAX(inv2.invoice_id) FROM saiyoojyam_invoice inv2 WHERE inv2.invoice_inmates = inv.invoice_inmates) AND inv.invoice_status = 0) OR i.inmates_id NOT IN (SELECT DISTINCT invx.invoice_inmates FROM saiyoojyam_invoice invx)';
+
+        }else{
+
+            $latest = 'i.inmates_id IN (SELECT inv.invoice_inmates FROM saiyoojyam_invoice inv WHERE inv.invoice_id = (SELECT MAX(inv2.invoice_id) FROM saiyoojyam_invoice inv2 WHERE inv2.invoice_inmates = inv.invoice_inmates) AND inv.invoice_status = '.$status.')';
+
+        }
+
+        $query = $this->db->table('saiyoojyam_inmates as i')
+        ->select('i.*')
+        ->where($latest, NULL, FALSE)
+        ->orderBy('CASE WHEN i.inmates_status = "active" THEN 0 ELSE 1 END', 'ASC', false)
+        ->orderBy('i.inmates_name', 'ASC');
+
+        if(!empty($inmate_status)){
+
+            $query->where('i.inmates_status', $inmate_status);
+
+        }
+
+        $result = $query->get();
+
+        return $result->getResult();
+    }
+
+
     //fetch total inmates
     public function FetchTotalInmates(){
         $date = date('Y-m-d');
@@ -696,6 +764,19 @@ class CommonModel extends Model
             ->orWhere('inmates_check_out_date', '')
         ->groupEnd()
         ->countAllResults();
+
+    }
+
+
+    //auto mark inmates as checked_out when check out date has passed
+    public function AutoCheckoutInmates(){
+
+        $this->db->table('saiyoojyam_inmates')
+        ->where('inmates_check_out_date !=', '0000-00-00')
+        ->where('inmates_check_out_date <', date('Y-m-d'))
+        ->where('inmates_status !=', 'checked_out')
+        ->set('inmates_status', 'checked_out')
+        ->update();
 
     }
 
@@ -1045,7 +1126,14 @@ public function inmatesMonthRent($date_start,$date_end){
     
     ->where("DATE_FORMAT(inmates_check_in_date, '%Y') <= $currentYear", NULL, FALSE)
 
-    ->orderBy('inmates_id', 'DESC');
+    ->groupStart()
+        ->where('inmates_status !=', 'checked_out')
+        ->orWhere("DATE_FORMAT(inmates_check_out_date, '%Y') >= $currentYear", NULL, FALSE)
+    ->groupEnd()
+
+    ->orderBy('CASE WHEN inmates_status = "active" THEN 0 ELSE 1 END', 'ASC', false)
+
+    ->orderBy('inmates_name', 'ASC');
     
     $result = $query->get()->getResult();
 

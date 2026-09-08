@@ -93,7 +93,7 @@
                           <p class="fw-semibold mb-2">ID Proof</p>
                           <?php if(!empty($inmate->inmates_id_proof)){ ?>
                           <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#imageModal" onclick="showImage('<?php echo base_url();?>Admin/Inmates/Image/<?php echo $inmate->inmates_id; ?>/proof')">
-                          <img src="<?php echo base_url();?>Admin/Inmates/Image/<?php echo $inmate->inmates_id; ?>/proof" class="rounded" style="max-width:160px;border:1px solid #ddd;cursor:pointer;"/>
+                          <img src="<?php echo base_url();?>Admin/Inmates/Image/<?php echo $inmate->inmates_id; ?>/proof" class="rounded" style="width:160px;height:160px;object-fit:cover;border:1px solid #ddd;cursor:pointer;"/>
                           </a>
                           <?php } else { echo '<p class="text-muted">---</p>'; } ?>
                         </div>
@@ -101,7 +101,7 @@
                           <p class="fw-semibold mb-2">Photo</p>
                           <?php if(!empty($inmate->inmates_photo)){ ?>
                           <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#imageModal" onclick="showImage('<?php echo base_url();?>Admin/Inmates/Image/<?php echo $inmate->inmates_id; ?>/photo')">
-                          <img src="<?php echo base_url();?>Admin/Inmates/Image/<?php echo $inmate->inmates_id; ?>/photo" class="rounded" style="max-width:160px;border:1px solid #ddd;cursor:pointer;"/>
+                          <img src="<?php echo base_url();?>Admin/Inmates/Image/<?php echo $inmate->inmates_id; ?>/photo" class="rounded" style="width:160px;height:160px;object-fit:cover;border:1px solid #ddd;cursor:pointer;"/>
                           </a>
                           <?php } else { echo '<p class="text-muted">---</p>'; } ?>
                         </div>

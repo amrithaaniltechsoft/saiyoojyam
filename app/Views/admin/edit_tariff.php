@@ -48,12 +48,12 @@
                           <div class="col-sm-3" style="margin-top: -23px;">
                             <label>Building</label>
                             <input type="text" class="form-control build_clz" value="<?php echo $tariff->building_name;?>"  name="" id="" placeholder="Tower1" required readonly/>
-                            <input type="hidden" name="tariffs_building"  class="build_id_clz">
+                            <input type="hidden" name="tariffs_building"  class="build_id_clz" value="<?php echo $tariff->tariffs_building;?>">
                           </div>
                           <div class="col-sm-3" style="margin-top: -23px;">
                             <label>Room Type</label>
                             <input type="text" class="form-control room_type_clz" value="<?php echo $tariff->room_type_name;?>"   name="" id="" placeholder="3 Share" required readonly/>
-                            <input type="hidden" name="	tariffs_room_types" class="room_type_id_clz">
+                            <input type="hidden" name="tariffs_room_types" class="room_type_id_clz" value="<?php echo $tariff->tariffs_room_types;?>">
                           </div>
                         </div>
 
@@ -67,7 +67,7 @@
                          <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Admission fees</label>
                           <div class="col-sm-10">
-                              <input type="number" class="form-control" name="	tariffs_admission_fees	" min="0" step="0.01" value="<?php echo $tariff->tariffs_admission_fees; ?>" id="basic-default-name" placeholder="e.g.,Tower 1, 3 share room" required>
+                              <input type="number" class="form-control" name="tariffs_admission_fees" min="0" step="0.01" value="<?php echo $tariff->tariffs_admission_fees; ?>" id="basic-default-name" placeholder="e.g.,Tower 1, 3 share room" required>
                           </div>
                         </div>
 
@@ -121,7 +121,7 @@
 
               /*fetch building and room type by room*/
 
-                $(".room_clz").on('change', function(){ 
+                function onRoomChange(){ 
 
                   var Id =  $('.room_clz').val();
 
@@ -146,12 +146,19 @@
 
                 
     
+                }
+
+                /*auto fill building & room type from selected room on page load*/
+                $(document).ready(function(){
+                  if(!$('.build_clz').val() || !$('.room_type_clz').val()){
+                    $(".room_clz").trigger('change');
+                  }
                 });
 
-                 
-
-
                 /*end section*/
+                
+                $(".room_clz").on('change', onRoomChange);
+                onRoomChange();
             </script>
 
             

@@ -32,7 +32,7 @@
 
     <div class="row justify-content-center ">
 
-      <div class="col-lg-8">
+      <div class="col-lg-7">
 
         <div class="rooleft">
 
@@ -114,7 +114,7 @@
 
   </div>
 
-  <div class="col-lg-4 col-md-6">
+  <div class="col-lg-5 col-md-5">
 
     <div class="rooright">
 
@@ -134,7 +134,7 @@
             <label>No. Persons</label>
             <div id="field1" class="field"> 
               <button type="button" id="sub" class="sub">-</button>
-              <input type="text" name="person" id="1" value="1" class="field" min="1" max="1" required/>
+              <input type="text" name="person" id="1" value="1" class="field" min="1" max="<?php echo $rooms->rooms_capacity; ?>" required/>
               <button type="button" id="add" class="add">+</button>
             </div>
           </div>

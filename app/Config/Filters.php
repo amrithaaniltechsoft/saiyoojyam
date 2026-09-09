@@ -90,6 +90,7 @@ class Filters extends BaseFilters
                 'Tariff',
                 'Gallery', 
                 'Rooms',
+                'Rooms/*',
                 'Room/*',
                 'Checkout',
                 'About',

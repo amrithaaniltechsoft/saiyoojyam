@@ -266,7 +266,30 @@ class Rooms extends BaseController
 
         if ($this->request->getMethod() === 'POST') {
 
-            
+            if(empty($this->request->getPost('consent'))){
+
+                $session = session();
+
+                $room_data_check = $session->get("RoomData");
+
+                $slug = "";
+
+                if(!empty($room_data_check['room_id'])){
+
+                    $room_row = $this->common_model->SingleRow('saiyoojyam_rooms',array('rooms_id' => $room_data_check['room_id']));
+
+                    if(!empty($room_row)){ $slug = $room_row->rooms_slug; }
+                }
+
+                $flashdata = array(
+                    'type' => 'error',
+                    'msg'  => 'Please accept the confirmation to proceed.',
+                );
+
+                $this->session->setFlashdata('alert',$flashdata);
+
+                return redirect()->to(site_url('Room/'.$slug));
+            }
 
             $idProof = $this->request->getFile('id_proof');
             $photo = $this->request->getFile('photo');

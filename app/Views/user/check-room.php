@@ -67,12 +67,14 @@
 </div>
 <div class="col-lg-6 col-md-6">
 
+<?php if(!empty($room_data['check_out_date']) && $room_data['check_out_date'] != '0000-00-00'){ ?>
 <div class="cc-check">
 <h4>Check-out</h4>
 <h5><?php echo $room_data['check_out_date']; ?></h5>
 
 <p>Until 11:00 AM</p>
 </div>
+<?php } ?>
 </div>
 </div>
 <hr>
@@ -112,7 +114,7 @@
     <div class="Booking-right">
         <div class="Booking-right-ss">
             <h3>Enter your details</h3>
-			<form method="post" action="<?php echo base_url();?>Rooms/Booking" enctype="multipart/form-data">
+			<form method="post" action="<?php echo base_url();?>Rooms/Booking" enctype="multipart/form-data" id="bookingForm">
                 <div class="row   Guest pay-form">
                 
 
@@ -169,8 +171,11 @@
 					</div>
 			
 
-					<div class="col-lg-12    col-sm-12">
-						<p>  To verify your booking, and for the Hostel to connect if needed</p>
+					<div class="col-lg-12 col-sm-12 form-group">
+						<div class="form-check">
+							<input class="form-check-input booking-check" type="checkbox" value="1" name="consent" id="consentCheck" style="appearance:none;-webkit-appearance:none;-moz-appearance:none;width:26px;height:26px;flex:0 0 auto;margin-top:0;border-radius:4px;cursor:pointer;box-shadow:none;">
+							<label class="form-check-label" for="consentCheck">To verify your booking, and for the Hostel to connect if needed</label>
+						</div>
 					</div>
 			
 					<div class="col-lg-12 form-group ">
@@ -194,9 +199,44 @@
 
 <!--footer section start-->
 
+<style>
+  .booking-check.form-check-input { display: none; }
+  .booking-check.form-check-input ~ .form-check-label:before {
+    content: '';
+    font-family: var(--icon-font);
+    font-weight: 700;
+    position: absolute;
+    left: 0px;
+    top: 3.5px;
+    background-color: var(--white-color);
+    border: 1px solid #938b8b;
+    height: 20px;
+    width: 20px;
+    line-height: 26px;
+    text-align: center;
+    font-size: 14px;
+  }
+  .booking-check.form-check-input:checked ~ .form-check-label:before {
+    content: "\f00c";
+    color: var(--white-color);
+    background-color: #000;
+    border-color: #000;
+  }
+</style>
+
 <?php echo view('user/includes/footer'); ?>
 
 <!--footer section end-->
+
+<script>
+  document.getElementById("bookingForm").addEventListener("submit", function (e) {
+    if (!document.getElementById("consentCheck").checked) {
+      e.preventDefault();
+      alertify.set('notifier', 'position', 'top-right');
+      alertify.error('Please accept the confirmation checkbox to proceed with your booking.');
+    }
+  });
+</script>
   
 	
  

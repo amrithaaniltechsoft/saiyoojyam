@@ -133,9 +133,7 @@
           <div class="form-group col-md-12 col-sm-12 col-lg-6">
             <label>No. Persons</label>
             <div id="field1" class="field"> 
-              <button type="button" id="sub" class="sub">-</button>
-              <input type="text" name="person" id="1" value="1" class="field" min="1" max="<?php echo $rooms->rooms_capacity; ?>" required/>
-              <button type="button" id="add" class="add">+</button>
+              <input type="text" name="person" id="1" value="1" class="field" readonly required/>
             </div>
           </div>
 
@@ -152,9 +150,6 @@
               
             </select>
 			    </div>
-
-
-
 
           <div class="form-group col-md-12 col-lg-6">
             <label>Check In Date</label>
@@ -255,28 +250,6 @@
   });
 </script>-->
 
-
-<script>
-  $('.add').click(function () {
-    var input = $(this).prev('.field');
-    var current = parseInt(input.val());
-    var max = parseInt(input.attr('max'));
-
-    if (current < max) {
-      input.val(current + 1);
-    }
-  });
-
-  $('.sub').click(function () {
-    var input = $(this).next('.field');
-    var current = parseInt(input.val());
-    var min = parseInt(input.attr('min'));
-
-    if (current > min) {
-      input.val(current - 1);
-    }
-  });
-</script>
 
 <script>
   /*show check out date*/

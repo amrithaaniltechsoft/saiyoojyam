@@ -676,6 +676,31 @@ class CommonModel extends Model
   
     }
 
+    public function CountOccupiedInRoom($room_id,$check_in,$check_out)
+    {
+        
+        if (empty($check_out) || $check_out === '0000-00-00') {
+
+            $check_out = '9999-12-31';
+        }
+
+        $builder = $this->db->table('saiyoojyam_inmates')
+            ->where('inmates_rooms', $room_id)
+            ->groupStart()
+            
+                ->where('inmates_check_in_date <', $check_out)
+                ->groupStart()
+                    ->where('inmates_check_out_date >', $check_in)
+                    ->orWhere('inmates_check_out_date IS NULL')
+                    ->orWhere('inmates_check_out_date', '')
+                    ->orWhere('inmates_check_out_date', '0000-00-00')
+                ->groupEnd()
+            ->groupEnd();
+
+        return $builder->countAllResults();
+  
+    }
+
 
     //fetch lastpayment month
     public function last_payment_month($table,$inmates_id){

@@ -416,4 +416,36 @@ class Rooms extends BaseController
         return view('user/payment',$data);
 
     }
+
+    public function CheckAvailability(){
+
+        if($this->request->getPost('room_id') === null){ return; }
+
+        $room_id     = (int)$this->request->getPost('room_id');
+
+        $check_in    = date('Y-m-d',strtotime($this->request->getPost('check_in_date')));
+
+        $check_out_p = $this->request->getPost('check_out_date');
+
+        $check_out   = (!empty($check_out_p)) ? date('Y-m-d',strtotime($check_out_p)) : '0000-00-00';
+
+        $target      = (int)$this->request->getPost('persons');
+
+        $room = $this->common_model->SingleRow('saiyoojyam_rooms',array('rooms_id' => $room_id));
+
+        $occupied = $this->common_model->CountOccupiedInRoom($room_id,$check_in,$check_out);
+
+        $available_slots = ((int)$room->rooms_capacity) - $occupied;
+
+        $response['capacity']         = (int)$room->rooms_capacity;
+
+        $response['occupied']         = $occupied;
+
+        $response['available_slots']  = $available_slots;
+
+        $response['ok']               = $target <= $available_slots;
+
+        echo json_encode($response);
+
+    }
 }

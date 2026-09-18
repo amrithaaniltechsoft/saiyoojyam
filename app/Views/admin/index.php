@@ -172,43 +172,58 @@ ul a {
   overflow: hidden;
 }
 
+/* Calendar container */
+.calendar {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
 /* Calendar header: month/year + nav */
 .calendar .calendar-header {
-  background-color: #007bff;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   color: white;
-  padding: 12px 20px;
+  padding: 16px 20px;
   font-size: 18px;
   text-align: center;
-  font-weight: bold;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
 }
 
 /* Navigation buttons */
 .calendar .calendar-header button {
-  background: white;
-  color: #007bff;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
   border: none;
-  padding: 6px 10px;
+  padding: 6px 12px;
   margin: 0 5px;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
 }
 .calendar .calendar-header button:hover {
-  background: #e6f0ff;
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.05);
 }
 
 /* Day names (Sun to Sat) */
 .calendar .calendar-days {
   display: flex;
-  background-color: #f8f9fa;
-  font-weight: 600;
-  border-bottom: 1px solid #ddd;
+  background-color: #f8fafc;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
 }
 .calendar .calendar-days .day {
   flex: 1;
   text-align: center;
-  padding: 10px;
-  color: #444;
+  padding: 12px;
+  color: #475569;
+  font-size: 13px;
+  text-transform: uppercase;
 }
 
 /* Calendar dates */
@@ -218,36 +233,42 @@ ul a {
 }
 .calendar .calendar-body .day {
   flex: 1 0 14.2857%;
-  height: 80px;
-  border: 1px solid #f0f0f0;
+  height: 75px;
+  border: 1px solid #f1f5f9;
   text-align: center;
-  padding: 5px;
+  padding: 8px;
   box-sizing: border-box;
   cursor: pointer;
-  transition: background 0.2s ease-in-out;
+  transition: all 0.2s ease;
   position: relative;
   font-size: 15px;
+  font-weight: 500;
+  color: #334155;
 }
 
 /* Today highlight */
 .calendar .calendar-body .day.today {
-  background-color: #fffbe6;
-  border: 2px solid #ffc107;
+  background-color: #e0e7ff;
+  border: 2px solid #6366f1;
+  color: #4338ca;
+  font-weight: 700;
 }
 
 /* Hover effect */
 .calendar .calendar-body .day:hover {
-  background-color: #e8f4ff;
+  background-color: #f1f5f9;
 }
 
-/* Selected day (highlighted on click, must match plugin DOM: .calendar table td .day) */
+/* Selected day */
 .calendar .day.selected {
-  background-color: #007bff;
+  background-color: #4f46e5;
   color: white;
-  border: 2px solid #0056b3;
+  border: 2px solid #4338ca;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
 }
 .calendar .day.selected:hover {
-  border: 2px solid #0056b3;
+  border: 2px solid #4338ca;
 }
 
 /* Event indicator dot (optional if you add events) */

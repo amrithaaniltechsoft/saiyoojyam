@@ -61,39 +61,65 @@ class Tariff extends BaseController
         
         if ($this->request->getMethod() === 'POST') {
 
-            $insert_data = $this->request->getPost();
+            $buildings  = $this->request->getPost('tariffs_building');
+            $room_types = $this->request->getPost('tariffs_room_types');
+            $rooms      = $this->request->getPost('tariffs_rooms');
+            $prices     = $this->request->getPost('tariffs_price');
 
-            $rooms = $this->request->getPost('tariffs_rooms');
+            if (!is_array($rooms)) {
+                $buildings  = array($buildings);
+                $room_types = array($room_types);
+                $rooms      = array($rooms);
+                $prices     = array($prices);
+            }
 
-            $tariff_avaliable = $this->common_model->FetchWhere('saiyoojyam_tariffs',array('tariffs_rooms' => $rooms));
+            $added_count = 0;
+            $errors = array();
 
-            if(!empty($tariff_avaliable)){
+            foreach ($rooms as $index => $room_id) {
+                if (empty($room_id)) continue;
 
-                $response['status'] = "false";
+                $building_id  = isset($buildings[$index]) ? $buildings[$index] : '';
+                $room_type_id = isset($room_types[$index]) ? $room_types[$index] : '';
+                $price        = isset($prices[$index]) ? $prices[$index] : 0;
 
-                $response['msg'] = "This room already exists. Please choose a different name";
+                $tariff_avaliable = $this->common_model->FetchWhere('saiyoojyam_tariffs', array('tariffs_rooms' => $room_id));
 
-            }else{
- 
+                if (!empty($tariff_avaliable)) {
+                    $room_info = $this->common_model->SingleRow('saiyoojyam_rooms', array('rooms_id' => $room_id));
+                    $room_name = $room_info ? $room_info->rooms_name : "Room #$room_id";
+                    $errors[] = "$room_name already exists";
+                } else {
+                    $insert_data = array(
+                        'tariffs_building'   => $building_id,
+                        'tariffs_room_types' => $room_type_id,
+                        'tariffs_rooms'      => $room_id,
+                        'tariffs_price'      => $price,
+                        'tariffs_created_at' => date('Y-m-d')
+                    );
 
-                $building_fees = $this->common_model->SingleRow('saiyoojyam_building',array('building_id' => $this->request->getPost('tariffs_building')));
+                    $building_fees = $this->common_model->SingleRow('saiyoojyam_building', array('building_id' => $building_id));
 
-                if(!empty($building_fees)){
+                    if (!empty($building_fees)) {
+                        $insert_data['tariffs_admission_fees'] = $building_fees->building_admission_fees;
+                        $insert_data['tariffs_caution_deposit'] = $building_fees->building_caution_deposit;
+                    }
 
-                    $insert_data['tariffs_admission_fees'] = $building_fees->building_admission_fees;
-
-                    $insert_data['tariffs_caution_deposit'] = $building_fees->building_caution_deposit;
-
+                    $this->common_model->InsertData('saiyoojyam_tariffs', $insert_data);
+                    $added_count++;
                 }
+            }
 
-                $insert_data['tariffs_created_at'] = date('Y-m-d'); 
-
-                $id = $this->common_model->InsertData('saiyoojyam_tariffs',$insert_data);
-
+            if ($added_count > 0) {
                 $response['status'] = "true";
-
-                $response['msg'] = "Data Added Successfully";
-
+                $msg = "$added_count Tariff(s) Added Successfully";
+                if (!empty($errors)) {
+                    $msg .= ". Skipped: " . implode(', ', $errors);
+                }
+                $response['msg'] = $msg;
+            } else {
+                $response['status'] = "false";
+                $response['msg'] = !empty($errors) ? implode(', ', $errors) : "Please select valid room(s) to add tariff";
             }
 
             echo json_encode($response);
@@ -102,9 +128,7 @@ class Tariff extends BaseController
 
         }
 
-        //$data['buildings'] = $this->common_model->FetchAllOrder('saiyoojyam_building','building_name','ASC');
-
-        $data['rooms'] = $this->common_model->FetchAllOrder('saiyoojyam_rooms','rooms_name','ASC');
+        $data['buildings'] = $this->common_model->FetchAllOrder('saiyoojyam_building','building_name','ASC');
 
         return view('admin/add_tariff',$data);
 

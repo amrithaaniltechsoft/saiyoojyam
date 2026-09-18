@@ -16,18 +16,13 @@ class Ajax extends BaseController
 
             $rooms = $this->common_model->FetchWhere('saiyoojyam_room_type',array('room_type_building_id' => $id));
 
-            $data['rooms'] ="";
+            $data['rooms'] = "<option value='' selected disabled>Select Room Types</option>";
 
-            $data['rooms'] .= "<select>
-               <option value='' selected disabled>Select Room Types</option>";
-
-               foreach($rooms as $room){
+            foreach($rooms as $room){
                 
-                $data['rooms'] .= "<option value=".$room->room_type_id.">".$room->room_type_name."</option>";
+                $data['rooms'] .= "<option value='".$room->room_type_id."'>".$room->room_type_name."</option>";
 
-               }
-
-            $data['rooms'] .= "</select>";
+            }
 
             echo json_encode($data);
  
@@ -41,25 +36,51 @@ class Ajax extends BaseController
 
             $id =  $this->request->getpost('ID');
 
-            
-
             $rooms = $this->common_model->FetchWhere('saiyoojyam_room_type',array('room_type_building_id' => $id));
 
-            $data['rooms'] ="";
+            $data['rooms'] = "<option value='' selected disabled>Select Room Types</option>";
 
-            $data['rooms'] .= "<select>
-               <option value='' selected disabled>Select Room Types</option>";
-
-               foreach($rooms as $room){
+            foreach($rooms as $room){
                 
-                $data['rooms'] .= "<option value=".$room->room_type_id.">".$room->room_type_name."</option>";
+                $data['rooms'] .= "<option value='".$room->room_type_id."'>".$room->room_type_name."</option>";
 
-               }
-
-            $data['rooms'] .= "</select>";
+            }
 
             echo json_encode($data);
  
+        }
+    }
+
+
+    public function tariffRooms(){
+
+        if($this->request->getMethod() === 'POST'){
+
+            $building_id  = $this->request->getPost('building_id');
+            $room_type_id = $this->request->getPost('room_type_id');
+
+            $cond = array();
+            if(!empty($building_id)){
+                $cond['rooms_building'] = $building_id;
+            }
+            if(!empty($room_type_id)){
+                $cond['rooms_type'] = $room_type_id;
+            }
+
+            $rooms = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms', $cond, 'rooms_name', 'ASC');
+
+            $options = "<option value='' selected disabled>Select Rooms</option>";
+
+            if(!empty($rooms)){
+                foreach($rooms as $room){
+                    $options .= "<option value='".$room->rooms_id."'>".$room->rooms_name."</option>";
+                }
+            }
+
+            $data['rooms'] = $options;
+
+            echo json_encode($data);
+
         }
     }
 

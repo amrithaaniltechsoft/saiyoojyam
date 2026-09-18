@@ -20,6 +20,58 @@ class Rooms extends BaseController
     }
 
 
+    public function Available(){
+        $selected_date = $this->request->getGet('date');
+        if(empty($selected_date)){
+            $selected_date = date('Y-m-d');
+        }
+
+        $rooms = $this->common_model->FetchAllOrder('saiyoojyam_rooms','rooms_id','DESC');
+        $buildings = $this->common_model->FetchAll('saiyoojyam_building');
+        $room_types = $this->common_model->FetchAll('saiyoojyam_room_type');
+
+        $available_rooms = [];
+
+        foreach ($rooms as $room) {
+            $occupied_count = $this->common_model->fetchAvaliableRooms($room->rooms_id, $selected_date);
+            
+            $building_name = '';
+            foreach($buildings as $build){
+                if($build->building_id == $room->rooms_building){
+                    $building_name = $build->building_name;
+                    break;
+                }
+            }
+
+            $room_type_name = '';
+            foreach($room_types as $rtype){
+                if($rtype->room_type_id == $room->rooms_type){
+                    $room_type_name = $rtype->room_type_name;
+                    break;
+                }
+            }
+
+            $avail_count = $room->rooms_capacity - $occupied_count;
+
+            $available_rooms[] = [
+                'room_id'        => $room->rooms_id,
+                'room_name'      => $room->rooms_name,
+                'building_name'  => $building_name,
+                'room_type_name' => $room_type_name,
+                'capacity'       => $room->rooms_capacity,
+                'occupied'       => $occupied_count,
+                'available'      => $avail_count > 0 ? $avail_count : 0,
+                'status'         => $avail_count > 0 ? 'Available' : 'Full'
+            ];
+        }
+
+        $data['pagedata'] = $available_rooms;
+        $data['selected_date'] = $selected_date;
+
+        return view('admin/view_available_rooms', $data);
+    }
+
+
    
 
     public function Add(){

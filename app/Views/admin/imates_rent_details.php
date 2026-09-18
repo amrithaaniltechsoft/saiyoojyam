@@ -291,14 +291,14 @@
             if($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
 
               echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
-              
+
             } 
             else {
 
               echo '<td></td>'; 
 
             }
-            
+
           }
 
         } 
@@ -323,8 +323,6 @@
     ?>
   </tr>
 <?php } ?>
-
-
 
   
   

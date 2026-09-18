@@ -54,10 +54,9 @@ class Home extends BaseController
 
         if($type=="Booking"){
 
-            $this->session->set('manage');
-
+            $this->session->remove('manage');
             
-           return redirect()->to('admin/home'); 
+            return redirect()->to('admin/home'); 
 
         }
         else{

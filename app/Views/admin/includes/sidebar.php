@@ -181,8 +181,18 @@
                     <div class="text-truncate" data-i18n="Notifications">View / Edit Rooms</div>
                   </a>
                 </li>
-                
               </ul>
+            </li>
+
+            <!--sidebar pages end-->
+
+            <!--sidebar pages start-->
+
+            <li class="menu-item">
+              <a href="<?=  base_url();?>Admin/Rooms/Available" target="_blank" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-hotel"></i>
+                <div class="text-truncate" data-i18n="Available Rooms">Available Rooms</div>
+              </a>
             </li>
 
             <!--sidebar pages end-->

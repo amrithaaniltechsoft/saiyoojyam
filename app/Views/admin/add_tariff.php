@@ -31,62 +31,57 @@
                       <form id="add_form">
 
                         
-                        <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Rooms</label>
-                          <div class="col-sm-4">
-                            <select id="" class="form-select room_clz" name="tariffs_rooms" required>
-                              <option value="" selected disabled>Select Rooms</option>
-                              <?php foreach($rooms as $room){?> 
-
-                                  <option value="<?php echo $room->rooms_id; ?>" ><?php echo $room->rooms_name; ?></option>
-
-                                <?php } ?>
-                                
-                                
-                            </select>
-                          </div>
-
-                          <div class="col-sm-3" style="margin-top: -23px;">
-                            <label>Building</label>
-                            <input type="text" class="form-control build_clz"   name="" id="" placeholder="Tower1" required readonly/>
-                            <input type="hidden" name="tariffs_building"  class="build_id_clz">
-                          </div>
-
-
-                          <div class="col-sm-3" style="margin-top: -23px;">
-                            <label>Room Type</label>
-                            <input type="text" class="form-control room_type_clz"   name="" id="" placeholder="3 Share" required readonly/>
-                            <input type="hidden" name="tariffs_room_types" class="room_type_id_clz">
-                          </div>
-
-
+                        <div class="table-responsive">
+                          <table class="table table-bordered align-middle" id="tariff_table">
+                            <thead class="table-light">
+                              <tr>
+                                <th style="width: 25%;">Building <span class="text-danger">*</span></th>
+                                <th style="width: 25%;">Room Type <span class="text-danger">*</span></th>
+                                <th style="width: 25%;">Room <span class="text-danger">*</span></th>
+                                <th style="width: 20%;">Monthly Rent (₹) <span class="text-danger">*</span></th>
+                                <th style="width: 5%; text-align: center;">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody id="tariff_tbody">
+                              <tr class="tariff-row">
+                                <td>
+                                  <select class="form-select build_clz" name="tariffs_building[]" required>
+                                    <option value="" selected disabled>Select Building</option>
+                                    <?php if(!empty($buildings)){ foreach($buildings as $build){ ?> 
+                                      <option value="<?php echo $build->building_id; ?>"><?php echo $build->building_name; ?></option>
+                                    <?php } } ?>
+                                  </select>
+                                </td>
+                                <td>
+                                  <select class="form-select room_type_clz" name="tariffs_room_types[]" required>
+                                    <option value="" selected disabled>Select Room Type</option>
+                                  </select>
+                                </td>
+                                <td>
+                                  <select class="form-select room_clz" name="tariffs_rooms[]" required>
+                                    <option value="" selected disabled>Select Rooms</option>
+                                  </select>
+                                </td>
+                                <td>
+                                  <input type="number" class="form-control" min="0" step="0.01" name="tariffs_price[]" placeholder="e.g., 5000" required/>
+                                </td>
+                                <td class="text-center">
+                                  <button type="button" class="btn btn-danger btn-sm remove-row-btn" style="display: none;">
+                                    <i class="bx bx-trash"></i>
+                                  </button>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
                         </div>
 
-
-                        <!--<div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Rooms Type</label>
-                          <div class="col-sm-10">
-                            <select id="" class="form-select room_clz" name="tariffs_room_types" required>
-                              <option value="" selected disabled>Select Room Types</option>
-                              
-                            </select>
-                          </div>
-                        </div>-->
-
-<div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Monthly Rent</label>
-                          <div class="col-sm-10">
-                            <input type="number" class="form-control" min="0" step="0.01"  name="tariffs_price" id="" placeholder="e.g., ₹50" required/>
-                          </div>
-                        </div>
-
-
-                       
-
-                        <div class="row justify-content-end">
-                          <div class="col-sm-10">
-                            <button type="submit" class="btn btn-primary">Add</button>
-                          </div>
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                          <button type="button" class="btn btn-secondary" id="add_more_btn">
+                            <i class="bx bx-plus me-1"></i> Add More Row
+                          </button>
+                          <button type="submit" class="btn btn-primary">
+                            <i class="bx bx-check me-1"></i> Submit Tariffs
+                          </button>
                         </div>
                       </form>
                     </div>
@@ -106,94 +101,107 @@
 
             <script>
               document.addEventListener("DOMContentLoaded", function(event) {
-                 
-    
-                /*add section*/  
-                
                 $(document).ready(function () {
+                  function updateRemoveButtons() {
+                    var rowCount = $('#tariff_tbody .tariff-row').length;
+                    if (rowCount > 1) {
+                      $('.remove-row-btn').show();
+                    } else {
+                      $('.remove-row-btn').hide();
+                    }
+                  }
+
+                  /* Add More Row */
+                  $('#add_more_btn').on('click', function () {
+                    var firstRow = $('#tariff_tbody .tariff-row:first');
+                    var newRow = firstRow.clone();
+
+                    newRow.find('select.build_clz').val('');
+                    newRow.find('select.room_type_clz').html('<option value="" selected disabled>Select Room Type</option>');
+                    newRow.find('select.room_clz').html('<option value="" selected disabled>Select Rooms</option>');
+                    newRow.find('input').val('');
+
+                    $('#tariff_tbody').append(newRow);
+                    updateRemoveButtons();
+                  });
+
+                  /* Remove Row */
+                  $('#tariff_tbody').on('click', '.remove-row-btn', function () {
+                    if ($('#tariff_tbody .tariff-row').length > 1) {
+                      $(this).closest('tr').remove();
+                      updateRemoveButtons();
+                    }
+                  });
+
+                  /* Fetch room type by building */
+                  $('#tariff_tbody').on('change', '.build_clz', function () {
+                    var $row = $(this).closest('tr');
+                    var Id = $(this).val();
+
+                    $row.find('.room_type_clz').html('<option value="" selected disabled>Select Room Type</option>');
+                    $row.find('.room_clz').html('<option value="" selected disabled>Select Rooms</option>');
+
+                    if (Id) {
+                      $.ajax({
+                        url: "<?php echo base_url(); ?>Admin/Ajax/tariffRoomTypes",
+                        type: "POST",
+                        data: { ID: Id },
+                        success: function (data) {
+                          var res = JSON.parse(data);
+                          $row.find('.room_type_clz').html(res.rooms);
+                        }
+                      });
+                    }
+                  });
+
+                  /* Fetch rooms by room type and building */
+                  $('#tariff_tbody').on('change', '.room_type_clz', function () {
+                    var $row = $(this).closest('tr');
+                    var buildId = $row.find('.build_clz').val();
+                    var typeId = $(this).val();
+
+                    $row.find('.room_clz').html('<option value="" selected disabled>Select Rooms</option>');
+
+                    if (typeId) {
+                      $.ajax({
+                        url: "<?php echo base_url(); ?>Admin/Ajax/tariffRooms",
+                        type: "POST",
+                        data: { building_id: buildId, room_type_id: typeId },
+                        success: function (data) {
+                          var res = JSON.parse(data);
+                          $row.find('.room_clz').html(res.rooms);
+                        }
+                      });
+                    }
+                  });
+
+                  /* Submit Handler */
                   var form = $('#add_form');
                   form.validate({
-                    rules: {
-                    
-                      required: 'required',
-                    },
-                    messages: {
-                    
-                      required: 'This field is required',
-                    },
-                    errorPlacement: function (error, element) {
-                      error.insertAfter(element); // or leave empty to suppress
-                    },
-                    errorClass: "text-danger", 
+                    errorClass: "text-danger",
                     submitHandler: function (currentForm) {
                       $.ajax({
                         url: "<?php echo base_url(); ?>Admin/Tariff/Add",
                         type: "POST",
-                        data: $(currentForm).serialize(), // Use FormData only if you're uploading files
-                        
-                        success: function(response) {
-
-                          console.log(response);
-
+                        data: $(currentForm).serialize(),
+                        success: function (response) {
                           var data = JSON.parse(response);
 
-                          if(data.status === "true"){
-                               
-                            alertify.success(data.msg).delay(3).dismissOthers();
-
-                          }else{
-                            
-                            alertify.error(data.msg).delay(3).dismissOthers();
-
+                          if (data.status === "true") {
+                            alertify.success(data.msg).delay(4).dismissOthers();
+                            $('#tariff_tbody .tariff-row:gt(0)').remove();
+                            form[0].reset();
+                            $('#tariff_tbody .room_type_clz').html('<option value="" selected disabled>Select Room Type</option>');
+                            $('#tariff_tbody .room_clz').html('<option value="" selected disabled>Select Rooms</option>');
+                            updateRemoveButtons();
+                          } else {
+                            alertify.error(data.msg).delay(4).dismissOthers();
                           }
-
-                          form[0].reset(); // Reset the form
-
                         }
-
                       });
                     }
                   });
                 });
-
-                /*end section*/
-
-
-                /*fetch building and room type by room*/
-
-                $(".room_clz").on('change', function(){ 
-
-                  var Id =  $('.room_clz').val();
-
-                  $.ajax({
-                        url: "<?php echo base_url(); ?>Admin/Ajax/Rooms",
-                        type: "POST",
-                        data: {ID :Id, },
-                        success: function(data) {
-
-                          var data = JSON.parse(data);
-
-                          $('.build_clz').val(data.building);
-
-                          $('.room_type_clz').val(data.room_type);
-
-                          $('.build_id_clz').val(data.building_id);
-
-                          $('.room_type_id_clz').val(data.room_type_id);
-
-                        }
-                  });
-
-                
-    
-                });
-
-                 
-
-
-/*end section*/
-
-        
               });
             </script>
 

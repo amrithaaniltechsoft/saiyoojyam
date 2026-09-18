@@ -451,21 +451,9 @@ class Ajax extends BaseController
                 
                                     <td>".$inmate->inmates_name."</td>
                                     <td class=''>".$inmate->rooms_name."</td>
-                                    <td class=''>".date('d-m-Y',strtotime($inmate->inmates_check_in_date))."</td>
                                     <td class=''>".$inmate->inmates_phone_no."</td>
-                                    <td class=''>".$inmate->inmates_place_of_work."</td>
                                     <td class=''>".$inmate->room_type_name."</td>
                                     <td class=''>".$inmate->tariffs_price."</td>
-                                    <td class=''>".$inmate->inmates_caution_deposit."</td>
-                                    <td class=''>".$inmate->inmates_admission_fee."</td>
-                                    <td class=''>".$inmate->invoice_total."</td>
-                                    <td class=''>---</td>
-                                    <td class=''>".$inmate->invoice_paid_amount."</td>
-                                    <td class=''>".$inmate->invoice_paid_date."</td>
-                                    <td class=''>---</td>
-                                    <td class=''>".$inmate->inmates_check_out_date."</td>
-                                    <td class=''>---</td>
-                                    <td class=''>---</td>
   
                                 </tr>";
             }

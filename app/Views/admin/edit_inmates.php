@@ -25,7 +25,7 @@
                       <h5 class="mb-0">Edit Inmates</h5>
                     </div>
                     <div class="card-body">
-                      <form id="edit_form" enctype="multipart/form-data" method="POST" action="<?php echo base_url();?>Admin/Inmates/Edit/<?php echo $inmate->inmates_id; ?>">
+                      <form id="edit_form" enctype="multipart/form-data" method="POST" novalidate action="<?php echo base_url();?>Admin/Inmates/Edit/<?php echo $inmate->inmates_id; ?>">
 
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Name</label>
@@ -44,7 +44,7 @@
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name" >Join In Date</label>
                           <div class="col-sm-10">
-                            <input type="date" class="form-control join_in_date_clz"  name="inmates_check_in_date" onclick="showPicker()" id="check_in-date-input" min="<?php echo date('Y-m-d'); ?>" value="<?php echo $inmate->inmates_check_in_date; ?>" required/>
+                            <input type="date" class="form-control join_in_date_clz"  name="inmates_check_in_date" onclick="showPicker()" id="check_in-date-input" min="<?php echo date('Y-m-d'); ?>" value="<?php echo $inmate->inmates_check_in_date; ?>" data-original="<?php echo $inmate->inmates_check_in_date; ?>" required/>
                           </div>
                         </div>
 
@@ -110,7 +110,7 @@
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Place Of Work</label>
                           <div class="col-sm-10">
-                            <input type="text" class="form-control" name="place_of_work" id="html5-date-input" value="<?php echo $inmate->inmates_place_of_work;?>" required/>
+                            <input type="text" class="form-control" name="place_of_work" id="html5-date-input" value="<?php echo $inmate->inmates_place_of_work;?>"/>
                           </div>
                         </div>
 
@@ -153,7 +153,7 @@
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Contact Number</label>
                           <div class="col-sm-10">
-                            <input type="text" class="form-control" name="inmates_guardian_contact" id="basic-default-name" value="<?php echo $inmate->inmates_guardian_contact;?>" placeholder="e.g., Rahul Sharma" required/>
+                            <input type="number" class="form-control" name="inmates_guardian_contact" id="basic-default-name" value="<?php echo $inmate->inmates_guardian_contact;?>" placeholder="e.g., 9876543210" required/>
                           </div>
                         </div>
 
@@ -168,6 +168,52 @@
                 </div>
                 <!-- Basic with Icons -->
                 
+              </div>
+
+              <div class="row mb-6 gy-6">
+                <div class="col-xxl">
+                  <div class="card">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                      <h5 class="mb-0">Room Change History</h5>
+                    </div>
+                    <div class="card-body">
+                      <div class="table-responsive text-nowrap">
+                        <table class="table display" id="roomHistoryTable">
+                          <thead>
+                            <tr>
+                              <th>Sl no</th>
+                              <th>Old Room</th>
+                              <th>New Room</th>
+                              <th>Old Rent</th>
+                              <th>New Rent</th>
+                              <th>Effective Month</th>
+                              <th>Effective Date</th>
+                              <th>Changed Date</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <?php $k=1; if(!empty($room_history)){ foreach($room_history as $rh){ ?>
+                            <tr>
+                              <td><?php echo $k;?></td>
+                              <td><?php echo $rh->old_room_name;?></td>
+                              <td><?php echo $rh->new_room_name;?></td>
+                              <td><?php echo number_format($rh->room_history_old_tariff_price,2);?></td>
+                              <td><?php echo number_format($rh->room_history_new_tariff_price,2);?></td>
+                              <td><?php echo $rh->room_history_effective_month;?></td>
+                              <td><?php echo $rh->room_history_effective_date ? date('d-m-Y', strtotime($rh->room_history_effective_date)) : '-';?></td>
+                              <td><?php echo date('d-m-Y H:i:s', strtotime($rh->room_history_created_at));?></td>
+                            </tr>
+                            <?php $k++; } }else{ ?>
+                            <tr>
+                              <td colspan="8" class="text-center">No room change history found</td>
+                            </tr>
+                            <?php } ?>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <!-- / Content -->
@@ -301,7 +347,9 @@
 
                   $('#edit_form').on('submit', function(e){
 
-                    var join = $('.join_in_date_clz').val();
+                    var $join = $('.join_in_date_clz');
+                    var join = $join.val();
+                    var original = $join.data('original');
 
                     var co = $('.check_out_date_clz').val();
 

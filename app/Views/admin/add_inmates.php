@@ -170,7 +170,7 @@
                        <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Contact Number</label>
                           <div class="col-sm-10">
-                            <input type="text" class="form-control" name="inmates_guardian_contact" id="basic-default-name" placeholder="e.g., Rahul Sharma" required/>
+                            <input type="number" class="form-control" name="inmates_guardian_contact" id="basic-default-name" placeholder="e.g., 9876543210" required/>
                           </div>
                       </div>
                       

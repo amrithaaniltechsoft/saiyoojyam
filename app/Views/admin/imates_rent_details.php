@@ -341,45 +341,12 @@
     <tr>
       <th>Inmates</th>
       <th>Room</th>
-      <th>DOA</th>
-      <th>Ph No</th>
-      <th>Place of Work</th>
+      <th>Phone Number</th>
       <th>Room Type</th>
       <th>Rent</th>
-      <th>CD</th>
-      <th>A Fee</th>
-      <th>Total</th>
-      <th>RENT RDN</th>
-      <th>Amount</th>
-      <th>Pay Date</th>
-      <th>Remark</th>
-      <th>Vacate On</th>
-      <th>Re Fund</th>
-      <th>Rf Date</th>
     </tr>
   </thead>
  <tbody class="inmates_details">
-  
-  <tr>
-    <td>Anju</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-    <td class="">test</td>
-  
-  </tr>
   
 </tbody>
 </table>

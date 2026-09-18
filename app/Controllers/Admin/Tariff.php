@@ -76,9 +76,13 @@ class Tariff extends BaseController
             }else{
  
 
-                if(empty($this->request->getPost('tariffs_caution_deposit'))){
+                $building_fees = $this->common_model->SingleRow('saiyoojyam_building',array('building_id' => $this->request->getPost('tariffs_building')));
 
-                    $insert_data['tariffs_caution_deposit'] = $this->request->getPost('tariffs_price');
+                if(!empty($building_fees)){
+
+                    $insert_data['tariffs_admission_fees'] = $building_fees->building_admission_fees;
+
+                    $insert_data['tariffs_caution_deposit'] = $building_fees->building_caution_deposit;
 
                 }
 
@@ -137,9 +141,13 @@ class Tariff extends BaseController
 
         $data['room_types'] = $this->common_model->FetchWhere('saiyoojyam_room_type',array('room_type_building_id' => $data['tariff']->tariffs_building));
 
+        $data['history'] = $this->common_model->FetchWhereOrderby('saiyoojyam_tariff_history',array('tariff_history_tariff_id' => $id),'tariff_history_id','DESC');
+
         if($this->request->getMethod() === 'POST'){
 
             $update_data = $this->request->getPost();
+
+            $old_price = $data['tariff']->tariffs_price;
 
             $room_avaliable = $this->common_model->CheckDataWhere('saiyoojyam_tariffs','tariffs_rooms',$this->request->getPost('tariffs_rooms'),$data['tariff']->tariffs_id,'tariffs_id');
             
@@ -156,9 +164,36 @@ class Tariff extends BaseController
 
             else{
                 
+
+                $building_fees = $this->common_model->SingleRow('saiyoojyam_building',array('building_id' => $this->request->getPost('tariffs_building')));
+
+                if(!empty($building_fees)){
+
+                    $update_data['tariffs_admission_fees'] = $building_fees->building_admission_fees;
+
+                    $update_data['tariffs_caution_deposit'] = $building_fees->building_caution_deposit;
+
+                }
+
                 $update_data['tariffs_updated_at'] = date('Y-m-d'); 
 
                 $this->common_model->EditData($update_data,array('tariffs_id' => $id),'saiyoojyam_tariffs');
+
+                $new_price = $this->request->getPost('tariffs_price');
+
+                if($new_price != $old_price){
+
+                    $history_data = array(
+                        'tariff_history_tariff_id'    => $id,
+                        'tariff_history_old_price'    => $old_price,
+                        'tariff_history_new_price'    => $new_price,
+                        'tariff_history_effective_month' => date('Y-m'),
+                        'tariff_history_created_at'   => date('Y-m-d H:i:s'),
+                    );
+
+                    $this->common_model->InsertData('saiyoojyam_tariff_history',$history_data);
+
+                }
 
                 $flashdata = array(
 
@@ -181,6 +216,28 @@ class Tariff extends BaseController
 
 
     public function Delete($id){
+
+        $tariff = $this->common_model->SingleRow('saiyoojyam_tariffs',array('tariffs_id' => $id));
+
+        if(!empty($tariff)){
+
+            $inmate_avaliable = $this->common_model->FetchWhere('saiyoojyam_inmates',array('inmates_rooms' => $tariff->tariffs_rooms, 'inmates_status' => 'active'));
+
+            if(!empty($inmate_avaliable)){
+                 
+                $flashdata = array(
+                    'type' => 'error',
+                    'msg'  => 'Cannot delete: Tariff is currently assigned to an active inmate',
+                );
+
+                $this->session->setFlashdata('alert',$flashdata);
+
+                return redirect()->to(site_url().'Admin/Tariff');
+            }
+
+        }
+
+        $this->common_model->DeleteData('saiyoojyam_tariff_history',array('tariff_history_tariff_id' => $id));
 
         $this->common_model->DeleteData('saiyoojyam_tariffs',array('tariffs_id' => $id));
 

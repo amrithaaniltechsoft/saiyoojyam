@@ -20,7 +20,7 @@
  <div class="breadcumb-wrapper" data-bg-src="<?php echo base_url();?>public/assets/img/banner/c-banner.jpg"  >
   <div class="container z-index-common">
     <h1 class="breadcumb-title">Contact Us</h1>
- <h2 class="breadcumb-intitle"> Saiyoojyam a perfect home for you</h2>
+ <h2 class="breadcumb-intitle">Saiyoojyam a perfect home for you</h2>
   </div>
 </div>
  <div class=" Contact-sec"  >
@@ -44,12 +44,12 @@
       </div>
 	   
       <div class="col-lg-4 col-md-6 col-md-6 d-flex">
-        <div class=" style-eight">
+        <div class="style-eight">
                   <div class="service-box-icon"> <i class="fas fa-phone"></i> </div>
                   <div class="service-content">
                     <h3>Call Us</h3>
-                    <p><a href="tel:<?php echo $contact->contact_phone1; ?>"  > </a><?php echo $contact->contact_phone1; ?></p>
-                    <p><a href="tel:<?php echo $contact->contact_phone2; ?> "  ><?php echo $contact->contact_phone2; ?></a></p>
+                    <p><a href="tel:<?php echo $contact->contact_phone1; ?>"> </a><?php echo $contact->contact_phone1; ?></p>
+                    <p><a href="tel:<?php echo $contact->contact_phone2; ?>"><?php echo $contact->contact_phone2; ?></a></p>
                     
 					
 					

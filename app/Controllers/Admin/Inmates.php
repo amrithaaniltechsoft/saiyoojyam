@@ -349,6 +349,34 @@ class Inmates extends BaseController
                 'inmates_place_of_work'    => $this->request->getPost('place_of_work'),
             ];
 
+            $old_room = $data['inmate']->inmates_rooms;
+
+            $new_room = $this->request->getPost('inmates_rooms');
+
+            if($old_room != $new_room){
+
+                $old_room_row = $this->common_model->SingleRow('saiyoojyam_rooms',array('rooms_id' => $old_room));
+
+                $new_room_row = $this->common_model->SingleRow('saiyoojyam_rooms',array('rooms_id' => $new_room));
+
+                $old_tariff = $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => !empty($old_room_row) ? $old_room_row->rooms_building : $data['inmate']->inmates_building),array('tariffs_rooms' => $old_room));
+
+                $new_tariff = $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => !empty($new_room_row) ? $new_room_row->rooms_building : $this->request->getPost('inmates_building')),array('tariffs_rooms' => $new_room));
+
+                $room_history_data = array(
+                    'room_history_inmates_id'      => $id,
+                    'room_history_old_room'        => $old_room,
+                    'room_history_new_room'        => $new_room,
+                    'room_history_old_tariff_price'=> !empty($old_tariff) ? $old_tariff->tariffs_price : 0,
+                    'room_history_new_tariff_price'=> !empty($new_tariff) ? $new_tariff->tariffs_price : 0,
+                    'room_history_effective_month' => date('Y-m'),
+                    'room_history_effective_date'  => date('Y-m-d'),
+                    'room_history_created_at'      => date('Y-m-d H:i:s'),
+                );
+
+                $this->common_model->InsertData('saiyoojyam_inmate_room_history',$room_history_data);
+            }
+
             $this->common_model->EditData($update_data,array('inmates_id' => $id),'saiyoojyam_inmates');
 
             $flashdata = array(
@@ -367,6 +395,27 @@ class Inmates extends BaseController
         $data['building'] = $this->common_model->FetchAllOrder('saiyoojyam_building','building_name','ASC');
 
         $data['rooms'] = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms',array('rooms_building' => $data['inmate']->inmates_building),'rooms_name','ASC');
+
+        $data['room_history'] = $this->common_model->FetchWhereOrderby('saiyoojyam_inmate_room_history',array('room_history_inmates_id' => $id),'room_history_id','DESC');
+
+        if(!empty($data['room_history'])){
+
+            $room_names = array();
+
+            $all_rooms = $this->common_model->FetchAll('saiyoojyam_rooms');
+
+            foreach($all_rooms as $r){
+
+                $room_names[$r->rooms_id] = $r->rooms_name;
+            }
+
+            foreach($data['room_history'] as $rh){
+
+                $rh->old_room_name = isset($room_names[$rh->room_history_old_room]) ? $room_names[$rh->room_history_old_room] : '-';
+
+                $rh->new_room_name = isset($room_names[$rh->room_history_new_room]) ? $room_names[$rh->room_history_new_room] : '-';
+            }
+        }
 
         return view('admin/edit_inmates',$data);
     }
@@ -422,7 +471,7 @@ class Inmates extends BaseController
     public function Receipt($id){
         
         $data['total_rent_month'] = 0;
-        $joins = array(
+$joins = array(
             array(
                 'table' => 'saiyoojyam_building',
                 'pk'    => 'building_id',
@@ -433,7 +482,7 @@ class Inmates extends BaseController
                 'pk'    => 'rooms_id',
                 'fk'    => 'inmates_rooms',
             ),
-           
+            
             
 
         );
@@ -458,6 +507,8 @@ class Inmates extends BaseController
         }
 
         $data['invoices'] = $this->common_model->FetchWhereOrderby('saiyoojyam_invoice',['invoice_inmates' => $id],'invoice_payment_month','DESC');
+
+        $data['rent_per_month'] = $data['tariffs']->tariffs_price;
         
         //Check if there is any balance remaining from the previous amount
         $data['last_paid_invoice'] = $this->common_model->FetchLastInvoice('saiyoojyam_invoice',array('invoice_inmates' => $id));
@@ -481,18 +532,70 @@ class Inmates extends BaseController
 
             if(!empty($data['tariffs']->tariffs_price)){
 
-               
-                $data['payment_month'] = $data['inmates']->inmates_check_in_date;
+                $check_in_date = $data['inmates']->inmates_check_in_date;
 
-                $year = date('Y', strtotime($data['payment_month']));
+                $join_y = date('Y', strtotime($check_in_date));
 
-                $month = date('m', strtotime($data['payment_month']));
+                $join_m = date('m', strtotime($check_in_date));
 
-                $days_in_a_month = cal_days_in_month(CAL_GREGORIAN,$month,$year);
-            
-                //$monthly_rent = $data['tariffs']->tariffs_price * $days_in_a_month;
+                $join_day = (int) date('j', strtotime($check_in_date));
 
-                $monthly_rent = $data['tariffs']->tariffs_price;
+                $join_month_days = cal_days_in_month(CAL_GREGORIAN, $join_m, $join_y);
+
+                if($join_day >= 20){
+
+                    $data['payment_month'] = date('Y-m-01', strtotime('+1 month', strtotime($check_in_date)));
+
+                    $effective_tariff = $this->getEffectiveTariff($id, $data['payment_month']);
+
+                    $data['rent_per_month'] = !empty($effective_tariff) ? $this->getApplicableRent($effective_tariff->tariffs_id,$data['payment_month'],$effective_tariff->tariffs_price) : $data['tariffs']->tariffs_price;
+
+                    $monthly_rent = $this->getSplitMonthRent($id, $data['payment_month'], $data['rent_per_month']);
+
+                    $data['rent_per_month'] = $monthly_rent;
+
+                    //add the join month stay days rent into the next month invoice
+
+                    $join_effective_tariff = $this->getEffectiveTariff($id, $check_in_date);
+
+                    $join_rent = !empty($join_effective_tariff) ? $this->getApplicableRent($join_effective_tariff->tariffs_id,$check_in_date,$join_effective_tariff->tariffs_price) : $data['tariffs']->tariffs_price;
+
+                    $stay_days = $join_month_days - $join_day + 1;
+
+                    $per_day   = $join_rent / $join_month_days;
+
+                    $monthly_rent = $monthly_rent + round($stay_days * $per_day, 2);
+
+                }elseif($join_day <= 5){
+
+                    $data['payment_month'] = $data['inmates']->inmates_check_in_date;
+
+                    $effective_tariff = $this->getEffectiveTariff($id, $data['payment_month']);
+
+                    $data['rent_per_month'] = !empty($effective_tariff) ? $this->getApplicableRent($effective_tariff->tariffs_id,$data['payment_month'],$effective_tariff->tariffs_price) : $data['tariffs']->tariffs_price;
+
+                    $monthly_rent = $this->getSplitMonthRent($id, $data['payment_month'], $data['rent_per_month']);
+
+                    $data['rent_per_month'] = $monthly_rent;
+
+                }else{
+
+                    $data['payment_month'] = $data['inmates']->inmates_check_in_date;
+
+                    $effective_tariff = $this->getEffectiveTariff($id, $data['payment_month']);
+
+                    $data['rent_per_month'] = !empty($effective_tariff) ? $this->getApplicableRent($effective_tariff->tariffs_id,$data['payment_month'],$effective_tariff->tariffs_price) : $data['tariffs']->tariffs_price;
+
+                    $monthly_rent = $this->getSplitMonthRent($id, $data['payment_month'], $data['rent_per_month']);
+
+                    $data['rent_per_month'] = $monthly_rent;
+
+                    $stay_days = $join_month_days - $join_day + 1;
+
+                    $per_day   = $monthly_rent / $join_month_days;
+
+                    $monthly_rent = round($stay_days * $per_day, 2);
+                }
 
                 $total_rent_month  = $monthly_rent + $data['tariffs']->tariffs_caution_deposit + $data['tariffs']->tariffs_admission_fees;
 
@@ -511,6 +614,10 @@ class Inmates extends BaseController
 
                 $data['payment_month'] = $final->format('Y-m-1');
 
+                $effective_tariff = $this->getEffectiveTariff($id, $data['payment_month']);
+
+                $data['rent_per_month'] = !empty($effective_tariff) ? $this->getApplicableRent($effective_tariff->tariffs_id,$data['payment_month'],$effective_tariff->tariffs_price) : $data['tariffs']->tariffs_price;
+
                
 
                 $year = date('Y', strtotime($data['payment_month']));
@@ -521,31 +628,11 @@ class Inmates extends BaseController
 
                 //$monthly_rent = $data['tariffs']->tariffs_price * $days_in_a_month;
                 
-                $monthly_rent = $data['tariffs']->tariffs_price;
+                $monthly_rent = $this->getSplitMonthRent($id, $data['payment_month'], $data['rent_per_month']);
 
-                //second month rent calculate
+                $data['rent_per_month'] = $monthly_rent;
 
-                if($invoice_count == 1){
-
-                    $parts = explode('-',$data['inmates']->inmates_check_in_date);
-
-                    $day = $parts[2];
-
-                    if($day > 5){
-
-                        //$stay_days = 30 - ($day - 1);
-
-                        $stay_days =  30 - $day + 1;
-
-                        //print_r($stay_days); exit();
-
-                        $per_day   = $monthly_rent / 30;
-
-                        $monthly_rent = round($stay_days * $per_day, 2);
-
-                    }
-
-                }
+                $monthly_rent = $this->getVacatingRent($monthly_rent, $data['payment_month'], $data['inmates_check_out']);
 
                 $invoice_single = $this->common_model->FetchLastInvoice('saiyoojyam_invoice',array('invoice_inmates' => $id));
 
@@ -573,6 +660,21 @@ class Inmates extends BaseController
 
         }
 
+        //room effective for the displayed payment month
+        $payment_month_for_room = !empty($data['payment_month']) ? $data['payment_month'] : date('Y-m-01');
+
+        $effective_room_id = $this->getEffectiveRoomId($id, $payment_month_for_room);
+
+        $effective_room = $this->common_model->SingleRow('saiyoojyam_rooms', array('rooms_id' => $effective_room_id));
+
+        if (!empty($effective_room)) {
+            $data['effective_room_name'] = $effective_room->rooms_name;
+            $effective_building = $this->common_model->SingleRow('saiyoojyam_building', array('building_id' => $effective_room->rooms_building));
+            $data['effective_building_name'] = !empty($effective_building) ? $effective_building->building_name : $data['inmates']->building_name;
+        } else {
+            $data['effective_room_name'] = $data['inmates']->rooms_name;
+            $data['effective_building_name'] = $data['inmates']->building_name;
+        }
 
         return view('admin/view_receipt',$data);
     }
@@ -591,8 +693,16 @@ class Inmates extends BaseController
             // check first payment or not
             if(empty($single_invoice)){
                 
-                
-                $payment_month = date('Y-m-01', strtotime($inmates->inmates_check_in_date));
+                $join_day = (int) date('j', strtotime($inmates->inmates_check_in_date));
+
+                if($join_day >= 20){
+
+                    $payment_month = date('Y-m-01', strtotime('+1 month', strtotime($inmates->inmates_check_in_date)));
+
+                }else{
+
+                    $payment_month = date('Y-m-01', strtotime($inmates->inmates_check_in_date));
+                }
 
                 //update caution deposit and admission fee 
 
@@ -909,43 +1019,39 @@ class Inmates extends BaseController
                         $days_in_a_month = cal_days_in_month(CAL_GREGORIAN,$month,$year);
 
                         
-                        $inmates = $this->common_model->SingleRow('saiyoojyam_tariffs',array('tariffs_rooms' => $inmates->inmates_rooms));
+                        $effective_tariff = $this->getEffectiveTariff($this->request->getPost('inmates_id'), $payment_month1);
+
+                        if(empty($effective_tariff)){
+
+                            $effective_tariff = $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => $inmates->inmates_building),array('tariffs_rooms' => $inmates->inmates_rooms));
+                        }
 
                         $response['payment_month1'] = date('M-Y',strtotime($payment_month1));
 
-                        $response['rent_per_day'] = $inmates->tariffs_price;
+                        // Calculate effective room and building for the new payment month
+                        $effective_room_id = $this->getEffectiveRoomId($this->request->getPost('inmates_id'), $payment_month1);
+                        $effective_room = $this->common_model->SingleRow('saiyoojyam_rooms', array('rooms_id' => $effective_room_id));
+
+                        if (!empty($effective_room)) {
+                            $response['effective_room_name'] = $effective_room->rooms_name;
+                            $effective_building = $this->common_model->SingleRow('saiyoojyam_building', array('building_id' => $effective_room->rooms_building));
+                            $response['effective_building_name'] = !empty($effective_building) ? $effective_building->building_name : '';
+                        } else {
+                            $orig_room = $this->common_model->SingleRow('saiyoojyam_rooms', array('rooms_id' => $inmates->inmates_rooms));
+                            $orig_building = $this->common_model->SingleRow('saiyoojyam_building', array('building_id' => $inmates->inmates_building));
+                            $response['effective_room_name'] = !empty($orig_room) ? $orig_room->rooms_name : '';
+                            $response['effective_building_name'] = !empty($orig_building) ? $orig_building->building_name : '';
+                        }
+
+                        $rent_per_day = !empty($effective_tariff) ? $this->getApplicableRent($effective_tariff->tariffs_id,$payment_month1,$effective_tariff->tariffs_price) : 0;
 
                         //$monthly_rent = $inmates->tariffs_price * $days_in_a_month;
 
-                        $monthly_rent = $inmates->tariffs_price;
-                        
-                        //check invoice count
-                        $invoice_count =  $this->common_model->checkWhereCount('saiyoojyam_invoice',array('invoice_inmates' => $this->request->getPost('inmates_id')));
+                        $monthly_rent = $this->getSplitMonthRent($this->request->getPost('inmates_id'), $payment_month1, $rent_per_day);
 
-                        if($invoice_count == 1){
+                        $response['rent_per_day'] = $monthly_rent;
 
-                            $inmates_details = $this->common_model->SingleRow('saiyoojyam_inmates',array('inmates_id' => $this->request->getPost('inmates_id')));
-
-                            $parts = explode('-',$inmates_details->inmates_check_in_date);
-
-                            $day = $parts[2];
-
-                            if($day > 5){
-    
-                                //$stay_days = 30 - ($day - 1);
-
-                                $stay_days =  30 - $day + 1;
-                                
-                                //print_r($stay_days); exit();
-
-                                $per_day   = $monthly_rent / 30;
-
-                                $monthly_rent = round($stay_days * $per_day, 2);
-
-                            }
-
-                        }
-
+                        $monthly_rent = $this->getVacatingRent($monthly_rent, $payment_month1, $inmates->inmates_check_out_date);
 
                         $invoice_last = $this->common_model->FetchLastInvoice('saiyoojyam_invoice',array('invoice_inmates' =>  $this->request->getPost('inmates_id')));
 
@@ -1332,6 +1438,8 @@ class Inmates extends BaseController
 
         $this->common_model->DeleteData('saiyoojyam_inmates',array('inmates_id' => $id));
 
+        $this->common_model->DeleteData('saiyoojyam_inmate_room_history',array('room_history_inmates_id' => $id));
+
         $uploadPath = WRITEPATH . 'uploads/inmates/';
 
         if(!empty($inmate->inmates_id_proof) && is_file($uploadPath.$inmate->inmates_id_proof)){
@@ -1408,6 +1516,231 @@ class Inmates extends BaseController
         $this->session->setFlashdata('alert',$flashdata);
 
         return redirect()->to(site_url().'Admin/Inmates');
+    }
+
+
+    private function getApplicableRent($tariff_id, $payment_month, $current_price){
+
+        $history = $this->common_model->FetchWhereOrderby('saiyoojyam_tariff_history',array('tariff_history_tariff_id' => $tariff_id),'tariff_history_effective_month','ASC');
+
+        $pm = date('Y-m', strtotime($payment_month));
+
+        if(empty($history)){
+
+            return $current_price;
+        }
+
+        $applicable = $history[0]->tariff_history_old_price;
+
+        foreach($history as $h){
+
+            if($h->tariff_history_effective_month <= $pm){
+
+                $applicable = $h->tariff_history_new_price;
+            }
+        }
+
+        return $applicable;
+    }
+
+
+    private function getEffectiveRoomId($inmate_id, $payment_month){
+
+        $room_history = $this->common_model->FetchWhereOrderby('saiyoojyam_inmate_room_history',array('room_history_inmates_id' => $inmate_id),'room_history_effective_month','ASC');
+
+        $pm = date('Y-m', strtotime($payment_month));
+
+        $inmate = $this->common_model->SingleRow('saiyoojyam_inmates',array('inmates_id' => $inmate_id));
+
+        if(empty($room_history)){
+
+            return $inmate->inmates_rooms;
+        }
+
+        $effective_room = null;
+
+        foreach($room_history as $h){
+
+            if($h->room_history_effective_month <= $pm){
+
+                $effective_room = $h->room_history_new_room;
+            }
+        }
+
+        if($effective_room === null){
+
+            $effective_room = $room_history[0]->room_history_old_room;
+        }
+
+        return $effective_room;
+    }
+
+
+    private function getEffectiveTariff($inmate_id, $payment_month){
+
+        $room_id = $this->getEffectiveRoomId($inmate_id, $payment_month);
+
+        $room = $this->common_model->SingleRow('saiyoojyam_rooms',array('rooms_id' => $room_id));
+
+        if(empty($room)){
+
+            return null;
+        }
+
+        return $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => $room->rooms_building),array('tariffs_rooms' => $room->rooms_id));
+    }
+
+    private function getSplitMonthRent($inmate_id, $payment_month, $default_monthly_rent){
+
+        $room_history = $this->common_model->FetchWhereOrderby('saiyoojyam_inmate_room_history', array('room_history_inmates_id' => $inmate_id), 'room_history_effective_date', 'ASC');
+
+        if(empty($room_history)){
+
+            return $default_monthly_rent;
+        }
+
+        $pm = date('Y-m', strtotime($payment_month));
+
+        $year = (int) date('Y', strtotime($pm));
+
+        $month = (int) date('n', strtotime($pm));
+
+        $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+
+        $changes_in_month = array();
+
+        $current_room = null;
+
+        $inmate = $this->common_model->SingleRow('saiyoojyam_inmates', array('inmates_id' => $inmate_id));
+
+        $first_day = $pm . '-01';
+
+        foreach($room_history as $h){
+
+            $ed = $h->room_history_effective_date;
+
+            if(empty($ed) || $ed == '0000-00-00'){
+
+                continue;
+            }
+
+            if(date('Y-m', strtotime($ed)) == $pm){
+
+                $changes_in_month[] = $h;
+
+            }elseif($ed < $first_day){
+
+                $current_room = $h->room_history_new_room;
+            }
+        }
+
+        if(empty($changes_in_month)){
+
+            return $default_monthly_rent;
+        }
+
+        if($current_room === null){
+
+            $current_room = !empty($changes_in_month[0]) ? $changes_in_month[0]->room_history_old_room : (!empty($inmate) ? $inmate->inmates_rooms : $room_history[0]->room_history_old_room);
+        }
+
+        $room_per_day = array();
+
+        for($d = 1; $d <= $days_in_month; $d++){
+
+            $room_per_day[$d] = $current_room;
+        }
+
+        foreach($changes_in_month as $h){
+
+            $change_day = (int) date('j', strtotime($h->room_history_effective_date));
+
+            for($d = $change_day; $d <= $days_in_month; $d++){
+
+                $room_per_day[$d] = $h->room_history_new_room;
+            }
+        }
+
+        $room_prices = array();
+
+        foreach($room_per_day as $room_id){
+
+            if(isset($room_prices[$room_id])){
+
+                continue;
+            }
+
+            $room = $this->common_model->SingleRow('saiyoojyam_rooms', array('rooms_id' => $room_id));
+
+            $tariff = !empty($room) ? $this->common_model->CheckTwiceCond('saiyoojyam_tariffs', array('tariffs_building' => $room->rooms_building), array('tariffs_rooms' => $room->rooms_id)) : null;
+
+            $stored_price = 0;
+
+            foreach($room_history as $h){
+
+                if($h->room_history_old_room == $room_id){
+
+                    $stored_price = $h->room_history_old_tariff_price;
+                }
+
+                if($h->room_history_new_room == $room_id){
+
+                    $stored_price = $h->room_history_new_tariff_price;
+                }
+            }
+
+            $room_prices[$room_id] = !empty($tariff) ? $this->getApplicableRent($tariff->tariffs_id, $pm, $tariff->tariffs_price) : $stored_price;
+        }
+
+        $per_day = array();
+
+        foreach($room_prices as $room_id => $monthly_price){
+
+            $per_day[$room_id] = $monthly_price / $days_in_month;
+        }
+
+        $split_rent = 0;
+
+        foreach($room_per_day as $room_id){
+
+            $split_rent += $per_day[$room_id];
+        }
+
+        return round($split_rent, 2);
+    }
+
+    private function getVacatingRent($monthly_rent, $payment_month, $check_out_date){
+
+        if(empty($check_out_date) || $check_out_date == '0000-00-00'){
+
+            return $monthly_rent;
+        }
+
+        $pm = date('Y-m', strtotime($payment_month));
+
+        $cm = date('Y-m', strtotime($check_out_date));
+
+        if($pm != $cm){
+
+            return $monthly_rent;
+        }
+
+        $day = (int) date('j', strtotime($check_out_date));
+
+        if($day <= 10){
+
+            $year = (int) date('Y', strtotime($check_out_date));
+
+            $month = (int) date('n', strtotime($check_out_date));
+
+            $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+
+            $per_day = $monthly_rent / $days_in_month;
+
+            $monthly_rent = round($day * $per_day, 2);
+        }
+
+        return $monthly_rent;
     }
 
 

@@ -121,7 +121,7 @@
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Building</label>
                           <div class="col-sm-10">
-                             <input type="text" class="form-control" name="" id="basic-default-name" value="<?php echo $inmates->building_name;?>" readonly/>
+                             <input type="text" class="form-control building_name_input" name="" id="basic-default-name" value="<?php echo !empty($effective_building_name) ? $effective_building_name : $inmates->building_name;?>" readonly/>
                           </div>
                         </div>
 
@@ -129,7 +129,7 @@
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Rooms</label>
                           <div class="col-sm-10">
-                             <input type="text" class="form-control" name="" id="basic-default-name" value="<?php echo $inmates->rooms_name;?>" readonly/>
+                             <input type="text" class="form-control room_name_input" name="" id="basic-default-name" value="<?php echo !empty($effective_room_name) ? $effective_room_name : $inmates->rooms_name;?>" readonly/>
                           </div>
                         </div>
 
@@ -180,7 +180,13 @@
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Rent Per Month</label>
                           <div class="col-sm-10">
-                             <input type="text" class="form-control rent_per_day" name="one_month_amount" id="basic-default-name" value="<?php echo $tariffs->tariffs_price;?>" readonly/>
+                             <input type="text" class="form-control rent_per_day" name="one_month_amount" id="basic-default-name" value="<?php echo !empty($rent_per_month) ? $rent_per_month : $tariffs->tariffs_price;?>" readonly/>
+                          </div>
+                        </div>
+
+                        <div class="row mb-6">
+                          <div class="col-sm-10 offset-sm-2">
+                            <small class="text-muted">If vacating on or before the 10th of a month, rent is charged only for the days until the vacating date. If vacating after the 10th, full monthly rent applies.</small>
                           </div>
                         </div>
 
@@ -611,6 +617,14 @@
                             $('.invoice_detail').show();
 
                             $('.payment_month').val(data.payment_month1);
+
+                            if(data.effective_building_name){
+                              $('.building_name_input').val(data.effective_building_name);
+                            }
+
+                            if(data.effective_room_name){
+                              $('.room_name_input').val(data.effective_room_name);
+                            }
 
                             $('.rent_per_day').val(data.rent_per_day);
 

@@ -248,6 +248,11 @@
               </a>
               <ul class="menu-sub">
                 <li class="menu-item">
+                  <a href="<?=  base_url();?>Admin/BuildingFees" class="menu-link">
+                    <div class="text-truncate" data-i18n="Account">Building Fees</div>
+                  </a>
+                </li>
+                <li class="menu-item">
                   <a href="<?=  base_url();?>Admin/Tariff/Add" class="menu-link">
                     <div class="text-truncate" data-i18n="Account">Add Tariff</div>
                   </a>
@@ -358,6 +363,7 @@
 
             <!--sidebar pages start-->
 
+            <!--
             <li class="menu-item">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
@@ -378,6 +384,7 @@
                 
               </ul>
             </li>
+            -->
 
             <!--sidebar pages end-->
 

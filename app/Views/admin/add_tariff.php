@@ -73,38 +73,7 @@
                           </div>
                         </div>-->
 
-
-                        <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Admission fees</label>
-                          <div class="col-sm-10">
-                            <input type="number" class="form-control" min="0" step="0.01"  name="tariffs_admission_fees" id="" placeholder="e.g., ₹50" required/>
-                          </div>
-                        </div>
-                        
-
-                        <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Caution deposit</label>
-                          <div class="col-sm-10">
-                            <input type="number" class="form-control caution_deposit" min="0" step="0.01"  name="tariffs_caution_deposit" id="" placeholder="e.g., ₹50" />
-                              
-                             <!-- Checkbox added here -->
-                            <div class="form-check mt-2">
-                              <input class="form-check-input" type="checkbox" value="1" id="cautionCheck" name="" checked>
-                              <label class="form-check-label" for="cautionCheck">
-                                One Month Rent
-                              </label>
-                            </div>
-                              <!---->                          
-                          </div>
-                        </div>
-
-
-                        
-
-
-                        
-
-                        <div class="row mb-6">
+<div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="">Monthly Rent</label>
                           <div class="col-sm-10">
                             <input type="number" class="form-control" min="0" step="0.01"  name="tariffs_price" id="" placeholder="e.g., ₹50" required/>
@@ -222,32 +191,9 @@
                  
 
 
-                /*end section*/
+/*end section*/
 
-                /*caution_deposit checked or unchecked*/
-
-                $("#cautionCheck").on('change', function () {
-
-                  if ($(this).is(':checked')) {
-
-                    //$('.caution_deposit').prop('required', false);
-                    //$('.caution_deposit').prop('disabled', true);
-                    $('.caution_deposit').val('').prop('required', false).prop('disabled', true);
-                  } else {
-
-                    //$('.caution_deposit').prop('required', true);
-                    $('.caution_deposit').prop('disabled', false).prop('required', true);
-                  }
-
-                    
-                
-                });
-
-                $("#cautionCheck").trigger('change');
-
-                /*end section*/
-
-       
+        
               });
             </script>
 

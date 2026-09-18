@@ -111,15 +111,15 @@
 
                         <td><?php echo $tariff->rooms_name;?></td>
 
-                        <td><?php echo number_format($tariff->tariffs_caution_deposit,2);?></td>
+                        <td><?php echo number_format($tariff->building_caution_deposit,2);?></td>
 
-                        <td><?php echo number_format($tariff->tariffs_admission_fees,2);?></td>
+                        <td><?php echo number_format($tariff->building_admission_fees,2);?></td>
                        
                         <td><?php echo number_format($tariff->tariffs_price,2);?></td>
                         
                         <td>
                           <a class="dropdown-item" href="<?php echo base_url();?>Admin/Tariff/Edit/<?php echo $tariff->tariffs_id;?>"><i class="icon-base bx bx-edit-alt me-2"></i> </a>
-                          <a class="dropdown-item" href="<?php echo base_url();?>Admin/Tariff/Delete/<?php echo $tariff->tariffs_id; ?>"><i class="icon-base bx bx-trash me-2"></i> </a>
+                          <a class="dropdown-item" href="<?php echo base_url();?>Admin/Tariff/Delete/<?php echo $tariff->tariffs_id; ?>" onclick="return confirm('Are you sure you want to delete this tariff?');"><i class="icon-base bx bx-trash me-2"></i> </a>
                         </td>
                         
 

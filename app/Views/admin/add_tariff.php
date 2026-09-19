@@ -66,7 +66,7 @@
                                   <input type="number" class="form-control" min="0" step="0.01" name="tariffs_price[]" placeholder="e.g., 5000" required/>
                                 </td>
                                 <td class="text-center">
-                                  <button type="button" class="btn btn-danger btn-sm remove-row-btn" style="display: none;">
+                                  <button type="button" class="btn text-danger remove-row-btn" style="display: none;">
                                     <i class="bx bx-trash"></i>
                                   </button>
                                 </td>

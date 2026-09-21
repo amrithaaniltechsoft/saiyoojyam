@@ -454,35 +454,77 @@ class Ajax extends BaseController
 
         if($this->request->getMethod() === 'POST'){
 
-            $building  =  $this->request->getpost('Build');
+            $building     = $this->request->getPost('Build');
+            $month        = $this->request->getPost('Month');
+            $year         = $this->request->getPost('Year');
+            $statusFilter = $this->request->getPost('Status') ?? 'all';
 
-            $month     =  $this->request->getpost('Month');
-
-            $year      =  $this->request->getpost('Year');
-
-            $inmates = $this->common_model->inmatesBuilding($month,$year,array('inmates_building' => $building));
-
-            
+            $inmates = $this->common_model->inmatesBuilding($month, $year, array('inmates_building' => $building), $statusFilter);
 
             $response['inmates_details'] = "";
             
-            foreach($inmates as $inmate){
+            if (empty($inmates)) {
+                $response['inmates_details'] = "<tr><td colspan='9' class='text-center text-muted py-4'>No inmates found matching the selected criteria.</td></tr>";
+                $response['summary'] = ['total' => 0, 'paid' => 0, 'unpaid' => 0, 'partial' => 0, 'advance' => 0];
+            } else {
+                $sl = 1;
+                $totalCount = 0;
+                $paidCount = 0;
+                $unpaidCount = 0;
+                $partialCount = 0;
+                $advanceCount = 0;
 
-                $response['inmates_details'] .="<tr>
-                
-                                    <td>".$inmate->inmates_name."</td>
-                                    <td class=''>".$inmate->rooms_name."</td>
-                                    <td class=''>".$inmate->inmates_phone_no."</td>
-                                    <td class=''>".$inmate->room_type_name."</td>
-                                    <td class=''>".$inmate->tariffs_price."</td>
-  
-                                </tr>";
+                foreach($inmates as $inmate){
+                    $totalCount++;
+                    $statusBadge = '';
+                    if ($inmate->payment_status == 1) {
+                        $paidCount++;
+                        $statusBadge = '<span class="badge" style="background:#eafaf1; color:#2e7d32; padding:5px 10px; border-radius:4px; font-weight:600; border:1px solid #2e7d32;">Paid</span>';
+                    } elseif ($inmate->payment_status == 2) {
+                        $partialCount++;
+                        $statusBadge = '<span class="badge" style="background:#fff3cd; color:#b57f00; padding:5px 10px; border-radius:4px; font-weight:600; border:1px solid #b57f00;">Partial</span>';
+                    } elseif ($inmate->payment_status == 3) {
+                        $advanceCount++;
+                        $statusBadge = '<span class="badge" style="background:#e6f7fb; color:#03c3ec; padding:5px 10px; border-radius:4px; font-weight:600; border:1px solid #03c3ec;">Advance</span>';
+                    } else {
+                        $unpaidCount++;
+                        $statusBadge = '<span class="badge" style="background:#fdecea; color:#c0392b; padding:5px 10px; border-radius:4px; font-weight:600; border:1px solid #c0392b;">Unpaid</span>';
+                    }
+
+                    $roomName     = !empty($inmate->rooms_name) ? $inmate->rooms_name : '-';
+                    $roomType     = !empty($inmate->room_type_name) ? $inmate->room_type_name : '-';
+                    $rent         = number_format((float)$inmate->rent_amount, 2);
+                    $paidAmt      = number_format((float)$inmate->paid_amount, 2);
+                    $balanceAmt   = number_format((float)$inmate->balance_amount, 2);
+                    $phone        = !empty($inmate->inmates_phone_no) ? $inmate->inmates_phone_no : '-';
+                    $uid          = !empty($inmate->inmates_uid) ? "<br/><small class='text-muted'>UID: ".$inmate->inmates_uid."</small>" : "";
+
+                    $actionBtn = '<a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'" class="btn btn-sm btn-primary" style="padding:4px 10px; font-size:12px; text-decoration:none;">Receipt / Collect</a>';
+
+                    $response['inmates_details'] .= "<tr>
+                        <td class='text-center'>".$sl++."</td>
+                        <td><strong>".htmlspecialchars($inmate->inmates_name)."</strong>".$uid."</td>
+                        <td>".htmlspecialchars($roomName)." <small class='text-muted'>(".htmlspecialchars($roomType).")</small></td>
+                        <td>".htmlspecialchars($phone)."</td>
+                        <td class='text-end'>₹".$rent."</td>
+                        <td class='text-end text-success'>₹".$paidAmt."</td>
+                        <td class='text-end text-danger'>₹".$balanceAmt."</td>
+                        <td class='text-center'>".$statusBadge."</td>
+                        <td class='text-center'>".$actionBtn."</td>
+                    </tr>";
+                }
+
+                $response['summary'] = [
+                    'total' => $totalCount,
+                    'paid' => $paidCount,
+                    'unpaid' => $unpaidCount,
+                    'partial' => $partialCount,
+                    'advance' => $advanceCount
+                ];
             }
 
             echo json_encode($response);
         }
-
-
     }
 
 

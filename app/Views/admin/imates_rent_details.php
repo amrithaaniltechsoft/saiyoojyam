@@ -46,15 +46,17 @@
   .legend-advance { background: #e6f7fb; border: 1px solid #03c3ec; }
   .legend-vacated { background: #eceff1; border: 1px solid #78909c; }
 
-  #yearSelect {
+  #yearSelect, .month_clz, .build_clz, .status_clz {
     display: inline-block;
-    margin: 0 auto 20px auto;
+    width: auto;
+    margin: 0 4px 15px 4px;
     padding: 6px 12px;
     font-size: 16px;
     border-radius: 6px;
     border: 1px solid #ccc;
     background: #fff;
     cursor: pointer;
+    vertical-align: middle;
   }
 
   table {
@@ -137,9 +139,13 @@
     display: block;
   }
 
-  #pos_adjust {
+  .yearly_report {
     display: inline-block;
-    margin: 0 auto 20px auto;
+    vertical-align: middle;
+    margin: 0 4px 15px 4px;
+  }
+  .yearly_report button {
+    margin: 0;
     padding: 6px 12px;
     font-size: 16px;
     border-radius: 6px;
@@ -147,22 +153,7 @@
     background: #fff;
     cursor: pointer;
   }
-  .yearly_report{
-
-    display: inline-block;
-  }
-  .yearly_report button{
-
-    margin: 0 auto 20px auto;
-    padding: 6px 12px;
-    font-size: 16px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    background: #fff;
-    cursor: pointer;
-  }
-  .yearly_report a{
-
+  .yearly_report a {
     color: black;
     text-decoration: none;
   }
@@ -181,24 +172,31 @@
   <div class="legend-item"><span class="legend-color legend-vacated"></span> Checked Out</div>
 </div>
 
-<div style="text-align: center;">
+<div style="text-align: center; margin-bottom: 20px;">
 
   <select id="yearSelect" class="form-control year_clz"></select>
 
-  <select id="pos_adjust" class="form-control month_clz">
+  <select class="form-control month_clz">
     <option value="" selected disabled>Select Month</option>
     <?php foreach($month as $mon){ ?> 
-
-    <option value="<?php echo $mon->month_id;?>" ><?php echo $mon->month_short;?></option>
-
+      <option value="<?php echo $mon->month_id;?>"><?php echo $mon->month_short;?></option>
     <?php } ?>
   </select>
 
-  <select id="pos_adjust" class="form-control build_clz">
+  <select class="form-control build_clz">
     <option value="" selected disabled>Select Building</option>
     <?php foreach($building as $build){ ?>
         <option value="<?php echo $build->building_id;?>"><?php echo $build->building_name;?></option>
     <?php } ?>
+  </select>
+
+  <select class="form-control status_clz" style="display: none;">
+    <option value="all">All Payment Statuses</option>
+    <option value="unpaid" selected>Unpaid & Partial Only</option>
+    <option value="unpaid_only">Strictly Unpaid Only</option>
+    <option value="paid">Paid Only</option>
+    <option value="partial">Partial Only</option>
+    <option value="advance">Advance Only</option>
   </select>
 
   <div class="yearly_report"><button><a href="<?php echo base_url();?>Admin/Inmates/RentalDetails">Yearly Report</a></button></div>
@@ -334,14 +332,25 @@
 
 <!--table2 section start-->
 
+<div id="summaryBanner" style="display:none; margin: 15px auto 25px auto; padding: 12px 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); text-align: center;">
+  <span style="margin: 0 15px; font-weight: 600;">Total Inmates: <span id="sumTotal" style="color:#2c3e50;">0</span></span> |
+  <span style="margin: 0 15px; font-weight: 600;">Unpaid: <span id="sumUnpaid" style="color:#c0392b;">0</span></span> |
+  <span style="margin: 0 15px; font-weight: 600;">Partial: <span id="sumPartial" style="color:#b57f00;">0</span></span> |
+  <span style="margin: 0 15px; font-weight: 600;">Paid: <span id="sumPaid" style="color:#2e7d32;">0</span></span>
+</div>
+
 <table id="buildingTable" style="display:none;">
   <thead>
     <tr>
-      <th>Inmates</th>
-      <th>Room</th>
-      <th>Phone Number</th>
-      <th>Room Type</th>
-      <th>Rent</th>
+      <th style="width: 5%; text-align: center;">#</th>
+      <th style="width: 20%;">Inmate Name</th>
+      <th style="width: 15%;">Room & Type</th>
+      <th style="width: 15%;">Phone Number</th>
+      <th style="width: 10%; text-align: right;">Rent (₹)</th>
+      <th style="width: 10%; text-align: right;">Paid (₹)</th>
+      <th style="width: 10%; text-align: right;">Balance (₹)</th>
+      <th style="width: 10%; text-align: center;">Status</th>
+      <th style="width: 10%; text-align: center;">Action</th>
     </tr>
   </thead>
  <tbody class="inmates_details">
@@ -353,151 +362,83 @@
 
 <!--table2 section end-->
 <script>
-
   alertify.set('notifier','position', 'top-center');
-      
-      
 </script>
 
 <script>
-
 $(document).ready(function () {
-
     const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+
     for (let y = currentYear - 1; y <= currentYear + 2; y++) {
         $('#yearSelect').append(`<option value="${y}">${y}</option>`);
     }
     $('#yearSelect').val(currentYear);
-   
 
-});
+    function fetchBuildingInmates() {
+        var build  = $(".build_clz").val();
+        var month  = $(".month_clz").val();
+        var year   = $(".year_clz").val();
+        var status = $(".status_clz").val() || 'all';
 
-</script>
-
-
-<!--year select start-->
-<script>
-$('.year_clz').on('change', function(){
-
-  var year = $(this).val();
-
-  $.ajax({
-      url: "<?php echo base_url(); ?>Admin/Ajax/checkYear",
-      type: "POST",
-      data: {currentYear :year},
-      success: function(data) {
-
-        var data = JSON.parse(data);
-
-        $('.tbody_data').html(data.year_html);
-
-        
-
-      }
-  });
-  
-});
-</script>
-
-<!--year select end-->
-
-
-<!--month select start-->
-
-<script>
-$('.month_clz').on('change', function(){
-
-    var building = $('.build_clz').val();
-
-    if(building == null){
-
-      alertify.error('Please Select Building').delay(8).dismissOthers();
-
-      return false;
-
-    }else{
-
-      var build = $(".build_clz").val();
-
-      var month = $(".month_clz").val();
-
-      var year  = $(".year_clz").val();
-
-      $.ajax({
-
-        url: "<?php echo base_url(); ?>Admin/Ajax/inmatesDetails",
-        type: "POST",
-        data: {Build :build, Month :month, Year :year},
-
-        success: function(data) {
-
-          var data = JSON.parse(data);
-
-          
-          $('.inmates_details').html(data.inmates_details);
-          
-
+        if (!build) {
+            return;
         }
 
-      });
+        if (!month) {
+            $(".month_clz").val(currentMonth);
+            month = currentMonth;
+        }
 
-      $('#calendarTable').hide();
+        $('.status_clz').show();
 
-      $('#buildingTable').show();
+        $.ajax({
+            url: "<?php echo base_url(); ?>Admin/Ajax/inmatesDetails",
+            type: "POST",
+            data: { Build: build, Month: month, Year: year, Status: status },
+            success: function(data) {
+                var res = JSON.parse(data);
+                $('.inmates_details').html(res.inmates_details);
 
+                if (res.summary) {
+                    $('#sumTotal').text(res.summary.total);
+                    $('#sumUnpaid').text(res.summary.unpaid);
+                    $('#sumPartial').text(res.summary.partial);
+                    $('#sumPaid').text(res.summary.paid);
+                    $('#summaryBanner').show();
+                }
 
+                $('#calendarTable').hide();
+                $('#buildingTable').show();
+            }
+        });
     }
- 
- 
-});
-</script>
 
-<!--month select end-->
-
-<script>
-
-$(document).ready(function () {
-
-  $( ".build_clz" ).on( "change", function() {
-
-    var build = $(".build_clz").val();
-
-    var month = $(".month_clz").val();
-
-    var year  = $(".year_clz").val();
-
-    if(month == null){
-
-        alertify.error('Please Select Month').delay(8).dismissOthers();
-    }
-    
-    /**/
-
-    $.ajax({
-      url: "<?php echo base_url(); ?>Admin/Ajax/inmatesDetails",
-      type: "POST",
-      data: {Build :build, Month :month, Year :year},
-      success: function(data) {
-
-        var data = JSON.parse(data);
-
-         
-        $('.inmates_details').html(data.inmates_details);
-        
-
-      }
+    $('.year_clz').on('change', function() {
+        if ($(".build_clz").val()) {
+            fetchBuildingInmates();
+        } else {
+            var year = $(this).val();
+            $.ajax({
+                url: "<?php echo base_url(); ?>Admin/Ajax/checkYear",
+                type: "POST",
+                data: { currentYear: year },
+                success: function(data) {
+                    var res = JSON.parse(data);
+                    $('.tbody_data').html(res.year_html);
+                }
+            });
+            $('.status_clz').hide();
+            $('#summaryBanner').hide();
+            $('#buildingTable').hide();
+            $('#calendarTable').show();
+        }
     });
 
-    /**/
-
-    $('#calendarTable').hide();
-
-    $('#buildingTable').show();
-    
-  });
-
+    $('.month_clz, .build_clz, .status_clz').on('change', function() {
+        fetchBuildingInmates();
+    });
 });
-
 </script>
 
 </body>

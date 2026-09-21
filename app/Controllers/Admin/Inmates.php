@@ -963,8 +963,6 @@ $joins = array(
             }
 
 
-            
-
 
             //check payment is up to date
             $last_paid_amount1 = $this->common_model->last_payment_month('saiyoojyam_invoice',$this->request->getPost('inmates_id'));

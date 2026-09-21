@@ -1208,30 +1208,72 @@ public function FetchLastInvoice($table,$cond){
 
 }
 
-public function inmatesBuilding($month,$year,$cond){
+public function inmatesBuilding($month, $year, $cond, $statusFilter = 'all'){
 
-    $date = date('Y-m-d', strtotime("$year-$month-01")); 
-    
-    $query = $this->db->table('saiyoojyam_inmates')
+    $month_num = sprintf('%02d', (int)$month);
+    $target_month_date = "$year-$month_num-01"; 
+    $target_month_end  = date('Y-m-t', strtotime($target_month_date));
 
-    ->where($cond)
+    $builder = $this->db->table('saiyoojyam_inmates')
+        ->where($cond)
+        ->where('inmates_check_in_date <=', $target_month_end)
+        ->groupStart()
+            ->where('inmates_status !=', 'checked_out')
+            ->orWhere('inmates_check_out_date >=', $target_month_date)
+            ->orWhere('inmates_check_out_date IS NULL')
+            ->orWhere('inmates_check_out_date', '0000-00-00')
+            ->orWhere('inmates_check_out_date', '')
+        ->groupEnd()
+        ->orderBy('inmates_name', 'ASC')
+        ->join('saiyoojyam_rooms', 'saiyoojyam_inmates.inmates_rooms = saiyoojyam_rooms.rooms_id', 'left')
+        ->join('saiyoojyam_room_type', 'saiyoojyam_inmates.inmates_room_type = saiyoojyam_room_type.room_type_id', 'left')
+        ->join('saiyoojyam_building', 'saiyoojyam_inmates.inmates_building = saiyoojyam_building.building_id', 'left');
 
-    ->where('saiyoojyam_invoice.invoice_payment_month',$date)
-        
-    ->orderBy('inmates_name', 'asc')
-    
-    ->join('saiyoojyam_rooms', 'saiyoojyam_inmates.inmates_rooms = saiyoojyam_rooms.rooms_id', 'left')
+    $inmates = $builder->get()->getResult();
 
-    ->join('saiyoojyam_room_type', 'saiyoojyam_inmates.inmates_room_type = saiyoojyam_room_type.room_type_id', 'left')
+    $result = [];
 
-    ->join('saiyoojyam_tariffs', 'saiyoojyam_inmates.inmates_rooms = saiyoojyam_tariffs.tariffs_rooms', 'left')
+    foreach($inmates as $inmate){
+        $tariff = $this->db->table('saiyoojyam_tariffs')
+            ->where('tariffs_building', $inmate->inmates_building)
+            ->where('tariffs_rooms', $inmate->inmates_rooms)
+            ->get()->getRow();
 
-    ->join('saiyoojyam_invoice', 'saiyoojyam_inmates.inmates_id  = saiyoojyam_invoice.invoice_inmates', 'left');
+        $rent = $tariff ? $tariff->tariffs_price : '0.00';
 
-    $result = $query->get()->getResult();
+        $invoice = $this->db->table('saiyoojyam_invoice')
+            ->where('invoice_inmates', $inmate->inmates_id)
+            ->where('invoice_payment_month', $target_month_date)
+            ->get()->getRow();
+
+        if(!empty($invoice)){
+            $inmate->payment_status = (int)$invoice->invoice_status;
+            $inmate->paid_amount    = $invoice->invoice_paid_amount;
+            $inmate->balance_amount = $invoice->invoice_balance;
+            $inmate->rent_amount    = !empty($invoice->invoice_rent) ? $invoice->invoice_rent : $rent;
+        } else {
+            $inmate->payment_status = 0;
+            $inmate->paid_amount    = '0.00';
+            $inmate->balance_amount = $rent;
+            $inmate->rent_amount    = $rent;
+        }
+
+        if ($statusFilter === 'unpaid' && $inmate->payment_status != 0 && $inmate->payment_status != 2) {
+            continue;
+        } elseif ($statusFilter === 'unpaid_only' && $inmate->payment_status != 0) {
+            continue;
+        } elseif ($statusFilter === 'paid' && $inmate->payment_status != 1) {
+            continue;
+        } elseif ($statusFilter === 'partial' && $inmate->payment_status != 2) {
+            continue;
+        } elseif ($statusFilter === 'advance' && $inmate->payment_status != 3) {
+            continue;
+        }
+
+        $result[] = $inmate;
+    }
 
     return $result;
-
 }
 
 

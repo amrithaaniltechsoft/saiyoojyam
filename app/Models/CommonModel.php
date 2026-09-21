@@ -1241,9 +1241,20 @@ public function inmatesBuilding($month, $year, $cond, $statusFilter = 'all'){
 
         $rent = $tariff ? $tariff->tariffs_price : '0.00';
 
+        $join_day = (int)date('j', strtotime($inmate->inmates_check_in_date));
+        $ci_month_date = date('Y-m-01', strtotime($inmate->inmates_check_in_date));
+        $lookup_month_date = $target_month_date;
+        if ($join_day >= 20 && $target_month_date == $ci_month_date) {
+            $lookup_month_date = date('Y-m-01', strtotime('+1 month', strtotime($target_month_date)));
+        }
+
         $invoice = $this->db->table('saiyoojyam_invoice')
             ->where('invoice_inmates', $inmate->inmates_id)
-            ->where('invoice_payment_month', $target_month_date)
+            ->groupStart()
+                ->where('invoice_payment_month', $lookup_month_date)
+                ->orWhere('invoice_payment_month', $target_month_date)
+            ->groupEnd()
+            ->orderBy('invoice_id', 'DESC')
             ->get()->getRow();
 
         if(!empty($invoice)){

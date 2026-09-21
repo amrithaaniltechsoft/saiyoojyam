@@ -606,7 +606,7 @@ $joins = array(
         }else{
            
 
-            if($data['last_paid_amount']!=$check_date){
+            if(!empty($data['last_paid_amount']) && $data['last_paid_amount'] < $check_date){
 
                 $date = new \DateTime($data['last_paid_amount']);
 
@@ -744,14 +744,16 @@ $joins = array(
               
 
                 $last_paid_amount = $this->common_model->last_payment_month('saiyoojyam_invoice',$this->request->getPost('inmates_id'));
+                $check_date = date('Y-m-01');
 
-
-                if (!empty($last_paid_amount)) {
+                if (!empty($last_paid_amount) && $last_paid_amount < $check_date) {
 
                     $date = new \DateTime($last_paid_amount); 
                     $final = $date->modify('+1 month');
                     $payment_month = $final->format('Y-m-1');
  
+                } else {
+                    $payment_month = !empty($last_paid_amount) ? $last_paid_amount : date('Y-m-01');
                 } 
                
               
@@ -971,7 +973,7 @@ $joins = array(
 
                 $check_date = date('Y-m-01');
                
-                if($last_paid_amount1 == $check_date){
+                if($last_paid_amount1 >= $check_date){
 
                     $response['payment'] = 1;
                      
@@ -984,16 +986,19 @@ $joins = array(
                 }
                 else{
 
-                    $oldDate = $inmates->inmates_check_out_date;
+                    $is_checkout_paid = false;
+                    if (!empty($inmates->inmates_check_out_date) && $inmates->inmates_check_out_date != '0000-00-00') {
+                        $oldDate = $inmates->inmates_check_out_date;
+                        $date = new DateTime($oldDate);
+                        $date->setDate($date->format('Y'), $date->format('m'), 01);
+                        $newCheckDate = $date->format('Y-m-d');
 
-                    $date = new DateTime($oldDate);
+                        if ($last_paid_amount1 >= $newCheckDate) {
+                            $is_checkout_paid = true;
+                        }
+                    }
 
-                    $date->setDate($date->format('Y'), $date->format('m'), 01);
-
-                    $newCheckDate = $date->format('Y-m-d');
-
-
-                    if($last_paid_amount1 == $newCheckDate){
+                    if($is_checkout_paid){
 
                         $response['payment'] = 1;
                      
@@ -1023,7 +1028,7 @@ $joins = array(
 
                             $effective_tariff = $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => $inmates->inmates_building),array('tariffs_rooms' => $inmates->inmates_rooms));
                         }
-
+    
                         $response['payment_month1'] = date('M-Y',strtotime($payment_month1));
 
                         // Calculate effective room and building for the new payment month

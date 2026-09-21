@@ -376,6 +376,8 @@ class Ajax extends BaseController
 
                     $ciMonth = (int)date('m', $ciDate);
 
+                    $ciDay = (int)date('j', $ciDate);
+
                     $upToNow = function($m) use ($yearToShow, $currentYear, $currentMonth){
                         return $yearToShow < $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth);
                     };
@@ -390,23 +392,28 @@ class Ajax extends BaseController
 
                         }
 
-                        if(isset($invoiceMonths[$m])) {
+                        $invData = isset($invoiceMonths[$m]) ? $invoiceMonths[$m] : null;
+                        if (empty($invData) && $ciDay >= 20 && $yearToShow == $ciYear && $m == $ciMonth && isset($invoiceMonths[$m + 1])) {
+                            $invData = $invoiceMonths[$m + 1];
+                        }
+
+                        if(!empty($invData)) {
 
 
-                            if($invoiceMonths[$m]['status'] == 1){
+                            if($invData['status'] == 1){
                
-                                $response['year_html'] .='<td class="paid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invoiceMonths[$m]['amount'].'</a></td>';
+                                $response['year_html'] .='<td class="paid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
 
                             }
             
-                            elseif($invoiceMonths[$m]['status'] == 2){
+                            elseif($invData['status'] == 2){
                 
-                                $response['year_html'] .='<td class="partial"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invoiceMonths[$m]['amount'].'</a></td>';
+                                $response['year_html'] .='<td class="partial"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
                
                             }
-                            elseif($invoiceMonths[$m]['status'] == 3){
+                            elseif($invData['status'] == 3){
                 
-                                $response['year_html'] .='<td class="advance"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invoiceMonths[$m]['amount'].'</a></td>';
+                                $response['year_html'] .='<td class="advance"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
                
                             }
                             else{

@@ -62,19 +62,19 @@
               <div class="row mb-6 gy-6">
                 <!-- Basic Layout -->
                 <?php 
+                  $check_date = date('Y-m-01');
+                  $show_invoice_form = (empty($last_paid_amount) || $last_paid_amount < $check_date);
 
-                  $check_date = date('Y-m-01');  if($last_paid_amount!=$check_date){
-
-                    $oldDate = $inmates_check_out;
-
-                    $date = new DateTime($oldDate);
-
+                  if (!empty($inmates_check_out) && $inmates_check_out != '0000-00-00') {
+                    $date = new DateTime($inmates_check_out);
                     $date->setDate($date->format('Y'), $date->format('m'), 01);
-
                     $newCheckDate = $date->format('Y-m-d');
+                    if (!empty($last_paid_amount) && $last_paid_amount >= $newCheckDate) {
+                      $show_invoice_form = false;
+                    }
+                  }
 
-                    if($last_paid_amount!=$newCheckDate){
-                    
+                  if ($show_invoice_form) {
                 ?> 
                 <div class="col-xxl invoice_detail">
                   <div class="card">
@@ -252,7 +252,7 @@
                     </div>
                   </div>
                 </div>
-                <?php } } ?>
+                <?php } ?>
                 <!-- Basic with Icons -->
 
 

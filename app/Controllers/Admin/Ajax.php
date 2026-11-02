@@ -142,7 +142,7 @@ class Ajax extends BaseController
 
             $check_out =  $this->request->getpost('Checkout');
 
-            $check_in_date  = date('Y-m-d',strtotime($date)); 
+            $check_in_date  = !empty($date) ? date('Y-m-d',strtotime($date)) : date('Y-m-d'); 
 
             if(!empty($check_out)){
                
@@ -153,24 +153,41 @@ class Ajax extends BaseController
                 $check_out_date = '0000-00-00';
             }
 
-           
             $rooms = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms', ['rooms_building' => $id], 'rooms_name', 'ASC');
+
+            // Fetch all configured tariffs to filter only rooms that have a tariff added
+            $db = \Config\Database::connect();
+            $tariffRows = $db->table('saiyoojyam_tariffs')
+                ->select('tariffs_rooms, tariffs_building, tariffs_room_types, tariffs_price')
+                ->get()
+                ->getResult();
+
+            $directTariffRoomIds = [];
+            $typeTariffKeys = [];
+
+            foreach ($tariffRows as $tRow) {
+                if (!empty($tRow->tariffs_rooms)) {
+                    $directTariffRoomIds[(int)$tRow->tariffs_rooms] = (float)$tRow->tariffs_price;
+                }
+                if (!empty($tRow->tariffs_building) && !empty($tRow->tariffs_room_types) && empty($tRow->tariffs_rooms)) {
+                    $typeTariffKeys[$tRow->tariffs_building . '_' . $tRow->tariffs_room_types] = (float)$tRow->tariffs_price;
+                }
+            }
 
             $available_rooms = [];
 
             foreach ($rooms as $room) {
+                // Only show rooms where tariff has been added
+                $hasTariff = isset($directTariffRoomIds[(int)$room->rooms_id]) 
+                          || isset($typeTariffKeys[$room->rooms_building . '_' . $room->rooms_type]);
 
-                $occupied_count = $this->common_model->CountInmatesInRoomOnDate($room->rooms_id, $check_in_date, $check_out_date,$room->rooms_capacity);
+                if (!$hasTariff) {
+                    continue;
+                }
 
-                /*if ($occupied_count) {
-                    echo "Room is available";
-                } else {
-                    echo "Room is FULL";
-                }*/
+                $occupied_count = $this->common_model->CountInmatesInRoomOnDate($room->rooms_id, $check_in_date, $check_out_date, $room->rooms_capacity);
 
-                //if ($occupied_count < $room->rooms_capacity) {
                 if ($occupied_count) {
-                    
                     $available_rooms[] = [
                         'room_id'   => $room->rooms_id,
                         'room_name' => $room->rooms_name,
@@ -181,25 +198,20 @@ class Ajax extends BaseController
                 }
             }
 
-           
+            $data['rooms'] = "";
 
-            
-            $data['rooms'] ="";
-
-            $data['rooms'] .= "<option value='' selected disabled>Select Rooms</option>";
-                
+            if (empty($available_rooms)) {
+                $data['rooms'] .= "<option value='' selected disabled>No tariff-configured rooms available</option>";
+            } else {
+                $data['rooms'] .= "<option value='' selected disabled>Select Rooms</option>";
                 foreach($available_rooms as $room){
-                
-                    $data['rooms'] .= "<option value=".$room['room_id'].">".$room['room_name']."</option>";
-
+                    $data['rooms'] .= "<option value='".$room['room_id']."'>".$room['room_name']."</option>";
                 }
-            
+            }
 
-             echo json_encode($data);
- 
+            echo json_encode($data);
 
         }
-
 
     }
 
@@ -242,7 +254,7 @@ class Ajax extends BaseController
 
             foreach($available_rooms as $room){
 
-                $data['rooms'] .='<div class="room-cell">'.$room['room_name'].'<br><span>'.$room['available'].'Persons</span></div>';
+                $data['rooms'] .='<div class="room-cell" data-room-id="'.$room['room_id'].'" style="cursor:pointer;" title="Click to view room & tariff details">'.$room['room_name'].'<br><span>'.$room['available'].' Persons</span></div>';
 
             } 
 
@@ -252,6 +264,159 @@ class Ajax extends BaseController
 
 
 
+        }
+    }
+
+    // Fetch Room Details including Tariffs & Current Inmates for Admin Dashboard
+    public function RoomDetails(){
+
+        if($this->request->getMethod() === 'POST'){
+
+            $room_id       = $this->request->getPost('room_id');
+            $selected_date = $this->request->getPost('date');
+            if(empty($selected_date)){
+                $selected_date = date('Y-m-d');
+            }
+
+            if(empty($room_id)){
+                echo json_encode(['status' => 'error', 'msg' => 'Invalid Room ID']);
+                return;
+            }
+
+            $joins = array(
+                array(
+                    'table' => 'saiyoojyam_building',
+                    'pk'    => 'building_id',
+                    'fk'    => 'rooms_building',
+                ),
+                array(
+                    'table' => 'saiyoojyam_room_type',
+                    'pk'    => 'room_type_id',
+                    'fk'    => 'rooms_type',
+                )
+            );
+
+            $room = $this->common_model->SingleRowJoin('saiyoojyam_rooms', array('rooms_id' => $room_id), $joins);
+
+            if(!$room){
+                echo json_encode(['status' => 'error', 'msg' => 'Room not found']);
+                return;
+            }
+
+            $occupied_count = $this->common_model->fetchAvaliableRooms($room_id, $selected_date);
+            $capacity = (int)$room->rooms_capacity;
+            $available_count = max(0, $capacity - $occupied_count);
+            $occupancy_pct = $capacity > 0 ? round(($occupied_count / $capacity) * 100) : 0;
+
+            // Tariff for this room
+            $tariff = $this->common_model->SingleRow('saiyoojyam_tariffs', array('tariffs_rooms' => $room_id));
+            if(!$tariff && !empty($room->rooms_type)){
+                $tariff = $this->common_model->SingleRow('saiyoojyam_tariffs', array(
+                    'tariffs_room_types' => $room->rooms_type,
+                    'tariffs_building'   => $room->rooms_building
+                ));
+            }
+
+            // Inmates in this room on selected date
+            $db = \Config\Database::connect();
+            $inmates = $db->table('saiyoojyam_inmates')
+                ->select('inmates_id, inmates_uid, inmates_name, inmates_phone_no, inmates_check_in_date, inmates_check_out_date, inmates_status')
+                ->where('inmates_rooms', $room_id)
+                ->where('inmates_status !=', 'pending')
+                ->where('inmates_status !=', 'cancelled')
+                ->where('inmates_status !=', 'rejected')
+                ->where('inmates_status !=', 'checked_out')
+                ->where('inmates_status !=', '')
+                ->where('inmates_check_in_date <=', $selected_date)
+                ->groupStart()
+                    ->where('inmates_check_out_date >', $selected_date)
+                    ->orWhere('inmates_check_out_date IS NULL')
+                    ->orWhere('inmates_check_out_date', '')
+                    ->orWhere('inmates_check_out_date', '0000-00-00')
+                ->groupEnd()
+                ->orderBy('inmates_name', 'ASC')
+                ->get()
+                ->getResult();
+
+            $inmates_list = [];
+            foreach($inmates as $inm){
+                $inmates_list[] = [
+                    'id'        => $inm->inmates_id,
+                    'uid'       => $inm->inmates_uid,
+                    'name'      => $inm->inmates_name,
+                    'phone'     => $inm->inmates_phone_no,
+                    'check_in'  => !empty($inm->inmates_check_in_date) ? date('d M Y', strtotime($inm->inmates_check_in_date)) : '-',
+                    'check_out' => (!empty($inm->inmates_check_out_date) && $inm->inmates_check_out_date != '0000-00-00') ? date('d M Y', strtotime($inm->inmates_check_out_date)) : 'Ongoing',
+                    'status'    => ucfirst($inm->inmates_status)
+                ];
+            }
+
+            $tariff_data = null;
+            if(!empty($tariff)){
+                $rent = (float)$tariff->tariffs_price;
+                $adm  = (float)$tariff->tariffs_admission_fees;
+                $dep  = (float)$tariff->tariffs_caution_deposit;
+
+                // Fallback to building admission & caution deposit if not configured in tariff
+                if ($adm <= 0 && !empty($room->building_admission_fees)) {
+                    $adm = (float)$room->building_admission_fees;
+                }
+                if ($dep <= 0 && !empty($room->building_caution_deposit)) {
+                    $dep = (float)$room->building_caution_deposit;
+                }
+
+                $tariff_data = [
+                    'id'              => $tariff->tariffs_id,
+                    'price'           => number_format($rent, 2),
+                    'admission_fees'  => number_format($adm, 2),
+                    'caution_deposit' => number_format($dep, 2),
+                    'total_initial'   => number_format($rent + $adm + $dep, 2),
+                ];
+            }
+
+            // Room Features
+            $features_list = [];
+            if(!empty($room->rooms_features)){
+                $feature_ids = array_filter(array_map('trim', explode(',', $room->rooms_features)));
+                if(!empty($feature_ids)){
+                    $features = $db->table('saiyoojyam_room_feature')
+                        ->whereIn('feature_id', $feature_ids)
+                        ->get()
+                        ->getResult();
+                    foreach($features as $feat){
+                        $features_list[] = [
+                            'id'    => $feat->feature_id,
+                            'name'  => $feat->feature_name,
+                            'image' => !empty($feat->feature_image) ? base_url('public/uploads/feature/' . $feat->feature_image) : ''
+                        ];
+                    }
+                }
+            }
+
+            $response = [
+                'status'        => 'success',
+                'selected_date' => date('d M Y', strtotime($selected_date)),
+                'room' => [
+                    'id'            => $room->rooms_id,
+                    'name'          => $room->rooms_name,
+                    'building_id'   => $room->building_id ?? $room->rooms_building,
+                    'building_name' => $room->building_name ?? 'Hostel Building',
+                    'type_id'       => $room->rooms_type ?? $room->room_type_id,
+                    'type_name'     => $room->room_type_name ?? 'Standard Room',
+                    'ac_type'       => ($room->rooms_ac_type === 'AC') ? 'AC' : '',
+                    'capacity'      => $capacity,
+                    'occupied'      => $occupied_count,
+                    'available'     => $available_count,
+                    'occupancy_pct' => $occupancy_pct,
+                    'description'   => $room->rooms_description ?? '',
+                    'features'      => $features_list,
+                    'status'        => $room->rooms_status ?? 'available'
+                ],
+                'tariff'  => $tariff_data,
+                'inmates' => $inmates_list
+            ];
+
+            return $this->response->setJSON($response);
         }
     }
 
@@ -358,8 +523,9 @@ class Ajax extends BaseController
                         $year  = (int)$parts[0]; 
                         $invoiceMonths[$month] = [
                             'month'  => $inv->invoice_payment_month,
-                            'amount' => $inv->invoice_paid_amount,
-                            'status' => $inv->invoice_status, 
+                            'amount' => (float)$inv->invoice_paid_amount,
+                            'rent'   => (float)$inv->invoice_rent,
+                            'status' => (int)$inv->invoice_status, 
                         ];
 
                     }
@@ -378,6 +544,18 @@ class Ajax extends BaseController
 
                     $ciDay = (int)date('j', $ciDate);
 
+                    $stayRent = 0.0;
+                    if ($ciDay >= 21) {
+                        $daysInCiMonth = cal_days_in_month(CAL_GREGORIAN, $ciMonth, $ciYear);
+                        $stayDays = $daysInCiMonth - $ciDay + 1;
+                        $tariffPrice = !empty($inmate->tariffs_price) ? (float)$inmate->tariffs_price : 0.0;
+                        if ($tariffPrice <= 0 && isset($invoiceMonths[$ciMonth + 1])) {
+                            $invRent = (float)$invoiceMonths[$ciMonth + 1]['rent'];
+                            $tariffPrice = $invRent / (1 + ($stayDays / $daysInCiMonth));
+                        }
+                        $stayRent = round($stayDays * ($tariffPrice / $daysInCiMonth), 2);
+                    }
+
                     $upToNow = function($m) use ($yearToShow, $currentYear, $currentMonth){
                         return $yearToShow < $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth);
                     };
@@ -392,28 +570,46 @@ class Ajax extends BaseController
 
                         }
 
-                        $invData = isset($invoiceMonths[$m]) ? $invoiceMonths[$m] : null;
-                        if (empty($invData) && $ciDay >= 20 && $yearToShow == $ciYear && $m == $ciMonth && isset($invoiceMonths[$m + 1])) {
-                            $invData = $invoiceMonths[$m + 1];
+                        $invData = null;
+                        $cellTitle = '';
+
+                        if ($ciDay >= 21 && $yearToShow == $ciYear && $m == $ciMonth) {
+                            $nextM = ($ciMonth == 12) ? 1 : ($ciMonth + 1);
+                            if (isset($invoiceMonths[$nextM])) {
+                                $invData = [
+                                    'amount' => number_format($stayRent, 2, '.', ''),
+                                    'status' => $invoiceMonths[$nextM]['status']
+                                ];
+                                $cellTitle = 'title="Stay Rent: ₹' . number_format($stayRent, 2) . ' (Paid with next month)"';
+                            }
+                        } elseif ($ciDay >= 21 && $yearToShow == $ciYear && $m == ($ciMonth + 1) && isset($invoiceMonths[$m])) {
+                            $inv = $invoiceMonths[$m];
+                            $remAmount = max(0, $inv['amount'] - $stayRent);
+                            $invData = [
+                                'amount' => number_format($remAmount, 2, '.', ''),
+                                'status' => $inv['status']
+                            ];
+                            $cellTitle = 'title="Monthly Rent & Fees: ₹' . number_format($remAmount, 2) . '"';
+                        } elseif (isset($invoiceMonths[$m])) {
+                            $invData = $invoiceMonths[$m];
                         }
 
                         if(!empty($invData)) {
 
-
                             if($invData['status'] == 1){
                
-                                $response['year_html'] .='<td class="paid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
+                                $response['year_html'] .='<td class="paid"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
 
                             }
             
                             elseif($invData['status'] == 2){
                 
-                                $response['year_html'] .='<td class="partial"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
+                                $response['year_html'] .='<td class="partial"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
                
                             }
                             elseif($invData['status'] == 3){
                 
-                                $response['year_html'] .='<td class="advance"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
+                                $response['year_html'] .='<td class="advance"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
                
                             }
                             else{
@@ -530,7 +726,7 @@ class Ajax extends BaseController
                 ];
             }
 
-            echo json_encode($response);
+            return $this->response->setJSON($response);
         }
     }
 

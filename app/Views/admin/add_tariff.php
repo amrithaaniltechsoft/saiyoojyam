@@ -46,24 +46,30 @@
                               <tr class="tariff-row">
                                 <td>
                                   <select class="form-select build_clz" name="tariffs_building[]" required>
-                                    <option value="" selected disabled>Select Building</option>
+                                    <option value="" <?php echo empty($selected_building_id) ? 'selected' : ''; ?> disabled>Select Building</option>
                                     <?php if(!empty($buildings)){ foreach($buildings as $build){ ?> 
-                                      <option value="<?php echo $build->building_id; ?>"><?php echo $build->building_name; ?></option>
+                                      <option value="<?php echo $build->building_id; ?>" <?php echo (!empty($selected_building_id) && $selected_building_id == $build->building_id) ? 'selected' : ''; ?>><?php echo $build->building_name; ?></option>
                                     <?php } } ?>
                                   </select>
                                 </td>
                                 <td>
                                   <select class="form-select room_type_clz" name="tariffs_room_types[]" required>
-                                    <option value="" selected disabled>Select Room Type</option>
+                                    <option value="" <?php echo empty($selected_type_id) ? 'selected' : ''; ?> disabled>Select Room Type</option>
+                                    <?php if(!empty($preselected_room_types)){ foreach($preselected_room_types as $rt){ ?>
+                                      <option value="<?php echo $rt->room_type_id; ?>" <?php echo (!empty($selected_type_id) && $selected_type_id == $rt->room_type_id) ? 'selected' : ''; ?>><?php echo $rt->room_type_name; ?></option>
+                                    <?php } } ?>
                                   </select>
                                 </td>
                                 <td>
                                   <select class="form-select room_clz" name="tariffs_rooms[]" required>
-                                    <option value="" selected disabled>Select Rooms</option>
+                                    <option value="" <?php echo empty($selected_room_id) ? 'selected' : ''; ?> disabled>Select Rooms</option>
+                                    <?php if(!empty($preselected_rooms)){ foreach($preselected_rooms as $rm){ ?>
+                                      <option value="<?php echo $rm->rooms_id; ?>" <?php echo (!empty($selected_room_id) && $selected_room_id == $rm->rooms_id) ? 'selected' : ''; ?>><?php echo $rm->rooms_name; ?></option>
+                                    <?php } } ?>
                                   </select>
                                 </td>
                                 <td>
-                                  <input type="number" class="form-control" min="0" step="0.01" name="tariffs_price[]" placeholder="e.g., 5000" required/>
+                                  <input type="number" class="form-control" min="0" step="0.01" name="tariffs_price[]" placeholder="e.g., 5000" required <?php echo !empty($selected_room_id) ? 'autofocus' : ''; ?>/>
                                 </td>
                                 <td class="text-center">
                                   <button type="button" class="btn text-danger remove-row-btn" style="display: none;">
@@ -102,6 +108,16 @@
             <script>
               document.addEventListener("DOMContentLoaded", function(event) {
                 $(document).ready(function () {
+                  <?php if(!empty($selected_building_id)): ?>
+                  $('#tariff_tbody .tariff-row:first .build_clz').val('<?php echo $selected_building_id; ?>');
+                  <?php endif; ?>
+                  <?php if(!empty($selected_type_id)): ?>
+                  $('#tariff_tbody .tariff-row:first .room_type_clz').val('<?php echo $selected_type_id; ?>');
+                  <?php endif; ?>
+                  <?php if(!empty($selected_room_id)): ?>
+                  $('#tariff_tbody .tariff-row:first .room_clz').val('<?php echo $selected_room_id; ?>');
+                  <?php endif; ?>
+
                   function updateRemoveButtons() {
                     var rowCount = $('#tariff_tbody .tariff-row').length;
                     if (rowCount > 1) {

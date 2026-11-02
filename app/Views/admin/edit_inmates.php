@@ -108,6 +108,13 @@
                         </div>
 
                         <div class="row mb-6">
+                          <label class="col-sm-2 col-form-label" for="basic-default-name">Email</label>
+                          <div class="col-sm-10">
+                            <input type="email" class="form-control" name="inmates_email" id="html5-email-input" value="<?php echo esc($inmate->inmates_email ?? '');?>" placeholder="inmate@example.com"/>
+                          </div>
+                        </div>
+
+                        <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Place Of Work</label>
                           <div class="col-sm-10">
                             <input type="text" class="form-control" name="place_of_work" id="html5-date-input" value="<?php echo $inmate->inmates_place_of_work;?>"/>

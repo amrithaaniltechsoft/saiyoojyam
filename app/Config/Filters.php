@@ -101,7 +101,9 @@ class Filters extends BaseFilters
                 'Categories/*',
                 'terms-and-conditions',
                 'rules-and-procedures',
-                'kitchen-and-dining'
+                'kitchen-and-dining',
+                'api/*',
+                'Api/*'
             ],
         ],
     ],

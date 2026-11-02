@@ -36,18 +36,17 @@
             </div>
 
             <div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
-              <!-- Search -->
-              <div class="navbar-nav align-items-center me-auto">
-                <div class="nav-item d-flex align-items-center">
-                  <span class="w-px-22 h-px-22"><i class="icon-base bx bx-search icon-md"></i></span>
-                  <input
-                    type="text"
-                    class="form-control border-0 shadow-none ps-1 ps-sm-2 d-md-block d-none"
-                    placeholder="Search..."
-                    aria-label="Search..." />
-                </div>
+              <!-- Quick Links Nav Section (Direct Action Buttons) -->
+              <div class="navbar-nav align-items-center me-auto d-none d-md-flex gap-2">
+                <a href="<?= base_url(); ?>Admin/Inmates/RentalDetails" target="_blank" class="btn btn-sm d-flex align-items-center gap-1.5 shadow-2xs" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;font-size:12px;font-weight:600;border-radius:8px;padding:6px 13px;transition:all 0.2s;" title="Open Monthly Rental Calendar in a new tab">
+                  <i class="fa fa-calendar" style="font-size:13px;color:#4f46e5;"></i>
+                  <span>Rental Calendar</span>
+                </a>
+                <a href="<?= base_url(); ?>Admin/Rooms/Available" target="_blank" class="btn btn-sm d-flex align-items-center gap-1.5 shadow-2xs" style="background:#fff2ed;color:#ea4407;border:1px solid #ffccba;font-size:12px;font-weight:600;border-radius:8px;padding:6px 13px;transition:all 0.2s;" title="View Live Room Vacancies & Capacities in a new tab">
+                  <i class="fa fa-bed" style="font-size:13px;color:#ff561c;"></i>
+                  <span>Available Rooms</span>
+                </a>
               </div>
-              <!-- /Search -->
 
               <ul class="navbar-nav flex-row align-items-center ms-md-auto">
                 <!-- Place this tag where you want the button to render. -->

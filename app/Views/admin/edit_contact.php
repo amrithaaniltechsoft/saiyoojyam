@@ -29,56 +29,44 @@
                       <form method="POST" enctype="multipart/form-data">
 
                         <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Adress</label>
-                          <div class="col-sm-10">
-                            <textarea type="text" class="form-control"   name="contact_adress" id=""  required ><?php echo $contact->contact_adress; ?></textarea>
-                          </div>
-                        </div>
-
-
-                        <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Phone1</label>
+                          <label class="col-sm-2 col-form-label" for="">Phone</label>
                           <div class="col-sm-10">
                             <input type="text" class="form-control" value="<?php echo $contact->contact_phone1; ?>"  name="contact_phone1" id=""  required/>
                           </div>
                         </div>
 
-
                         <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Phone2</label>
-                          <div class="col-sm-10">
-                            <input type="text" class="form-control" value="<?php echo $contact->contact_phone2; ?>"  name="contact_phone2" id=""  required/>
-                          </div>
-                        </div>
-
-
-                        <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Phone3</label>
-                          <div class="col-sm-10">
-                            <input type="text" class="form-control" value="<?php echo $contact->contact_phone3; ?>"  name="contact_phone3" id="" />
-                          </div>
-                        </div>
-
-
-                        <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Email1</label>
+                          <label class="col-sm-2 col-form-label" for="">Email</label>
                           <div class="col-sm-10">
                             <input type="email" class="form-control" value="<?php echo $contact->contact_email1; ?>"  name="contact_email1" id=""  required/>
                           </div>
                         </div>
 
                         <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">Email2</label>
+                          <label class="col-sm-2 col-form-label" for="">WhatsApp</label>
                           <div class="col-sm-10">
-                            <input type="email" class="form-control" value="<?php echo $contact->contact_email2; ?>"  name="contact_email2" id="" />
+                            <input type="text" class="form-control" value="<?php echo $contact->contact_whats_app ?? ''; ?>"  name="contact_whats_app" id=""  required/>
                           </div>
                         </div>
 
+                        <div class="row mb-6">
+                          <label class="col-sm-2 col-form-label" for="">Instagram</label>
+                          <div class="col-sm-10">
+                            <input type="url" class="form-control" value="<?php echo $contact->contact_instagram ?? ''; ?>" name="contact_instagram" id="" placeholder="https://instagram.com/yourprofile" />
+                          </div>
+                        </div>
 
                         <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="">What's app</label>
+                          <label class="col-sm-2 col-form-label" for="">Facebook</label>
                           <div class="col-sm-10">
-                            <input type="text" class="form-control" value="<?php echo $contact->contact_whats_app; ?>"  name="contact_whats_app" id=""  required/>
+                            <input type="url" class="form-control" value="<?php echo $contact->contact_facebook ?? ''; ?>" name="contact_facebook" id="" placeholder="https://facebook.com/yourpage" />
+                          </div>
+                        </div>
+
+                        <div class="row mb-6">
+                          <label class="col-sm-2 col-form-label" for="">YouTube</label>
+                          <div class="col-sm-10">
+                            <input type="url" class="form-control" value="<?php echo $contact->contact_youtube ?? ''; ?>" name="contact_youtube" id="" placeholder="https://youtube.com/@yourchannel" />
                           </div>
                         </div>
 

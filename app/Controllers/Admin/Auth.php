@@ -48,6 +48,13 @@ class Auth extends BaseController
             return redirect()->to('/login')->withInput();
         }
 
+        $commonModel = new \App\Models\CommonModel();
+        $pendingCount = $commonModel->checkWhereCount('saiyoojyam_inmates', ['inmates_status' => 'pending']);
+        if ($pendingCount > 0) {
+            session()->setFlashdata('show_pending_alert', 1);
+            return redirect()->to(base_url('Admin/Home#pending-bookings-section'))->withCookies();
+        }
+
         return redirect()->to(config('Auth')->loginRedirect())->withCookies();
     }
 

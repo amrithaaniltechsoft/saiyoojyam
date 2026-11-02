@@ -66,6 +66,11 @@ class Inmates extends BaseController
 
                 $conditions['inmates_status'] = $status;
 
+            } elseif(empty($status)){
+
+                // Exclude unapproved pending bookings from the official Inmates list
+                $conditions['inmates_status !='] = 'pending';
+
             }
 
             if(!empty($ref)){
@@ -86,15 +91,7 @@ class Inmates extends BaseController
 
             }
 
-            if(!empty($conditions)){
-
-                $data['pagedata'] = $this->common_model->FetchInmatesActiveFirst($conditions);
-
-            }else{
-
-                $data['pagedata'] = $this->common_model->FetchInmatesActiveFirst();
-
-            }
+            $data['pagedata'] = $this->common_model->FetchInmatesActiveFirst($conditions);
 
         }
 
@@ -104,7 +101,7 @@ class Inmates extends BaseController
 
         $data['room_types'] = $this->common_model->FetchAll('saiyoojyam_room_type');
 
-        $data['reffers'] = $this->common_model->FetchAllOrder('saiyoojyam_inmates','inmates_uid','ASC');
+        $data['reffers'] = $this->common_model->FetchWhereOrderby('saiyoojyam_inmates', array('inmates_status !=' => 'pending'), 'inmates_uid', 'ASC');
 
         $data['active_ref'] = $ref;
 
@@ -121,7 +118,11 @@ class Inmates extends BaseController
     }
 
 
-    public function View($id){
+    public function View($id = null){
+
+        if(empty($id)){
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
 
         $joins = array(
             array(
@@ -217,17 +218,56 @@ class Inmates extends BaseController
             }
             
             
+            $email = trim((string)$this->request->getPost('inmates_email'));
+            if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $response['status'] = false;
+                $response['msg'] = 'Please enter a valid email address.';
+                echo json_encode($response);
+                return;
+            }
+
+            $roomId = $this->request->getPost('inmates_rooms');
+            $buildingId = $this->request->getPost('inmates_building');
+            $roomTypeId = $this->request->getPost('inmates_room_type');
+
+            $db = \Config\Database::connect();
+            $tariff = $db->table('saiyoojyam_tariffs')
+                ->where('tariffs_rooms', $roomId)
+                ->get()
+                ->getRow();
+
+            if (!$tariff && !empty($roomTypeId)) {
+                $tariff = $db->table('saiyoojyam_tariffs')
+                    ->where('tariffs_building', $buildingId)
+                    ->where('tariffs_room_types', $roomTypeId)
+                    ->get()
+                    ->getRow();
+            }
+
+            $tariffId = $tariff ? (int)$tariff->tariffs_id : 0;
+            $admFee   = $tariff ? (float)$tariff->tariffs_admission_fees : 0.00;
+            $cautDep  = $tariff ? (float)$tariff->tariffs_caution_deposit : 0.00;
+
+            if ($admFee <= 0 || $cautDep <= 0) {
+                $bRow = $db->table('saiyoojyam_building')->where('building_id', $buildingId)->get()->getRow();
+                if ($bRow) {
+                    if ($admFee <= 0) $admFee = (float)$bRow->building_admission_fees;
+                    if ($cautDep <= 0) $cautDep = (float)$bRow->building_caution_deposit;
+                }
+            }
+
             $data = [
                 
                 'inmates_name'             => $this->request->getPost('inmates_name'),
                 'inmates_age'              => $this->request->getPost('inmates_age'),
-                'inmates_building'         => $this->request->getPost('inmates_building'),
-                'inmates_room_type'        => $this->request->getPost('inmates_room_type'),
-                'inmates_rooms'            => $this->request->getPost('inmates_rooms'),
+                'inmates_building'         => $buildingId,
+                'inmates_room_type'        => $roomTypeId,
+                'inmates_rooms'            => $roomId,
                 'inmates_check_in_date'    => date('Y-m-d',strtotime($check_in_date)),
                 'inmates_check_out_date'   => date('Y-m-d',strtotime($check_out_date)),
                 'inmates_duration_of_stay' => $this->request->getPost('inmates_duration_of_stay'),
                 'inmates_phone_no'         => $this->request->getPost('inmates_phone_no'),
+                'inmates_email'            => $email,
                 'inmates_whats_app_number' => $this->request->getPost('inmates_whats_app_number'),
                 'inmates_guardian_name'    => $this->request->getPost('inmates_guardian_name'),
                 'inmates_relation'         => $this->request->getPost('inmates_relation'),
@@ -235,12 +275,13 @@ class Inmates extends BaseController
                 'inmates_id_proof'         => $idProofName,
                 'inmates_photo'            => $photoName,
                 'inmates_place_of_work'    => $this->request->getPost('place_of_work'),
-                'inmates_created_at'       => date('Y-m-d'),
+                'inmates_tariffs'          => $tariffId,
+                'inmates_admission_fee'    => $admFee,
+                'inmates_caution_deposit'  => $cautDep,
+                'inmates_status'           => 'active',
+                'inmates_approved_at'      => date('Y-m-d H:i:s'),
+                'inmates_created_at'       => date('Y-m-d H:i:s'),
             ]; 
-
-            
-
-    
 
             $id = $this->common_model->InsertData('saiyoojyam_inmates',$data);
 
@@ -248,6 +289,25 @@ class Inmates extends BaseController
 
             $this->common_model->EditData(array('inmates_uid' =>  $inmates_id),array('inmates_id' => $id),'saiyoojyam_inmates');
 
+            if (!empty($email) && $db->tableExists("saiyoojyam_customers")) {
+                $cust = $db->table("saiyoojyam_customers")->where("customer_email", $email)->get()->getRow();
+                $now = date('Y-m-d H:i:s');
+                if ($cust) {
+                    $db->table("saiyoojyam_customers")->where("customer_id", $cust->customer_id)->update([
+                        "customer_name"  => $this->request->getPost('inmates_name'),
+                        "customer_phone" => $this->request->getPost('inmates_phone_no'),
+                        "updated_at"     => $now,
+                    ]);
+                } else {
+                    $db->table("saiyoojyam_customers")->insert([
+                        "customer_name"  => $this->request->getPost('inmates_name'),
+                        "customer_email" => $email,
+                        "customer_phone" => $this->request->getPost('inmates_phone_no'),
+                        "created_at"     => $now,
+                        "updated_at"     => $now,
+                    ]);
+                }
+            }
 
             $response['status'] = true;
             $response['msg'] = 'Data Added Successfully';
@@ -265,7 +325,11 @@ class Inmates extends BaseController
     }
 
 
-    public function Edit($id){
+    public function Edit($id = null){
+
+        if(empty($id)){
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
 
         $data['inmate'] = $this->common_model->SingleRow('saiyoojyam_inmates',array('inmates_id' => $id));
 
@@ -329,6 +393,14 @@ class Inmates extends BaseController
                 return;
             }
 
+            $email = trim((string)$this->request->getPost('inmates_email'));
+            if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $response['status'] = false;
+                $response['msg'] = 'Please enter a valid email address.';
+                echo json_encode($response);
+                return;
+            }
+
             $update_data = [
 
                 'inmates_name'             => $this->request->getPost('inmates_name'),
@@ -340,6 +412,7 @@ class Inmates extends BaseController
                 'inmates_check_out_date'   => date('Y-m-d',strtotime($check_out_date)),
                 'inmates_duration_of_stay' => $this->request->getPost('inmates_duration_of_stay'),
                 'inmates_phone_no'         => $this->request->getPost('inmates_phone_no'),
+                'inmates_email'            => $email,
                 'inmates_whats_app_number' => $this->request->getPost('inmates_whats_app_number'),
                 'inmates_guardian_name'    => $this->request->getPost('inmates_guardian_name'),
                 'inmates_relation'         => $this->request->getPost('inmates_relation'),
@@ -394,7 +467,22 @@ class Inmates extends BaseController
 
         $data['building'] = $this->common_model->FetchAllOrder('saiyoojyam_building','building_name','ASC');
 
-        $data['rooms'] = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms',array('rooms_building' => $data['inmate']->inmates_building),'rooms_name','ASC');
+        $db = \Config\Database::connect();
+        $tariffRoomIds = $db->table('saiyoojyam_tariffs')
+            ->select('tariffs_rooms')
+            ->where('tariffs_rooms >', 0)
+            ->get()
+            ->getResultArray();
+        $tariffRoomIdList = array_map('intval', array_column($tariffRoomIds, 'tariffs_rooms'));
+
+        $allRooms = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms',array('rooms_building' => $data['inmate']->inmates_building),'rooms_name','ASC');
+        $filteredRooms = [];
+        foreach($allRooms as $r){
+            if(in_array((int)$r->rooms_id, $tariffRoomIdList) || (int)$r->rooms_id === (int)($data['inmate']->inmates_rooms ?? 0)){
+                $filteredRooms[] = $r;
+            }
+        }
+        $data['rooms'] = $filteredRooms;
 
         $data['room_history'] = $this->common_model->FetchWhereOrderby('saiyoojyam_inmate_room_history',array('room_history_inmates_id' => $id),'room_history_id','DESC');
 
@@ -468,7 +556,10 @@ class Inmates extends BaseController
     }
 
 
-    public function Receipt($id){
+    public function Receipt($id = null){
+        if(empty($id)){
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
         
         $data['total_rent_month'] = 0;
 $joins = array(
@@ -542,33 +633,10 @@ $joins = array(
 
                 $join_month_days = cal_days_in_month(CAL_GREGORIAN, $join_m, $join_y);
 
-                if($join_day >= 20){
+                // 1. If the person comes on or before 5th: full month rent
+                if($join_day <= 5){
 
-                    $data['payment_month'] = date('Y-m-01', strtotime('+1 month', strtotime($check_in_date)));
-
-                    $effective_tariff = $this->getEffectiveTariff($id, $data['payment_month']);
-
-                    $data['rent_per_month'] = !empty($effective_tariff) ? $this->getApplicableRent($effective_tariff->tariffs_id,$data['payment_month'],$effective_tariff->tariffs_price) : $data['tariffs']->tariffs_price;
-
-                    $monthly_rent = $this->getSplitMonthRent($id, $data['payment_month'], $data['rent_per_month']);
-
-                    $data['rent_per_month'] = $monthly_rent;
-
-                    //add the join month stay days rent into the next month invoice
-
-                    $join_effective_tariff = $this->getEffectiveTariff($id, $check_in_date);
-
-                    $join_rent = !empty($join_effective_tariff) ? $this->getApplicableRent($join_effective_tariff->tariffs_id,$check_in_date,$join_effective_tariff->tariffs_price) : $data['tariffs']->tariffs_price;
-
-                    $stay_days = $join_month_days - $join_day + 1;
-
-                    $per_day   = $join_rent / $join_month_days;
-
-                    $monthly_rent = $monthly_rent + round($stay_days * $per_day, 2);
-
-                }elseif($join_day <= 5){
-
-                    $data['payment_month'] = $data['inmates']->inmates_check_in_date;
+                    $data['payment_month'] = date('Y-m-01', strtotime($check_in_date));
 
                     $effective_tariff = $this->getEffectiveTariff($id, $data['payment_month']);
 
@@ -578,9 +646,11 @@ $joins = array(
 
                     $data['rent_per_month'] = $monthly_rent;
 
-                }else{
+                // 2. Until 20th of a month: collect rent from the joining date till end of the month
+                // Rent/day = (monthly rent) / (No. of days in the month)
+                }elseif($join_day <= 20){
 
-                    $data['payment_month'] = $data['inmates']->inmates_check_in_date;
+                    $data['payment_month'] = date('Y-m-01', strtotime($check_in_date));
 
                     $effective_tariff = $this->getEffectiveTariff($id, $data['payment_month']);
 
@@ -595,6 +665,31 @@ $joins = array(
                     $per_day   = $monthly_rent / $join_month_days;
 
                     $monthly_rent = round($stay_days * $per_day, 2);
+
+                // 3. From 21st: Rent = Rent for the days left in current month + next month rent
+                }else{
+
+                    $data['payment_month'] = date('Y-m-01', strtotime('first day of next month', strtotime($check_in_date)));
+
+                    $effective_tariff = $this->getEffectiveTariff($id, $data['payment_month']);
+
+                    $data['rent_per_month'] = !empty($effective_tariff) ? $this->getApplicableRent($effective_tariff->tariffs_id,$data['payment_month'],$effective_tariff->tariffs_price) : $data['tariffs']->tariffs_price;
+
+                    $monthly_rent = $this->getSplitMonthRent($id, $data['payment_month'], $data['rent_per_month']);
+
+                    $data['rent_per_month'] = $monthly_rent;
+
+                    // add the join month stay days rent into the next month invoice
+                    $join_effective_tariff = $this->getEffectiveTariff($id, $check_in_date);
+
+                    $join_rent = !empty($join_effective_tariff) ? $this->getApplicableRent($join_effective_tariff->tariffs_id,$check_in_date,$join_effective_tariff->tariffs_price) : $data['tariffs']->tariffs_price;
+
+                    $stay_days = $join_month_days - $join_day + 1;
+
+                    $per_day   = $join_rent / $join_month_days;
+
+                    $monthly_rent = $monthly_rent + round($stay_days * $per_day, 2);
+
                 }
 
                 $total_rent_month  = $monthly_rent + $data['tariffs']->tariffs_caution_deposit + $data['tariffs']->tariffs_admission_fees;
@@ -695,9 +790,10 @@ $joins = array(
                 
                 $join_day = (int) date('j', strtotime($inmates->inmates_check_in_date));
 
-                if($join_day >= 20){
+                // From 21st, payment month is next month
+                if($join_day >= 21){
 
-                    $payment_month = date('Y-m-01', strtotime('+1 month', strtotime($inmates->inmates_check_in_date)));
+                    $payment_month = date('Y-m-01', strtotime('first day of next month', strtotime($inmates->inmates_check_in_date)));
 
                 }else{
 
@@ -1296,8 +1392,12 @@ $joins = array(
     }
 
 
-    public function Print()
+    public function Print($id = null)
     {
+        if (empty($id)) {
+            $id = $this->request->getGet('id') ?? $this->request->getGet('inmates_id');
+        }
+
         $mpdf = new \Mpdf\Mpdf([
             'margin_top' => 10,
             'margin_bottom' => 10,
@@ -1305,14 +1405,56 @@ $joins = array(
             'margin_right' => 10,
         ]);
 
-        // Dynamic data
-        $guestName = 'Athira Raj';
-        $joinDate = '2025-06-01';
-        $paymentMonth = '2025-06-01';
-        $building = 'Block A';
-        $room = 'Room 101';
-        $rentPerDay = 700;
-        $rentPerMonth = 21000;
+        $db = \Config\Database::connect();
+        $inmate = null;
+        if (!empty($id)) {
+            $inmate = $db->table('saiyoojyam_inmates')->where('inmates_id', (int) $id)->get()->getRow();
+        }
+
+        $guestName = $inmate ? $inmate->inmates_name : 'Guest';
+        $joinDate = $inmate ? $inmate->inmates_check_in_date : date('Y-m-d');
+        $inmateUid = $inmate ? $inmate->inmates_uid : '';
+        $building = 'Saiyoojyam Ladies Hostel';
+        $room = 'Room';
+        $rentPerMonth = 0.0;
+        $cautionDeposit = $inmate ? (float) $inmate->inmates_caution_deposit : 0.0;
+        $admissionFees = $inmate ? (float) $inmate->inmates_admission_fee : 0.0;
+        $totalPaid = 0.0;
+        $paymentMonth = date('Y-m-01');
+
+        if ($inmate) {
+            $bRow = $db->table('saiyoojyam_building')->where('building_id', (int) $inmate->inmates_building)->get()->getRow();
+            if ($bRow) {
+                $building = $bRow->building_name;
+            }
+            $rRow = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $inmate->inmates_rooms)->get()->getRow();
+            if ($rRow) {
+                $room = 'Room ' . $rRow->rooms_name;
+            }
+            $invRow = $db->table('saiyoojyam_invoice')->where('invoice_inmates', (string) $inmate->inmates_id)->orderBy('invoice_id', 'DESC')->get()->getRow();
+            if ($invRow) {
+                $paymentMonth = $invRow->invoice_payment_month;
+                $rentPerMonth = (float) $invRow->invoice_rent;
+                $totalPaid = (float) $invRow->invoice_paid_amount;
+            } else {
+                $tRow = $db->table('saiyoojyam_tariffs')->where('tariffs_id', (int) $inmate->inmates_tariffs)->get()->getRow();
+                if ($tRow) {
+                    $rentPerMonth = (float) $tRow->tariffs_price;
+                }
+                $totalPaid = $rentPerMonth + $cautionDeposit + $admissionFees;
+            }
+        }
+
+        $paymentMonthDisplay = date('F Y', strtotime($paymentMonth));
+        if ($inmate) {
+            $joinDay = (int)date('j', strtotime($joinDate));
+            $nextMonthDate = date('Y-m-01', strtotime('first day of next month', strtotime($joinDate)));
+            if ($joinDay >= 21 && $paymentMonth == $nextMonthDate) {
+                $paymentMonthDisplay = date('F Y', strtotime($joinDate)) . ' & ' . date('F Y', strtotime($paymentMonth));
+            }
+        }
+
+        $rentPerDay = $rentPerMonth > 0 ? round($rentPerMonth / 30, 2) : 0;
         $logo = base_url('assets/admin/img/logo.png');
 
         $html = '
@@ -1338,7 +1480,8 @@ $joins = array(
 
         <!-- Title -->
         <div style="text-align: center; margin-bottom: 20px;">
-            <h3 style="margin: 0; font-size: 18px; text-transform: uppercase;">INVOICE</h3>
+            <h3 style="margin: 0; font-size: 18px; text-transform: uppercase;">INVOICE & RECEIPT</h3>
+            ' . ($inmateUid ? '<div style="font-size: 12px; color: #555; margin-top: 4px;">Booking ID: <strong>' . htmlspecialchars($inmateUid) . '</strong></div>' : '') . '
         </div>
 
         <!-- Personal Info -->
@@ -1347,7 +1490,7 @@ $joins = array(
             <table style="width: 100%;">
                 <tr>
                     <td style="padding: 5px; width: 35%; font-weight: bold;">Name</td>
-                    <td style="padding: 5px;">' . $guestName . '</td>
+                    <td style="padding: 5px;">' . htmlspecialchars($guestName) . '</td>
                 </tr>
                 <tr>
                     <td style="padding: 5px; font-weight: bold;">Join Date</td>
@@ -1355,7 +1498,7 @@ $joins = array(
                 </tr>
                 <tr>
                     <td style="padding: 5px; font-weight: bold;">Payment Month</td>
-                    <td style="padding: 5px;">' . date('F Y', strtotime($paymentMonth)) . '</td>
+                    <td style="padding: 5px;">' . $paymentMonthDisplay . '</td>
                 </tr>
             </table>
         </div>
@@ -1366,33 +1509,43 @@ $joins = array(
             <table style="width: 100%;">
                 <tr>
                     <td style="padding: 5px; width: 35%; font-weight: bold;">Building</td>
-                    <td style="padding: 5px;">' . $building . '</td>
+                    <td style="padding: 5px;">' . htmlspecialchars($building) . '</td>
                 </tr>
                 <tr>
                     <td style="padding: 5px; font-weight: bold;">Room</td>
-                    <td style="padding: 5px;">' . $room . '</td>
+                    <td style="padding: 5px;">' . htmlspecialchars($room) . '</td>
                 </tr>
             </table>
         </div>
 
         <!-- Rent Info -->
         <div style="border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
-            <h4 style="margin: 0 0 10px; font-size: 14px;">Rent Details</h4>
-            <table style="width: 100%;">
+            <h4 style="margin: 0 0 10px; font-size: 14px;">Payment Breakdown</h4>
+            <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <td style="padding: 5px; width: 35%; font-weight: bold;">Rent Per Day</td>
-                    <td style="padding: 5px;">₹' . number_format($rentPerDay, 2) . '</td>
+                    <td style="padding: 5px; width: 50%;">Rent Amount</td>
+                    <td style="padding: 5px; text-align: right;">₹' . number_format($rentPerMonth, 2) . '</td>
                 </tr>
+                ' . ($cautionDeposit > 0 ? '
                 <tr>
-                    <td style="padding: 5px; font-weight: bold;">Total Rent (Per Month)</td>
-                    <td style="padding: 5px; font-weight: bold;">₹' . number_format($rentPerMonth, 2) . '</td>
+                    <td style="padding: 5px;">Caution Deposit</td>
+                    <td style="padding: 5px; text-align: right;">₹' . number_format($cautionDeposit, 2) . '</td>
+                </tr>' : '') . '
+                ' . ($admissionFees > 0 ? '
+                <tr>
+                    <td style="padding: 5px;">Admission Fee</td>
+                    <td style="padding: 5px; text-align: right;">₹' . number_format($admissionFees, 2) . '</td>
+                </tr>' : '') . '
+                <tr style="border-top: 1px solid #bbb;">
+                    <td style="padding: 6px; font-weight: bold; font-size: 14px;">Total Paid</td>
+                    <td style="padding: 6px; font-weight: bold; font-size: 14px; color: #2e7d32; text-align: right;">₹' . number_format($totalPaid, 2) . ' (Fully Paid)</td>
                 </tr>
             </table>
         </div>
 
         <!-- Footer -->
         <div style="text-align: center; font-size: 12px; color: #666; margin-top: 30px;">
-            <p>Thank you for staying with us.</p>
+            <p>Thank you for staying with us at Saiyoojyam.</p>
             <p>For queries, contact the hostel office.</p>
         </div>
 
@@ -1405,11 +1558,14 @@ $joins = array(
 
         return $this->response
             ->setContentType('application/pdf')
-            ->setBody($mpdf->Output('invoice.pdf', 'S'));
+            ->setBody($mpdf->Output('invoice_' . ($inmateUid ?: $id) . '.pdf', 'I'));
     }
 
 
-    public function Delete($id){
+    public function Delete($id = null){
+        if(empty($id)){
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
 
         $inmate = $this->common_model->SingleRow('saiyoojyam_inmates',array('inmates_id' => $id));
 
@@ -1443,6 +1599,16 @@ $joins = array(
 
         $this->common_model->DeleteData('saiyoojyam_inmate_room_history',array('room_history_inmates_id' => $id));
 
+        if (!empty($inmate->inmates_user_id)) {
+            $db = \Config\Database::connect();
+            $db->table('auth_identities')->where('user_id', $inmate->inmates_user_id)->delete();
+            $db->table('auth_groups_users')->where('user_id', $inmate->inmates_user_id)->delete();
+            $db->table('users')->where('id', $inmate->inmates_user_id)->delete();
+            if ($db->tableExists('saiyoojyam_users')) {
+                $db->table('saiyoojyam_users')->where('users_id', $inmate->inmates_user_id)->delete();
+            }
+        }
+
         $uploadPath = WRITEPATH . 'uploads/inmates/';
 
         if(!empty($inmate->inmates_id_proof) && is_file($uploadPath.$inmate->inmates_id_proof)){
@@ -1464,60 +1630,110 @@ $joins = array(
     }
 
 
-    public function CheckOut($id){
+    public function CheckOut($id = null){
 
-        $inmate = $this->common_model->SingleRow('saiyoojyam_inmates',array('inmates_id' => $id));
+        $isAjax = $this->request->isAJAX() || $this->request->getPost("is_ajax") || ($this->request->getHeaderLine("X-Requested-With") === "XMLHttpRequest");
+
+        $inmateId = $id ?: $this->request->getPost('inmates_id');
+        $inmate = $this->common_model->SingleRow('saiyoojyam_inmates', array('inmates_id' => $inmateId));
 
         if(empty($inmate)){
-
-            $flashdata = array(
-                'type' => 'error',
-                'msg'  => 'Inmate not found',
-            );
-
-            $this->session->setFlashdata('alert',$flashdata);
-
+            $msg = 'Inmate not found.';
+            if ($isAjax) {
+                return $this->response->setStatusCode(404)->setJSON(['status' => false, 'message' => $msg]);
+            }
+            $this->session->setFlashdata('alert', ['type' => 'error', 'msg' => $msg]);
             return redirect()->to(site_url().'Admin/Inmates');
         }
 
-        if(!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00'){
+        $today = date('Y-m-d');
 
-            $flashdata = array(
-                'type' => 'error',
-                'msg'  => 'Inmate is already checked out',
-            );
-
-            $this->session->setFlashdata('alert',$flashdata);
-
+        // Check if inmate is already completely checked out in the past or today
+        if($inmate->inmates_status === 'checked_out' && !empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date <= $today){
+            $msg = 'Inmate has already checked out on ' . date('d-M-Y', strtotime($inmate->inmates_check_out_date)) . '.';
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => $msg]);
+            }
+            $this->session->setFlashdata('alert', ['type' => 'error', 'msg' => $msg]);
             return redirect()->to(site_url().'Admin/Inmates');
         }
 
-        $min_check_out_date = date('Y-m-d', strtotime('+1 month', strtotime($inmate->inmates_check_in_date)));
+        $checkout_type = $this->request->getPost('checkout_type') ?: 'today';
 
-        if(date('Y-m-d') < $min_check_out_date){
+        if ($checkout_type === 'upcoming') {
+            $checkout_date = trim((string)$this->request->getPost('upcoming_checkout_date'));
+            if (empty($checkout_date)) {
+                $checkout_date = trim((string)$this->request->getPost('checkout_date'));
+            }
+            if (empty($checkout_date)) {
+                $msg = 'Please select a valid upcoming check out date.';
+                if ($isAjax) {
+                    return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => $msg]);
+                }
+                $this->session->setFlashdata('alert', ['type' => 'error', 'msg' => $msg]);
+                return redirect()->to(site_url().'Admin/Inmates');
+            }
+            if ($checkout_date < $today) {
+                $msg = 'Upcoming check out date must be today or a future date.';
+                if ($isAjax) {
+                    return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => $msg]);
+                }
+                $this->session->setFlashdata('alert', ['type' => 'error', 'msg' => $msg]);
+                return redirect()->to(site_url().'Admin/Inmates');
+            }
+        } else {
+            $checkout_date = $today;
+        }
 
-            $flashdata = array(
-                'type' => 'error',
-                'msg'  => 'Check out is allowed only after one month from the check in date ('.$min_check_out_date.')',
-            );
+        // Validate 1-month minimum stay rule: Inmates can check out only after 1 month from check in date
+        if (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date !== '0000-00-00') {
+            $one_month = date('Y-m-d', strtotime($inmate->inmates_check_in_date . ' + 1 month'));
+            if ($checkout_date < $one_month) {
+                $checkin_fmt = date('d-M-Y', strtotime($inmate->inmates_check_in_date));
+                $eligible_fmt = date('d-M-Y', strtotime($one_month));
+                $msg = 'Check out is allowed only after one month from the check in date (' . $checkin_fmt . '). Earliest allowed check out date is ' . $eligible_fmt . '.';
+                if ($isAjax) {
+                    return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => $msg]);
+                }
+                $this->session->setFlashdata('alert', ['type' => 'error', 'msg' => $msg]);
+                return redirect()->to(site_url().'Admin/Inmates');
+            }
+        }
 
-            $this->session->setFlashdata('alert',$flashdata);
-
+        if (!empty($inmate->inmates_check_in_date) && $checkout_date < $inmate->inmates_check_in_date) {
+            $msg = 'Check out date cannot be earlier than check in date (' . date('d-M-Y', strtotime($inmate->inmates_check_in_date)) . ').';
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => $msg]);
+            }
+            $this->session->setFlashdata('alert', ['type' => 'error', 'msg' => $msg]);
             return redirect()->to(site_url().'Admin/Inmates');
         }
+
+        // Determine status:
+        // If checkout is today or past, status is 'checked_out'
+        // If checkout is an upcoming date in future, inmate remains 'active' until that date arrives
+        $status = ($checkout_date <= $today) ? 'checked_out' : 'active';
 
         $this->common_model->EditData(array(
-            'inmates_check_out_date' => date('Y-m-d'),
-            'inmates_status'         => 'checked_out',
-        ),array('inmates_id' => $id),'saiyoojyam_inmates');
+            'inmates_check_out_date' => $checkout_date,
+            'inmates_status'         => $status,
+        ), array('inmates_id' => $inmateId), 'saiyoojyam_inmates');
 
-        $flashdata = array(
-            'type' => 'success',
-            'msg'  => 'Inmate Checked Out Successfully',
-        );
+        $formatted_date = date('d-M-Y', strtotime($checkout_date));
+        $msg = ($status === 'checked_out')
+            ? "Inmate checked out successfully today ($formatted_date)."
+            : "Upcoming check out date scheduled successfully for $formatted_date. Resident remains active until this date.";
 
-        $this->session->setFlashdata('alert',$flashdata);
+        if ($isAjax) {
+            return $this->response->setJSON([
+                'status'        => true,
+                'message'       => $msg,
+                'checkout_date' => $formatted_date,
+                'inmate_status' => $status
+            ]);
+        }
 
+        $this->session->setFlashdata('alert', ['type' => 'success', 'msg' => $msg]);
         return redirect()->to(site_url().'Admin/Inmates');
     }
 
@@ -1747,4 +1963,691 @@ $joins = array(
     }
 
 
+
+    public function Pending()
+    {
+        return redirect()->to(base_url("Admin/Home#pending-bookings-section"));
+    }
+
+    public function ApproveBooking()
+    {
+        $isAjax = $this->request->isAJAX() || $this->request->getPost("is_ajax") || ($this->request->getHeaderLine("X-Requested-With") === "XMLHttpRequest");
+
+        $inmateId = (int) $this->request->getPost("inmates_id");
+        $username = trim((string) $this->request->getPost("username"));
+        $email    = trim((string) $this->request->getPost("email"));
+        $phone    = trim((string) $this->request->getPost("phone"));
+        $password = trim((string) $this->request->getPost("password"));
+
+        if ($inmateId <= 0) {
+            $msg = "Invalid booking ID.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
+        if (empty($username) || empty($email) || empty($password)) {
+            $msg = "Username, Email and Password are required to approve inmate and create their login.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
+        if (strlen($password) < 8) {
+            $msg = "Password must be at least 8 characters long.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
+        if (!preg_match('/[a-z]/', $password)) {
+            $msg = "Password must contain at least one lowercase letter.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
+        if (!preg_match('/[A-Z]/', $password)) {
+            $msg = "Password must contain at least one uppercase letter.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
+        if (!preg_match('/[0-9]/', $password)) {
+            $msg = "Password must contain at least one number.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
+        $db = \Config\Database::connect();
+        $inmate = $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->get()->getRow();
+        if (!$inmate) {
+            $msg = "Inmate booking record not found.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(404)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
+        // 1. Resolve or Create CodeIgniter Shield User
+        $existingEmailIdentity = $db->table("auth_identities")
+            ->where("type", "email_password")
+            ->where("LOWER(secret)", strtolower($email))
+            ->get()
+            ->getRow();
+
+        $existingUserByUsername = $db->table("users")
+            ->where("LOWER(username)", strtolower($username))
+            ->get()
+            ->getRow();
+
+        $userId = 0;
+        $now = date("Y-m-d H:i:s");
+
+        if ($existingEmailIdentity) {
+            // An account already exists for this email address -> re-use and activate
+            $existingUser = $db->table("users")->where("id", $existingEmailIdentity->user_id)->get()->getRow();
+
+            if ($existingUser) {
+                $userId = (int) $existingUser->id;
+
+                // Update username if requested and not taken by someone else
+                if (strtolower($existingUser->username) !== strtolower($username)) {
+                    if (!$existingUserByUsername || $existingUserByUsername->id == $userId) {
+                        $db->table("users")->where("id", $userId)->update([
+                            "username"   => $username,
+                            "active"     => 1,
+                            "updated_at" => $now,
+                        ]);
+                    } else {
+                        // Username is taken by another account, keep existing username
+                        $username = $existingUser->username;
+                        $db->table("users")->where("id", $userId)->update([
+                            "active"     => 1,
+                            "updated_at" => $now,
+                        ]);
+                    }
+                } else {
+                    $db->table("users")->where("id", $userId)->update([
+                        "active"     => 1,
+                        "updated_at" => $now,
+                    ]);
+                }
+
+                // Update password
+                $db->table("auth_identities")->where("id", $existingEmailIdentity->id)->update([
+                    "secret2"    => password_hash($password, PASSWORD_DEFAULT),
+                    "updated_at" => $now,
+                ]);
+            } else {
+                // Clean up orphaned identity if parent user row was missing
+                $db->table("auth_identities")->where("id", $existingEmailIdentity->id)->delete();
+                $existingEmailIdentity = null;
+            }
+        }
+
+        if (!$userId) {
+            // Create brand new Shield user
+            if ($existingUserByUsername) {
+                // If username is taken, append unique suffix
+                $username = $username . '_' . strtolower($inmate->inmates_uid ?: rand(100, 999));
+            }
+
+            $db->table("users")->insert([
+                "username"   => $username,
+                "active"     => 1,
+                "created_at" => $now,
+                "updated_at" => $now,
+            ]);
+            $userId = (int) $db->insertID();
+
+            // Insert password into auth_identities
+            $db->table("auth_identities")->insert([
+                "user_id"     => $userId,
+                "type"        => "email_password",
+                "name"        => "",
+                "secret"      => $email,
+                "secret2"     => password_hash($password, PASSWORD_DEFAULT),
+                "force_reset" => 0,
+                "created_at"  => $now,
+                "updated_at"  => $now,
+            ]);
+
+            // Add group
+            $db->table("auth_groups_users")->insert([
+                "user_id"    => $userId,
+                "group"      => "user",
+                "created_at" => $now,
+            ]);
+        }
+
+        // 2. Sync saiyoojyam_users
+        if ($db->tableExists("saiyoojyam_users")) {
+            $sUser = $db->table("saiyoojyam_users")->where("users_id", $userId)->get()->getRow();
+            if ($sUser) {
+                $db->table("saiyoojyam_users")->where("users_id", $userId)->update([
+                    "users_name"   => $inmate->inmates_name,
+                    "users_email"  => $email,
+                    "users_mobile" => $phone ?: $inmate->inmates_phone_no,
+                ]);
+            } else {
+                $db->table("saiyoojyam_users")->insert([
+                    "users_id"         => $userId,
+                    "users_name"       => $inmate->inmates_name,
+                    "users_email"      => $email,
+                    "users_mobile"     => $phone ?: $inmate->inmates_phone_no,
+                    "users_address"    => "",
+                    "users_created_at" => $now,
+                ]);
+            }
+        }
+
+        // 3. Sync saiyoojyam_customers
+        if ($db->tableExists("saiyoojyam_customers")) {
+            $cust = $db->table("saiyoojyam_customers")->where("customer_email", $email)->get()->getRow();
+            if ($cust) {
+                $db->table("saiyoojyam_customers")->where("customer_id", $cust->customer_id)->update([
+                    "customer_name"  => $inmate->inmates_name,
+                    "customer_phone" => $phone ?: $inmate->inmates_phone_no,
+                    "updated_at"     => $now,
+                ]);
+            } else {
+                $db->table("saiyoojyam_customers")->insert([
+                    "customer_name"  => $inmate->inmates_name,
+                    "customer_email" => $email,
+                    "customer_phone" => $phone ?: $inmate->inmates_phone_no,
+                    "created_at"     => $now,
+                    "updated_at"     => $now,
+                ]);
+            }
+        }
+
+        // 4. Update saiyoojyam_inmates status to "active"
+        $updateInmate = [
+            "inmates_status"      => "active",
+            "inmates_user_id"     => $userId,
+            "inmates_email"       => $email,
+            "inmates_approved_at" => $now,
+        ];
+        if (!empty($phone)) {
+            $updateInmate["inmates_phone_no"] = $phone;
+        }
+
+        $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->update($updateInmate);
+
+        // 5. Send Approval Email to User with Credentials
+        $buildingRow = $db->table("saiyoojyam_building")->where("building_id", (int) $inmate->inmates_building)->get()->getRow();
+        $roomRow = $db->table("saiyoojyam_rooms")->where("rooms_id", (int) $inmate->inmates_rooms)->get()->getRow();
+        $buildingName = $buildingRow ? $buildingRow->building_name : "Saiyoojyam Hostel";
+        $roomName = $roomRow ? "Room " . $roomRow->rooms_name : "Room #" . $inmate->inmates_rooms;
+
+        $emailSent = false;
+        $emailError = null;
+        if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $emailService = \Config\Services::email();
+                $emailService->initialize([
+                    "SMTPHost"   => "smtp.gmail.com",
+                    "SMTPUser"   => "websolutionstechsoft@gmail.com",
+                    "SMTPPass"   => "auugkahjshqosnrv",
+                    "SMTPPort"   => 587,
+                    "SMTPCrypto" => "tls",
+                    "protocol"   => "smtp",
+                    "fromEmail"  => "websolutionstechsoft@gmail.com",
+                    "fromName"   => "Saiyoojyam Ladies Hostels",
+                    "mailType"   => "html",
+                    "CRLF"       => "\r\n",
+                    "newline"    => "\r\n",
+                ]);
+
+                $emailService->setFrom("websolutionstechsoft@gmail.com", "Saiyoojyam Ladies Hostels");
+                $emailService->setTo($email);
+                $emailService->setSubject("Booking Approved - Your Saiyoojyam Inmate Login Credentials");
+
+                $portalUrl = "http://localhost:3000";
+
+                $htmlMessage = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: #f7f7f9; margin: 0; padding: 24px; color: #1f2937; }
+        .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.07); border: 1px solid #eaeaea; }
+        .header { background: linear-gradient(135deg, #FF561C 0%, #e0450d 100%); padding: 32px 24px; text-align: center; color: #ffffff; }
+        .header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 700; }
+        .header p { margin: 0; font-size: 14px; opacity: 0.95; }
+        .content { padding: 32px 28px; }
+        .greeting { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #111827; }
+        .intro { font-size: 14px; line-height: 1.6; color: #4b5563; margin-bottom: 22px; }
+        .details-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; margin-bottom: 22px; }
+        .details-title { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #6b7280; margin-bottom: 10px; letter-spacing: 0.5px; }
+        .details-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .details-table td { padding: 6px 0; }
+        .details-label { color: #6b7280; }
+        .details-value { font-weight: 600; color: #111827; text-align: right; }
+        .cred-box { background: #fff5f2; border: 2px dashed #FF561C; border-radius: 12px; padding: 20px; margin: 24px 0; }
+        .cred-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #c23807; margin-bottom: 14px; }
+        .cred-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .cred-table td { padding: 8px 0; }
+        .btn-wrapper { text-align: center; margin: 28px 0 10px 0; }
+        .btn { display: inline-block; background: #FF561C; color: #ffffff !important; font-weight: 700; font-size: 14px; padding: 13px 32px; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(255,86,28,0.3); }
+        .footer { background: #f9fafb; padding: 20px 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Booking Approved!</h1>
+            <p>Welcome to Saiyoojyam Ladies Hostels</p>
+        </div>
+        <div class="content">
+            <div class="greeting">Dear ' . esc($inmate->inmates_name) . ',</div>
+            <div class="intro">
+                We are pleased to inform you that your online room reservation has been officially <strong>approved</strong> by the hostel administration! Your inmate account is now active.
+            </div>
+
+            <!-- Booking Summary -->
+            <div class="details-card">
+                <div class="details-title">Booking Details</div>
+                <table class="details-table">
+                    <tr>
+                        <td class="details-label">Booking UID:</td>
+                        <td class="details-value" style="color: #FF561C; font-family: monospace;">' . esc($inmate->inmates_uid ?: ("IN" . str_pad($inmate->inmates_id, 6, "0", STR_PAD_LEFT))) . '</td>
+                    </tr>
+                    <tr>
+                        <td class="details-label">Hostel Building:</td>
+                        <td class="details-value">' . esc($buildingName) . '</td>
+                    </tr>
+                    <tr>
+                        <td class="details-label">Room Assigned:</td>
+                        <td class="details-value">' . esc($roomName) . '</td>
+                    </tr>
+                    <tr>
+                        <td class="details-label">Check-in Date:</td>
+                        <td class="details-value">' . date("d M Y", strtotime($inmate->inmates_check_in_date)) . '</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Inmate Login Credentials Box -->
+            <div class="cred-box">
+                <div class="cred-title">Your Inmate Login Credentials</div>
+                <table class="cred-table">
+                    <tr style="border-bottom: 1px solid #ffdcd1;">
+                        <td style="color: #6b7280;">Username:</td>
+                        <td style="font-weight: 700; color: #111827; font-family: monospace; text-align: right;">' . esc($username) . '</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #ffdcd1;">
+                        <td style="color: #6b7280;">Email Address:</td>
+                        <td style="font-weight: 700; color: #111827; text-align: right;">' . esc($email) . '</td>
+                    </tr>
+                    <tr style="border-bottom: 1px solid #ffdcd1;">
+                        <td style="color: #6b7280;">Phone Number:</td>
+                        <td style="font-weight: 700; color: #111827; text-align: right;">' . esc($phone ?: $inmate->inmates_phone_no) . '</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #6b7280;">Login Password:</td>
+                        <td style="font-weight: 800; color: #FF561C; font-family: monospace; font-size: 16px; text-align: right;">' . esc($password) . '</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="btn-wrapper">
+                <a href="' . $portalUrl . '" class="btn" target="_blank">Access Inmate Portal</a>
+            </div>
+
+            <p style="font-size: 12px; color: #6b7280; line-height: 1.5; margin-top: 24px; text-align: center;">
+                Please keep these credentials confidential. At the time of check-in, kindly present your government ID proof at the reception.
+            </p>
+        </div>
+
+        <div class="footer">
+            <strong>Saiyoojyam Ladies Hostels</strong><br>
+            Kakkanad, Kochi, Kerala<br>
+            Helpline: +91 70341 11368 | websolutionstechsoft@gmail.com
+        </div>
+    </div>
+</body>
+</html>';
+
+                $emailService->setMessage($htmlMessage);
+                $emailSent = $emailService->send(false);
+                if (!$emailSent) {
+                    $emailError = $emailService->printDebugger(["headers"]);
+                    log_message("error", "[ApproveBooking] Email send error: " . $emailError);
+                }
+            } catch (\Throwable $e) {
+                $emailError = $e->getMessage();
+                log_message("error", "[ApproveBooking] Email exception: " . $emailError);
+            }
+        }
+
+        $successMsg = "Booking request approved successfully! Inmate is now officially active. Credentials created -> Username: " . $username . ", Email: " . $email;
+        if ($emailSent) {
+            $successMsg .= ". An approval email with login credentials has been sent to " . $email . ".";
+        } elseif ($emailError) {
+            $successMsg .= " (Note: Could not send email notification: " . strip_tags($emailError) . ")";
+        }
+
+        if ($isAjax) {
+            return $this->response->setJSON([
+                "status"  => true,
+                "message" => $successMsg,
+                "data"    => [
+                    "inmates_id"  => $inmateId,
+                    "username"    => $username,
+                    "email"       => $email,
+                    "phone"       => $phone,
+                    "inmate_name" => $inmate->inmates_name,
+                    "receipt_url" => base_url("Admin/Inmates/Receipt/" . $inmateId),
+                ],
+            ]);
+        }
+
+        return redirect()->to(base_url("Admin/Home"))->with("success", $successMsg);
+    }
+
+    public function RejectBooking()
+    {
+        $isAjax = $this->request->isAJAX() || $this->request->getPost("is_ajax") || ($this->request->getHeaderLine("X-Requested-With") === "XMLHttpRequest");
+
+        $inmateId = (int) $this->request->getPost("inmates_id");
+        if ($inmateId <= 0) {
+            $msg = "Invalid booking ID.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
+        $db = \Config\Database::connect();
+        $inmate = $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->get()->getRow();
+        if (!$inmate) {
+            $msg = "Inmate record not found.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(404)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
+        $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->update([
+            "inmates_status"         => "checked_out",
+            "inmates_check_out_date" => date('Y-m-d'),
+        ]);
+
+        $successMsg = "Booking request has been rejected.";
+        if ($isAjax) {
+            return $this->response->setJSON(["status" => true, "message" => $successMsg]);
+        }
+        return redirect()->to(base_url("Admin/Home"))->with("success", $successMsg);
+    }
+
+    public function RegeneratePassword()
+    {
+        $isAjax = $this->request->isAJAX() || $this->request->getPost("is_ajax") || ($this->request->getHeaderLine("X-Requested-With") === "XMLHttpRequest");
+
+        $inmateId = (int) $this->request->getPost("inmates_id");
+        if ($inmateId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                "status"  => false,
+                "message" => "Invalid Inmate ID.",
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        $inmate = $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->get()->getRow();
+        if (!$inmate) {
+            return $this->response->setStatusCode(404)->setJSON([
+                "status"  => false,
+                "message" => "Inmate record not found.",
+            ]);
+        }
+
+        $now = date("Y-m-d H:i:s");
+        $customPassword = trim((string) $this->request->getPost("password"));
+        $sendEmail = (int) $this->request->getPost("send_email");
+
+        // Generate password if empty
+        if (!empty($customPassword)) {
+            $password = $customPassword;
+            if (strlen($password) < 6) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    "status"  => false,
+                    "message" => "Password must be at least 6 characters long.",
+                ]);
+            }
+        } else {
+            // Generate clean, memorable strong password e.g. Saiy742@26K
+            $randNum = rand(100, 999);
+            $symbols = ['@', '#', '$', '!', '&'];
+            $sym = $symbols[array_rand($symbols)];
+            $randChar = chr(rand(65, 90));
+            $password = "Saiy" . $randNum . $sym . date('y') . $randChar;
+        }
+
+        $email = trim((string) ($inmate->inmates_email ?? ''));
+        $phone = trim((string) ($inmate->inmates_phone_no ?? ''));
+
+        // Resolve or create Shield user account
+        $userId = (int) ($inmate->inmates_user_id ?? 0);
+        $userRow = null;
+        if ($userId > 0) {
+            $userRow = $db->table("users")->where("id", $userId)->get()->getRow();
+        }
+
+        // If not linked yet, check by email in auth_identities
+        if (!$userRow && !empty($email)) {
+            $existingIdent = $db->table("auth_identities")
+                ->where("type", "email_password")
+                ->where("LOWER(secret)", strtolower($email))
+                ->get()
+                ->getRow();
+            if ($existingIdent) {
+                $userRow = $db->table("users")->where("id", (int) $existingIdent->user_id)->get()->getRow();
+                if ($userRow) {
+                    $userId = (int) $userRow->id;
+                }
+            }
+        }
+
+        // Generate username if creating or needing update
+        $cleanUsername = preg_replace('/[^a-zA-Z0-9]/', '', strtolower($inmate->inmates_name ?: 'inmate'));
+        if (strlen($cleanUsername) < 3) {
+            $cleanUsername = 'inmate' . $inmateId;
+        }
+
+        if (!$userRow) {
+            // Check if username taken
+            $taken = $db->table("users")->where("username", $cleanUsername)->get()->getRow();
+            if ($taken) {
+                $cleanUsername = $cleanUsername . '_' . strtolower($inmate->inmates_uid ?: rand(100, 999));
+            }
+
+            $db->table("users")->insert([
+                "username"   => $cleanUsername,
+                "active"     => 1,
+                "created_at" => $now,
+                "updated_at" => $now,
+            ]);
+            $userId = (int) $db->insertID();
+
+            // Insert password into auth_identities
+            $db->table("auth_identities")->insert([
+                "user_id"     => $userId,
+                "type"        => "email_password",
+                "name"        => "",
+                "secret"      => $email ?: ($cleanUsername . '@saiyoojyam.local'),
+                "secret2"     => password_hash($password, PASSWORD_DEFAULT),
+                "force_reset" => 0,
+                "created_at"  => $now,
+                "updated_at"  => $now,
+            ]);
+
+            // Add group
+            $db->table("auth_groups_users")->insert([
+                "user_id"    => $userId,
+                "group"      => "user",
+                "created_at" => $now,
+            ]);
+
+            // Link to inmate
+            $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->update([
+                "inmates_user_id" => $userId
+            ]);
+        } else {
+            // Existing user - update password in auth_identities
+            $ident = $db->table("auth_identities")
+                ->where("user_id", $userId)
+                ->where("type", "email_password")
+                ->get()
+                ->getRow();
+
+            if ($ident) {
+                $db->table("auth_identities")->where("id", $ident->id)->update([
+                    "secret"     => $email ?: $ident->secret,
+                    "secret2"    => password_hash($password, PASSWORD_DEFAULT),
+                    "updated_at" => $now,
+                ]);
+            } else {
+                $db->table("auth_identities")->insert([
+                    "user_id"     => $userId,
+                    "type"        => "email_password",
+                    "name"        => "",
+                    "secret"      => $email ?: ($userRow->username . '@saiyoojyam.local'),
+                    "secret2"     => password_hash($password, PASSWORD_DEFAULT),
+                    "force_reset" => 0,
+                    "created_at"  => $now,
+                    "updated_at"  => $now,
+                ]);
+            }
+
+            // Ensure user is active
+            $db->table("users")->where("id", $userId)->update([
+                "active"     => 1,
+                "updated_at" => $now,
+            ]);
+
+            // Ensure inmates_user_id is linked
+            if ((int)($inmate->inmates_user_id ?? 0) !== $userId) {
+                $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->update([
+                    "inmates_user_id" => $userId
+                ]);
+            }
+
+            $cleanUsername = $userRow->username;
+        }
+
+        // Send Email if requested and email is valid
+        $emailSent = false;
+        $emailError = null;
+        if ($sendEmail && !empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $emailService = \Config\Services::email();
+                $emailService->initialize([
+                    "SMTPHost"   => "smtp.gmail.com",
+                    "SMTPUser"   => "websolutionstechsoft@gmail.com",
+                    "SMTPPass"   => "auugkahjshqosnrv",
+                    "SMTPPort"   => 587,
+                    "SMTPCrypto" => "tls",
+                    "protocol"   => "smtp",
+                    "fromEmail"  => "websolutionstechsoft@gmail.com",
+                    "fromName"   => "Saiyoojyam Ladies Hostels",
+                    "mailType"   => "html",
+                    "CRLF"       => "\r\n",
+                    "newline"    => "\r\n",
+                ]);
+
+                $emailService->setFrom("websolutionstechsoft@gmail.com", "Saiyoojyam Ladies Hostels");
+                $emailService->setTo($email);
+                $emailService->setSubject("Password Reset - Your Saiyoojyam Inmate Login Credentials");
+
+                $portalUrl = "http://localhost:3000";
+
+                $htmlMessage = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background-color: #f7f7f9; margin: 0; padding: 24px; color: #1f2937; }
+        .container { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.07); border: 1px solid #eaeaea; }
+        .header { background: linear-gradient(135deg, #FF561C 0%, #e0450d 100%); padding: 30px 24px; text-align: center; color: #ffffff; }
+        .header h1 { margin: 0 0 6px 0; font-size: 22px; font-weight: 700; }
+        .header p { margin: 0; font-size: 13px; opacity: 0.95; }
+        .content { padding: 30px 26px; }
+        .greeting { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #111827; }
+        .intro { font-size: 14px; line-height: 1.6; color: #4b5563; margin-bottom: 20px; }
+        .cred-box { background: #fff5f2; border: 2px dashed #FF561C; border-radius: 12px; padding: 20px; margin: 20px 0; }
+        .cred-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #c23807; margin-bottom: 12px; }
+        .cred-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .cred-table td { padding: 7px 0; }
+        .btn-wrapper { text-align: center; margin: 24px 0 10px 0; }
+        .btn { display: inline-block; background: #FF561C; color: #ffffff !important; font-weight: 700; font-size: 14px; padding: 12px 30px; border-radius: 8px; text-decoration: none; }
+        .footer { background: #f9fafb; padding: 18px 24px; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Password Regenerated</h1>
+            <p>Saiyoojyam Ladies Hostels - Resident Account</p>
+        </div>
+        <div class="content">
+            <div class="greeting">Dear ' . esc($inmate->inmates_name) . ',</div>
+            <div class="intro">
+                Your login credentials for the Saiyoojyam Inmate Resident Portal have been updated by management. You can sign in using your new credentials below:
+            </div>
+            <div class="cred-box">
+                <div class="cred-title">Updated Login Credentials</div>
+                <table class="cred-table">
+                    <tr><td style="color:#6b7280;width:35%;">Reference ID:</td><td style="font-weight:700;color:#111827;">' . esc($inmate->inmates_uid ?: 'N/A') . '</td></tr>
+                    <tr><td style="color:#6b7280;">Username / Email:</td><td style="font-weight:700;color:#111827;">' . esc($email ?: $cleanUsername) . '</td></tr>
+                    <tr><td style="color:#6b7280;">New Password:</td><td style="font-family:monospace;font-weight:700;font-size:16px;color:#c23807;">' . esc($password) . '</td></tr>
+                </table>
+            </div>
+            <div class="btn-wrapper">
+                <a href="' . $portalUrl . '" class="btn" target="_blank">Access Resident Portal</a>
+            </div>
+        </div>
+        <div class="footer">
+            Saiyoojyam Ladies Hostels &bull; Kakkanad, Kochi<br>
+            Please keep your password secure.
+        </div>
+    </div>
+</body>
+</html>';
+
+                $emailService->setMessage($htmlMessage);
+                $emailSent = $emailService->send();
+            } catch (\Throwable $e) {
+                $emailSent = false;
+                $emailError = $e->getMessage();
+            }
+        }
+
+        return $this->response->setJSON([
+            "status"        => true,
+            "message"       => "Password regenerated successfully!",
+            "email_sent"    => $emailSent,
+            "email_address" => $email ?: "None",
+            "email_error"   => $emailError,
+            "credentials"   => [
+                "name"       => $inmate->inmates_name,
+                "uid"        => $inmate->inmates_uid ?: 'IN' . str_pad((string)$inmateId, 6, '0', STR_PAD_LEFT),
+                "login_id"   => $email ?: $cleanUsername,
+                "username"   => $cleanUsername,
+                "email"      => $email ?: '',
+                "password"   => $password,
+                "portal_url" => "http://localhost:3000",
+            ],
+        ]);
+    }
 }

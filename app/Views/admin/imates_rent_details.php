@@ -234,93 +234,91 @@
           $year  = (int)$parts[0];  
           $invoiceMonths[$month] = [
               'month'         => $inv->invoice_payment_month,
-              'amount'        => $inv->invoice_paid_amount,
-              'status'        => $inv->invoice_status, 
-              
+              'amount'        => (float)$inv->invoice_paid_amount,
+              'rent'          => (float)$inv->invoice_rent,
+              'status'        => (int)$inv->invoice_status, 
           ];
       }
      
-      
       $currentMonth = (int)date('m');
-
       $currentYear  = (int)date('Y');
-
       $yearToShow = $currentYear;
-
       $ciDate = strtotime($inmate->inmates_check_in_date);
-
       $ciYear = (int)date('Y', $ciDate);
-
       $ciMonth = (int)date('m', $ciDate);
-
       $ciDay = (int)date('j', $ciDate);
+
+      $stayRent = 0.0;
+      if ($ciDay >= 21) {
+        $daysInCiMonth = cal_days_in_month(CAL_GREGORIAN, $ciMonth, $ciYear);
+        $stayDays = $daysInCiMonth - $ciDay + 1;
+        $tariffPrice = !empty($inmate->tariffs_price) ? (float)$inmate->tariffs_price : 0.0;
+        if ($tariffPrice <= 0 && isset($invoiceMonths[$ciMonth + 1])) {
+          $invRent = (float)$invoiceMonths[$ciMonth + 1]['rent'];
+          $tariffPrice = $invRent / (1 + ($stayDays / $daysInCiMonth));
+        }
+        $stayRent = round($stayDays * ($tariffPrice / $daysInCiMonth), 2);
+      }
 
       for ($m = 1; $m <= 12; $m++) {
 
         if(($yearToShow > $currentYear) || (($yearToShow < $ciYear) || ($yearToShow == $ciYear && $m < $ciMonth))){
-
           echo '<td></td>';
-
           continue;
-
         }
 
-        $invData = isset($invoiceMonths[$m]) ? $invoiceMonths[$m] : null;
-        if (empty($invData) && $ciDay >= 20 && $yearToShow == $ciYear && $m == $ciMonth && isset($invoiceMonths[$m + 1])) {
-          $invData = $invoiceMonths[$m + 1];
+        $invData = null;
+        $cellTitle = '';
+
+        if ($ciDay >= 21 && $yearToShow == $ciYear && $m == $ciMonth) {
+          $nextM = ($ciMonth == 12) ? 1 : ($ciMonth + 1);
+          if (isset($invoiceMonths[$nextM])) {
+            $invData = [
+              'amount' => number_format($stayRent, 2, '.', ''),
+              'status' => $invoiceMonths[$nextM]['status']
+            ];
+            $cellTitle = 'title="Stay Rent: ₹' . number_format($stayRent, 2) . ' (Paid with next month)"';
+          }
+        } elseif ($ciDay >= 21 && $yearToShow == $ciYear && $m == ($ciMonth + 1) && isset($invoiceMonths[$m])) {
+          $inv = $invoiceMonths[$m];
+          $remAmount = max(0, $inv['amount'] - $stayRent);
+          $invData = [
+            'amount' => number_format($remAmount, 2, '.', ''),
+            'status' => $inv['status']
+          ];
+          $cellTitle = 'title="Monthly Rent & Fees: ₹' . number_format($remAmount, 2) . '"';
+        } elseif (isset($invoiceMonths[$m])) {
+          $invData = $invoiceMonths[$m];
         }
 
         if (!empty($invData)) {
 
           if ($invData['status'] == 1) {
-
-            echo '<td class="paid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
-
+            echo '<td class="paid"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
           } 
-          
           elseif($invData['status'] == 2) {
-
-            echo '<td class="partial"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
-
+            echo '<td class="partial"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
           }
-
           elseif($invData['status'] == 3) {
-
-            echo '<td class="advance"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
-
+            echo '<td class="advance"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
           }
-          
           else{
-                  
-            //if ($m <= $currentMonth) {
             if($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
-
               echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
-
             } 
             else {
-
               echo '<td></td>'; 
-
             }
-
           }
 
         } 
         else {
-              
           if ($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
-
             echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>'; 
-
           } 
-          
           else {
-
             echo '<td></td>'; 
-
           }
-
         }
         
       }

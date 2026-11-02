@@ -23,7 +23,7 @@
                   <div class="card">
                     <div class="card-header d-flex align-items-center justify-content-between">
                       <h5 class="mb-0">Edit Building</h5>
-                      
+                      <a href="<?= base_url(); ?>Admin/Building" class="btn btn-secondary btn-sm"><i class="icon-base bx bx-list-ul me-1"></i> List Building</a>
                     </div>
                     <div class="card-body">
                       <form method="POST" enctype="multipart/form-data">

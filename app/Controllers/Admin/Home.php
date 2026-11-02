@@ -34,14 +34,18 @@ class Home extends BaseController
 
             $todays_date = date('Y-m-d');
 
-            //todays check In's
-            $data['todays_check_in'] = $this->common_model->checkWhereCount('saiyoojyam_inmates',array('inmates_check_in_date' => $todays_date));
+            //todays check In's (only officially active inmates)
+            $data['todays_check_in'] = $this->common_model->checkWhereCount('saiyoojyam_inmates',array('inmates_check_in_date' => $todays_date, 'inmates_status' => 'active'));
             
             //todays check out's
-            $data['todays_check_out'] = $this->common_model->checkWhereCount('saiyoojyam_inmates',array('inmates_check_out_date' => $todays_date));            
+            $data['todays_check_out'] = $this->common_model->checkWhereCount('saiyoojyam_inmates',array('inmates_check_out_date' => $todays_date, 'inmates_status' => 'checked_out'));            
 
             //total active inmates
             $data['active_inmates']    = $this->common_model->checkWhereCount('saiyoojyam_inmates',array('inmates_status' => 'active')); 
+
+            //pending bookings count & list
+            $data['pending_bookings_count'] = $this->common_model->checkWhereCount('saiyoojyam_inmates', array('inmates_status' => 'pending'));
+            $data['pending_bookings']       = $this->common_model->getPendingBookingRequests(); 
 
            
 

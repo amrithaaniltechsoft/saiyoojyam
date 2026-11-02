@@ -128,9 +128,51 @@ class Tariff extends BaseController
 
         }
 
+        $selected_room_id     = $this->request->getGet('room_id');
+        $selected_building_id = $this->request->getGet('building_id');
+        $selected_type_id     = $this->request->getGet('room_type_id');
+
+        if (!empty($selected_room_id)) {
+            $target_room = null;
+            if (is_numeric($selected_room_id)) {
+                $target_room = $this->common_model->SingleRow('saiyoojyam_rooms', array('rooms_id' => $selected_room_id));
+            }
+            if (!$target_room) {
+                $target_room = $this->common_model->SingleRow('saiyoojyam_rooms', array('rooms_name' => $selected_room_id));
+            }
+            if ($target_room) {
+                $selected_room_id = $target_room->rooms_id;
+                if (empty($selected_building_id)) {
+                    $selected_building_id = $target_room->rooms_building;
+                }
+                if (empty($selected_type_id)) {
+                    $selected_type_id = $target_room->rooms_type;
+                }
+            }
+        }
+
+        $data['selected_building_id'] = $selected_building_id;
+        $data['selected_type_id']     = $selected_type_id;
+        $data['selected_room_id']     = $selected_room_id;
+
         $data['buildings'] = $this->common_model->FetchAllOrder('saiyoojyam_building','building_name','ASC');
 
-        return view('admin/add_tariff',$data);
+        if (!empty($selected_building_id)) {
+            $data['preselected_room_types'] = $this->common_model->FetchWhere('saiyoojyam_room_type', array('room_type_building_id' => $selected_building_id));
+        } else {
+            $data['preselected_room_types'] = [];
+        }
+
+        if (!empty($selected_building_id) && !empty($selected_type_id)) {
+            $data['preselected_rooms'] = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms', array(
+                'rooms_building' => $selected_building_id,
+                'rooms_type'     => $selected_type_id
+            ), 'rooms_name', 'ASC');
+        } else {
+            $data['preselected_rooms'] = [];
+        }
+
+        return view('admin/add_tariff', $data);
 
 
     }

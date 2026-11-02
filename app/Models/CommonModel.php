@@ -738,6 +738,12 @@ class CommonModel extends Model
 
             $query->where($cond);
 
+            if(!isset($cond['inmates_status']) && !isset($cond['inmates_status !='])){
+                $query->where('inmates_status !=', 'pending');
+            }
+
+        } else {
+            $query->where('inmates_status !=', 'pending');
         }
 
         $query->orderBy('CASE WHEN inmates_status = "active" THEN 0 ELSE 1 END', 'ASC', false)
@@ -770,6 +776,8 @@ class CommonModel extends Model
 
             $query->where('i.inmates_status', $inmate_status);
 
+        } else {
+            $query->where('i.inmates_status !=', 'pending');
         }
 
         $result = $query->get();
@@ -782,6 +790,7 @@ class CommonModel extends Model
     public function FetchTotalInmates(){
         $date = date('Y-m-d');
         return $this->db->table('saiyoojyam_inmates')
+        ->where('inmates_status', 'active')
         ->where('inmates_check_in_date <=', $date)
         ->groupStart()
             ->where('inmates_check_out_date >=', $date)
@@ -797,9 +806,9 @@ class CommonModel extends Model
     public function AutoCheckoutInmates(){
 
         $this->db->table('saiyoojyam_inmates')
+        ->where('inmates_status', 'active')
         ->where('inmates_check_out_date !=', '0000-00-00')
-        ->where('inmates_check_out_date <', date('Y-m-d'))
-        ->where('inmates_status !=', 'checked_out')
+        ->where('inmates_check_out_date <=', date('Y-m-d'))
         ->set('inmates_status', 'checked_out')
         ->update();
 
@@ -1133,11 +1142,16 @@ public function fetchAvaliableRooms($room_id,$check_in_date){
 
     return $this->db->table('saiyoojyam_inmates')
         ->where('inmates_rooms', $room_id)
+        ->where('inmates_status !=', 'checked_out')
+        ->where('inmates_status !=', 'rejected')
+        ->where('inmates_status !=', 'cancelled')
+        ->where('inmates_status !=', '')
         ->where('inmates_check_in_date <=', $check_in_date)
         ->groupStart()
             ->where('inmates_check_out_date >', $check_in_date)
             ->orWhere('inmates_check_out_date IS NULL')
             ->orWhere('inmates_check_out_date', '')
+            ->orWhere('inmates_check_out_date', '0000-00-00')
         ->groupEnd()
         ->countAllResults();
 }
@@ -1148,8 +1162,11 @@ public function inmatesMonthRent($date_start,$date_end){
     $currentYear = date('Y',strtotime($date_start));
 
     $query = $this->db->table('saiyoojyam_inmates')
+    ->select('saiyoojyam_inmates.*, saiyoojyam_tariffs.tariffs_price')
+    ->join('saiyoojyam_tariffs', 'saiyoojyam_inmates.inmates_tariffs = saiyoojyam_tariffs.tariffs_id', 'left')
     
     ->where("DATE_FORMAT(inmates_check_in_date, '%Y') <= $currentYear", NULL, FALSE)
+    ->where('inmates_status !=', 'pending')
 
     ->groupStart()
         ->where('inmates_status !=', 'checked_out')
@@ -1216,6 +1233,7 @@ public function inmatesBuilding($month, $year, $cond, $statusFilter = 'all'){
 
     $builder = $this->db->table('saiyoojyam_inmates')
         ->where($cond)
+        ->where('saiyoojyam_inmates.inmates_status !=', 'pending')
         ->where('inmates_check_in_date <=', $target_month_end)
         ->groupStart()
             ->where('inmates_status !=', 'checked_out')
@@ -1243,9 +1261,14 @@ public function inmatesBuilding($month, $year, $cond, $statusFilter = 'all'){
 
         $join_day = (int)date('j', strtotime($inmate->inmates_check_in_date));
         $ci_month_date = date('Y-m-01', strtotime($inmate->inmates_check_in_date));
+        $ci_year = (int)date('Y', strtotime($inmate->inmates_check_in_date));
+        $ci_month = (int)date('m', strtotime($inmate->inmates_check_in_date));
+        $next_month_date = date('Y-m-01', strtotime('first day of next month', strtotime($inmate->inmates_check_in_date)));
+
         $lookup_month_date = $target_month_date;
-        if ($join_day >= 20 && $target_month_date == $ci_month_date) {
-            $lookup_month_date = date('Y-m-01', strtotime('+1 month', strtotime($target_month_date)));
+        $is_late_join_month = ($join_day >= 21 && $target_month_date == $ci_month_date);
+        if ($is_late_join_month) {
+            $lookup_month_date = $next_month_date;
         }
 
         $invoice = $this->db->table('saiyoojyam_invoice')
@@ -1259,9 +1282,29 @@ public function inmatesBuilding($month, $year, $cond, $statusFilter = 'all'){
 
         if(!empty($invoice)){
             $inmate->payment_status = (int)$invoice->invoice_status;
-            $inmate->paid_amount    = $invoice->invoice_paid_amount;
-            $inmate->balance_amount = $invoice->invoice_balance;
-            $inmate->rent_amount    = !empty($invoice->invoice_rent) ? $invoice->invoice_rent : $rent;
+            if ($is_late_join_month) {
+                $days_in_ci_month = cal_days_in_month(CAL_GREGORIAN, $ci_month, $ci_year);
+                $stay_days = $days_in_ci_month - $join_day + 1;
+                $per_day = $rent > 0 ? ($rent / $days_in_ci_month) : 0;
+                $stay_rent = round($stay_days * $per_day, 2);
+
+                $inmate->rent_amount    = number_format($stay_rent, 2, '.', '');
+                $inmate->paid_amount    = ($invoice->invoice_status == 1) ? number_format($stay_rent, 2, '.', '') : '0.00';
+                $inmate->balance_amount = ($invoice->invoice_status == 1) ? '0.00' : number_format($stay_rent, 2, '.', '');
+            } elseif ($join_day >= 21 && $target_month_date == $next_month_date) {
+                $days_in_ci_month = cal_days_in_month(CAL_GREGORIAN, $ci_month, $ci_year);
+                $stay_days = $days_in_ci_month - $join_day + 1;
+                $per_day = $rent > 0 ? ($rent / $days_in_ci_month) : 0;
+                $stay_rent = round($stay_days * $per_day, 2);
+
+                $inmate->rent_amount    = number_format(max(0, (float)$invoice->invoice_rent - $stay_rent), 2, '.', '');
+                $inmate->paid_amount    = number_format(max(0, (float)$invoice->invoice_paid_amount - $stay_rent), 2, '.', '');
+                $inmate->balance_amount = $invoice->invoice_balance;
+            } else {
+                $inmate->paid_amount    = $invoice->invoice_paid_amount;
+                $inmate->balance_amount = $invoice->invoice_balance;
+                $inmate->rent_amount    = !empty($invoice->invoice_rent) ? $invoice->invoice_rent : $rent;
+            }
         } else {
             $inmate->payment_status = 0;
             $inmate->paid_amount    = '0.00';
@@ -1318,5 +1361,20 @@ public function room_type($cond){
 
 
 
-}
 
+    public function getPendingBookingRequests()
+    {
+        return $this->db->table('saiyoojyam_inmates i')
+            ->select('i.*, b.building_name, r.rooms_name, rt.room_type_name, d.duration_stay, inv.invoice_id, inv.invoice_rent, inv.invoice_total, inv.invoice_paid_amount, inv.invoice_status, inv.invoice_payment_month')
+            ->join('saiyoojyam_building b', 'b.building_id = i.inmates_building', 'left')
+            ->join('saiyoojyam_rooms r', 'r.rooms_id = i.inmates_rooms', 'left')
+            ->join('saiyoojyam_room_type rt', 'rt.room_type_id = i.inmates_room_type', 'left')
+            ->join('saiyoojyam_duration_of_stay d', 'd.duration_id = i.inmates_duration_of_stay', 'left')
+            ->join('saiyoojyam_invoice inv', 'inv.invoice_inmates = i.inmates_id', 'left')
+            ->where('i.inmates_status', 'pending')
+            ->orderBy('i.inmates_id', 'DESC')
+            ->get()
+            ->getResult();
+    }
+
+}

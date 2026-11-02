@@ -109,7 +109,15 @@
                          <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Payment Month</label>
                           <div class="col-sm-10">
-                            <input type="text" class="form-control payment_month" name="" value="<?php echo date('M-Y',strtotime($payment_month));?>" id="html5-date-input" readonly/>
+                            <?php
+                              $ciDay = (int)date('j', strtotime($inmates->inmates_check_in_date));
+                              $ciMonthDate = date('Y-m-01', strtotime($inmates->inmates_check_in_date));
+                              $formPaymentMonthDisplay = date('M-Y', strtotime($payment_month));
+                              if ($ciDay >= 21 && empty($invoices)) {
+                                  $formPaymentMonthDisplay = date('M-Y', strtotime($ciMonthDate)) . ' & ' . date('M-Y', strtotime($payment_month));
+                              }
+                            ?>
+                            <input type="text" class="form-control payment_month" name="" value="<?php echo $formPaymentMonthDisplay;?>" id="html5-date-input" readonly/>
                           </div>
                         </div>
 
@@ -244,7 +252,7 @@
                         <div class="row justify-content-end">
                           <div class="col-sm-10">
                             <button type="submit" class="btn btn-success">Update</button>
-                            <a href="<?php echo base_url();?>Admin/Inmates/Print" target="_blank" class="btn btn-primary" style="color:#fff;">Print Invoice</a>
+                            <a href="<?php echo base_url();?>Admin/Inmates/Print/<?php echo $inmates->inmates_id;?>" target="_blank" class="btn btn-primary" style="color:#fff;">Print Invoice</a>
                           </div>
                         </div>
 
@@ -259,7 +267,12 @@
 
                  <!-- Basic Bootstrap Table -->
                  <div class="card">
-                <h5 class="card-header">View Payments</h5>
+                <div class="card-header d-flex align-items-center justify-content-between">
+                  <h5 class="mb-0">View Payments</h5>
+                  <a href="<?php echo base_url();?>Admin/Inmates/Print/<?php echo $inmates->inmates_id;?>" target="_blank" class="btn btn-primary btn-sm" style="color:#fff;">
+                    <i class="bx bx-printer me-1"></i> Print Invoice
+                  </a>
+                </div>
                 <div class="table-responsive text-nowrap">
                   <table class="table display" id="myTable">
                     <thead>
@@ -279,8 +292,17 @@
                         
                       <tr>
 
+                        <?php
+                          $ciDay = (int)date('j', strtotime($inmates->inmates_check_in_date));
+                          $ciMonthDate = date('Y-m-01', strtotime($inmates->inmates_check_in_date));
+                          $nextMonthDate = date('Y-m-01', strtotime('first day of next month', strtotime($inmates->inmates_check_in_date)));
+                          $tablePayMonthDisplay = date('M-Y', strtotime($invoice->invoice_payment_month));
+                          if ($ciDay >= 21 && $invoice->invoice_payment_month == $nextMonthDate) {
+                              $tablePayMonthDisplay = date('M-Y', strtotime($ciMonthDate)) . ' & ' . date('M-Y', strtotime($invoice->invoice_payment_month));
+                          }
+                        ?>
                         <td data-order="<?= $invoice->invoice_payment_month ?>">
-                          <?= date('M-Y', strtotime($invoice->invoice_payment_month)) ?>
+                          <?= $tablePayMonthDisplay ?>
                         </td>
                        
                         <td><?php echo $invoice->invoice_paid_date;?></td>

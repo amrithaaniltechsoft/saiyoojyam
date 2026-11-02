@@ -30,11 +30,12 @@
                     <thead>
                       <tr>
                         <th>Sl no</th>
-                        <th>Adress</th>
-                        <th>Phone1</th>
-                        <th>Phone2</th>
-                        <th>Email1</th>
-                        <th>Email2</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>WhatsApp</th>
+                        <th>Instagram</th>
+                        <th>Facebook</th>
+                        <th>YouTube</th>
                         <th>Action</th>
                       </tr>
                     </thead>
@@ -45,15 +46,17 @@
                        
                         <td><?php echo $i; ?></td>
                         
-                        <td><?php echo $val->contact_adress; ?></td>
-
                         <td><?php echo $val->contact_phone1; ?></td>
-                        
-                        <td><?php echo $val->contact_phone2; ?></td>
 
                         <td><?php echo $val->contact_email1; ?></td>
 
-                        <td><?php echo $val->contact_email2; ?></td>
+                        <td><?php echo $val->contact_whats_app; ?></td>
+
+                        <td><?php echo !empty($val->contact_instagram) ? '<a href="' . esc($val->contact_instagram) . '" target="_blank"><i class="bx bxl-instagram text-danger fs-5"></i></a>' : '-'; ?></td>
+
+                        <td><?php echo !empty($val->contact_facebook) ? '<a href="' . esc($val->contact_facebook) . '" target="_blank"><i class="bx bxl-facebook-circle text-primary fs-5"></i></a>' : '-'; ?></td>
+
+                        <td><?php echo !empty($val->contact_youtube) ? '<a href="' . esc($val->contact_youtube) . '" target="_blank"><i class="bx bxl-youtube text-danger fs-5"></i></a>' : '-'; ?></td>
                          
 
                         

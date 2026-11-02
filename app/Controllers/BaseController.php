@@ -47,6 +47,8 @@ abstract class BaseController extends Controller
 
     public $session;
 
+    public $data = [];
+
     /**
      * @return void
      */

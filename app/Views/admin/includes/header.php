@@ -62,6 +62,25 @@
     .dropdown-item {
       display: contents;
     }
+    .dropdown-menu .dropdown-item {
+      display: flex !important;
+      align-items: center !important;
+      white-space: nowrap !important;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+    .dropdown-menu .dropdown-item i {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+      line-height: 1;
+      margin-right: 10px !important;
+    }
+    .dropdown-menu .dropdown-item span {
+      display: inline-block;
+      line-height: 1.2;
+    }
     .edit_image {
       width: 300px;
       object-fit: contain;
@@ -203,38 +222,38 @@
                       <img src="<?php echo base_url();?>public/assets/admin/img/avatars/user-dummy-img.jpg" alt class="w-px-40 h-auto rounded-circle" />
                     </div>
                   </a>
-                  <ul class="dropdown-menu dropdown-menu-end" style="padding: 10px 30px;">
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="padding: 10px 16px; min-width: 220px;">
                     <li>
-                      <a class="dropdown-item" href="#">
-                        <div class="d-flex">
+                      <a class="dropdown-item" href="#" style="display: flex !important; align-items: center !important;">
+                        <div class="d-flex align-items-center">
                           <div class="flex-shrink-0 me-3">
                             <div class="avatar avatar-online">
                               <img src="<?php echo base_url();?>public/assets/admin/img/avatars/user-dummy-img.jpg" alt class="w-px-40 h-auto rounded-circle" />
                             </div>
                           </div>
                           <div class="flex-grow-1">
-                            <h6 class="mb-0" style="margin-top: 10px;">Admin</h6>
+                            <h6 class="mb-0 current-user-name-display fw-semibold" style="margin-top: 0;"><?= esc(auth()->user()->username ?? 'Admin') ?></h6>
                             <!--<small class="text-body-secondary">Admin</small>-->
                           </div>
                         </div>
                       </a>
                     </li>
                     <li>
-                      <div class="dropdown-divider my-1"></div>
+                      <div class="dropdown-divider my-2"></div>
                     </li>
                     
                     <li>
-                      <a class="dropdown-item" href="<?=  base_url();?>Admin/ChangePassword">
-                        <span>Change Password</span>
+                      <a class="dropdown-item d-flex align-items-center" href="<?=  base_url();?>Admin/ChangePassword" style="display: flex !important; align-items: center !important; white-space: nowrap !important;">
+                        <i class="icon-base bx bx-lock-alt icon-md me-2" style="display: inline-flex !important; align-items: center;"></i><span>Change Password</span>
                       </a>
                     </li>
                     
                     <li>
-                      <div class="dropdown-divider my-1"></div>
+                      <div class="dropdown-divider my-2"></div>
                     </li>
                     <li>
-                      <a class="dropdown-item" href="<?= site_url('logout') ?>">
-                        <i class="icon-base bx bx-power-off icon-md me-3"></i><span>Log Out</span>
+                      <a class="dropdown-item d-flex align-items-center" href="<?= site_url('logout') ?>" style="display: flex !important; align-items: center !important; white-space: nowrap !important;">
+                        <i class="icon-base bx bx-power-off icon-md me-2 text-danger" style="display: inline-flex !important; align-items: center;"></i><span>Log Out</span>
                       </a>
                     </li>
                   </ul>

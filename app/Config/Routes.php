@@ -37,6 +37,9 @@ $routes->get('dashboard', static function () {
     return redirect()->to('Admin/Home');
 });
 
+$routes->get('Admin/ChangePassword', '\App\Controllers\Admin\ChangePassword::index');
+$routes->post('Admin/ChangePassword/updatePassword', '\App\Controllers\Admin\ChangePassword::updatePassword');
+
 $routes->get('Admin/WhyChoose', '\App\Controllers\Admin\WhyChoose::index');
 $routes->get('Admin/WhyChoose/Add', '\App\Controllers\Admin\WhyChoose::Add');
 $routes->post('Admin/WhyChoose/Add', '\App\Controllers\Admin\WhyChoose::Add');
@@ -93,6 +96,9 @@ $routes->post('Admin/Inmates/ApproveBooking', '\App\Controllers\Admin\Inmates::A
 $routes->post('Admin/Inmates/RejectBooking', '\App\Controllers\Admin\Inmates::RejectBooking');
 $routes->match(['GET', 'POST'], 'Admin/Inmates/RegeneratePassword', '\App\Controllers\Admin\Inmates::RegeneratePassword');
 $routes->get('Admin/Inmates/Pending', '\App\Controllers\Admin\Inmates::Pending');
+$routes->match(['GET', 'POST'], 'Admin/Payments', '\App\Controllers\Admin\Payments::index');
+$routes->match(['GET', 'POST'], 'Admin/Payments/View', '\App\Controllers\Admin\Payments::View');
+$routes->post('Admin/Payments/PayBalance', '\App\Controllers\Admin\Payments::PayBalance');
 $routes->match(['GET', 'POST'], 'Admin/Inmates/CheckOut', '\App\Controllers\Admin\Inmates::CheckOut');
 $routes->match(['GET', 'POST'], 'Admin/Inmates/CheckOut/(:num)', '\App\Controllers\Admin\Inmates::CheckOut/$1');
 $routes->post('api/checkout', '\App\Controllers\Api\Inmates::create');

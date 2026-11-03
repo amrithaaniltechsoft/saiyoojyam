@@ -79,6 +79,11 @@
               $website="active";
               }
 
+              $uriSegs = service('uri')->getSegments();
+              $seg2 = strtolower($uriSegs[1] ?? '');
+              $seg3 = strtolower($uriSegs[2] ?? '');
+              $seg4 = strtolower($uriSegs[3] ?? '');
+
             ?>
 
 
@@ -95,13 +100,11 @@
             <!----->
 
             <!-- Dashboards -->
-            <li class="menu-item active open">
-              <a href="<?=  base_url();?>Admin/Home" class="menu-link menu-toggle">
+            <li class="menu-item <?= (empty($seg2) || $seg2 == 'home') ? 'active' : '' ?>">
+              <a href="<?=  base_url();?>Admin/Home" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-home-smile"></i>
                 <div class="text-truncate" data-i18n="">Dashboards</div>
-                
               </a>
-              
             </li>
 
 
@@ -117,18 +120,18 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item <?php $uri = service('uri'); if(strtolower($uri->getSegment(2) ?? '') == 'building'){ echo 'active open'; } ?>">
+            <li class="menu-item <?= $seg2 == 'building' ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Building</div>
               </a>
               <ul class="menu-sub">
-                <li class="menu-item <?php $uri = service('uri'); if(strtolower($uri->getSegment(2) ?? '') == 'building' && strtolower($uri->getSegment(3) ?? '') == 'add'){ echo 'active'; } ?>">
+                <li class="menu-item <?= ($seg2 == 'building' && $seg3 == 'add') ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Building/Add" class="menu-link">
                     <div class="text-truncate" data-i18n="Account">Add Building</div>
                   </a>
                 </li>
-                <li class="menu-item <?php $uri = service('uri'); if(strtolower($uri->getSegment(2) ?? '') == 'building' && (empty($uri->getSegment(3)) || strtolower($uri->getSegment(3) ?? '') == 'index')){ echo 'active'; } ?>">
+                <li class="menu-item <?= ($seg2 == 'building' && ($seg3 == '' || $seg3 == 'index')) ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Building" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">List Building</div>
                   </a>
@@ -141,18 +144,18 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item">
+            <li class="menu-item <?= $seg2 == 'roomtypes' ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Room Types</div>
               </a>
               <ul class="menu-sub">
-                <li class="menu-item">
+                <li class="menu-item <?= ($seg2 == 'roomtypes' && $seg3 == 'add') ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/RoomTypes/Add" class="menu-link">
                     <div class="text-truncate" data-i18n="Account">Add Room Types</div>
                   </a>
                 </li>
-                <li class="menu-item">
+                <li class="menu-item <?= ($seg2 == 'roomtypes' && ($seg3 == '' || in_array($seg3, ['index', 'edit']))) ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/RoomTypes" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit Room Types</div>
                   </a>
@@ -165,18 +168,18 @@
             
             <!--sidebar pages start-->
 
-            <li class="menu-item">
+            <li class="menu-item <?= ($seg2 == 'rooms' && $seg3 != 'available') ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Rooms</div>
               </a>
               <ul class="menu-sub">
-                <li class="menu-item">
+                <li class="menu-item <?= ($seg2 == 'rooms' && $seg3 == 'add') ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Rooms/Add" class="menu-link">
                     <div class="text-truncate" data-i18n="Account">Add Rooms</div>
                   </a>
                 </li>
-                <li class="menu-item">
+                <li class="menu-item <?= ($seg2 == 'rooms' && ($seg3 == '' || in_array($seg3, ['index', 'edit']))) ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Rooms" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit Rooms</div>
                   </a>
@@ -251,23 +254,23 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item">
+            <li class="menu-item <?= in_array($seg2, ['tariff', 'buildingfees']) ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Tariff</div>
               </a>
               <ul class="menu-sub">
-                <li class="menu-item">
+                <li class="menu-item <?= $seg2 == 'buildingfees' ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/BuildingFees" class="menu-link">
                     <div class="text-truncate" data-i18n="Account">Building Fees</div>
                   </a>
                 </li>
-                <li class="menu-item">
+                <li class="menu-item <?= ($seg2 == 'tariff' && $seg3 == 'add') ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Tariff/Add" class="menu-link">
                     <div class="text-truncate" data-i18n="Account">Add Tariff</div>
                   </a>
                 </li>
-                <li class="menu-item">
+                <li class="menu-item <?= ($seg2 == 'tariff' && ($seg3 == '' || in_array($seg3, ['index', 'edit']))) ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Tariff" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit Tariff</div>
                   </a>
@@ -311,18 +314,18 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item">
+            <li class="menu-item <?= $seg2 == 'inmates' ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Inmates</div>
               </a>
               <ul class="menu-sub">
-                <li class="menu-item">
+                <li class="menu-item <?= ($seg2 == 'inmates' && $seg3 == 'add') ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Inmates/Add" class="menu-link">
                     <div class="text-truncate" data-i18n="Account">Add Inmates</div>
                   </a>
                 </li>
-                <li class="menu-item">
+                <li class="menu-item <?= ($seg2 == 'inmates' && ($seg3 == '' || in_array($seg3, ['index', 'edit', 'view'])) && empty($seg4)) ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Inmates" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit Inmates</div>
                   </a>
@@ -411,7 +414,7 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item">
+            <li class="menu-item <?= $seg2 == 'payments' ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Payments</div>
@@ -422,7 +425,7 @@
                     <div class="text-truncate" data-i18n="Account">Add Payments</div>
                   </a>
                 </li>-->
-                <li class="menu-item">
+                <li class="menu-item <?= $seg2 == 'payments' ? 'active' : '' ?>">
                   <a href="<?= base_url();?>Admin/Payments/View" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View Payments</div>
                   </a>
@@ -439,13 +442,13 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item <?php $uri = service('uri'); if(strtolower($uri->getSegment(2) ?? '') == 'building'){ echo 'active open'; } ?>">
+            <li class="menu-item <?= $seg2 == 'building' ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Building</div>
               </a>
               <ul class="menu-sub">
-                <li class="menu-item <?php $uri = service('uri'); if(strtolower($uri->getSegment(2) ?? '') == 'building'){ echo 'active'; } ?>">
+                <li class="menu-item <?= $seg2 == 'building' ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Building" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">List Building</div>
                   </a>
@@ -457,14 +460,14 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item <?php $uri = service('uri'); if(strtolower($uri->getSegment(2) ?? '') == 'about'){ echo 'active open'; } ?>">
+            <li class="menu-item <?= $seg2 == 'about' ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">About US</div>
               </a>
               <ul class="menu-sub">
                  
-                <li class="menu-item <?php $uri = service('uri'); if(strtolower($uri->getSegment(2) ?? '') == 'about'){ echo 'active'; } ?>">
+                <li class="menu-item <?= $seg2 == 'about' ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/About/View" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit About Us</div>
                   </a>
@@ -477,14 +480,14 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item <?php $uri = service('uri'); if($uri->getSegment(2) == 'WhyChoose' || $uri->getSegment(2) == 'Whychoose'){ echo 'active open'; } ?>">
+            <li class="menu-item <?= in_array($seg2, ['whychoose']) ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Why Choose Us</div>
               </a>
               <ul class="menu-sub">
                  
-                <li class="menu-item <?php $uri = service('uri'); if($uri->getSegment(2) == 'WhyChoose' || $uri->getSegment(2) == 'Whychoose'){ echo 'active'; } ?>">
+                <li class="menu-item <?= in_array($seg2, ['whychoose']) ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/WhyChoose" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit Why Choose Saiyoojyam</div>
                   </a>
@@ -498,13 +501,13 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item <?php $uri = service('uri'); if(strtolower($uri->getSegment(2) ?? '') == 'foodquality'){ echo 'active open'; } ?>">
+            <li class="menu-item <?= $seg2 == 'foodquality' ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-restaurant"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Food Quality</div>
               </a>
               <ul class="menu-sub">
-                <li class="menu-item <?php $uri = service('uri'); if(strtolower($uri->getSegment(2) ?? '') == 'foodquality'){ echo 'active'; } ?>">
+                <li class="menu-item <?= $seg2 == 'foodquality' ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/FoodQuality" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit Food Quality</div>
                   </a>
@@ -516,14 +519,14 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item <?php $uri = service('uri'); if($uri->getSegment(2) == 'Cms'){ echo 'active open'; } ?>">
+            <li class="menu-item <?= in_array($seg2, ['cms']) ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">CMS</div>
               </a>
               <ul class="menu-sub">
                  
-                <li class="menu-item <?php $uri = service('uri'); if($uri->getSegment(2) == 'Cms'){ echo 'active'; } ?>">
+                <li class="menu-item <?= in_array($seg2, ['cms']) ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Cms" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit CMS</div>
                   </a>
@@ -537,14 +540,14 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item">
+            <li class="menu-item <?= $seg2 == 'contact' ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Contact</div>
               </a>
               <ul class="menu-sub">
                 
-                <li class="menu-item">
+                <li class="menu-item <?= $seg2 == 'contact' ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Contact" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit Contact</div>
                   </a>
@@ -558,14 +561,14 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item">
+            <li class="menu-item <?= $seg2 == 'seo' ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">SEO</div>
               </a>
               <ul class="menu-sub">
                 
-                <li class="menu-item">
+                <li class="menu-item <?= $seg2 == 'seo' ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Seo" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit SEO</div>
                   </a>
@@ -585,12 +588,16 @@
             <?php } ?> 
 
 
-
-
-           
-
-
             <!--sidebar pages start-->
+
+            <li class="menu-item <?= $seg2 == 'changepassword' ? 'active' : '' ?>">
+              <a href="<?= base_url(); ?>Admin/ChangePassword" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-lock-alt"></i>
+                <div class="text-truncate" data-i18n="Change Password">Change Password</div>
+              </a>
+            </li>
+
+            <!--sidebar pages end-->
 
             <!--<li class="menu-item">
               <a href="javascript:void(0);" class="menu-link menu-toggle">

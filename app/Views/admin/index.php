@@ -498,31 +498,7 @@ ul a {
 
 
 
-                <?php if (!empty($pending_bookings_count) && $pending_bookings_count > 0): ?>
-                <!-- Top Priority Notification Alert Banner -->
-                <div class="col-12 mb-3">
-                  <div class="alert border-0 shadow-sm d-flex flex-wrap align-items-center justify-content-between p-3" style="background: linear-gradient(135deg, #fff3ee 0%, #ffede5 100%); border-left: 5px solid #ff561c !important; border-radius: 12px;">
-                    <div class="d-flex align-items-center gap-3">
-                      <div style="width:48px;height:48px;border-radius:50%;background:#ff561c;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(255,86,28,0.3);" class="pulse-icon">
-                        <i class="fa fa-bell" style="font-size:22px;"></i>
-                      </div>
-                      <div>
-                        <h6 class="mb-1 fw-bold text-dark" style="font-size:16px;">
-                          Action Required: <?php echo $pending_bookings_count; ?> Pending Booking Request<?php echo $pending_bookings_count > 1 ? 's' : ''; ?> Awaiting Approval
-                        </h6>
-                        <p class="mb-0 text-muted" style="font-size:13px;">
-                          New online room reservations have been paid. Review guest details and set inmate login credentials below.
-                        </p>
-                      </div>
-                    </div>
-                    <div class="mt-2 mt-md-0 d-flex gap-2">
-                      <a href="#pending-bookings-section" class="btn text-white fw-bold shadow-sm" style="background:#ff561c;border-color:#ff561c;padding:10px 18px;border-radius:8px;font-size:13px;">
-                        <i class="fa fa-arrow-down me-1"></i> Review &amp; Approve Now
-                      </a>
-                    </div>
-                  </div>
-                </div>
-                <?php endif; ?>
+
 
 <!-- Pending Booking Requests Section Start -->
                 <div class="col-12 mt-4" id="pending-bookings-section">

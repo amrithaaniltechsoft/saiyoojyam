@@ -149,7 +149,7 @@
             </div>
 
             <div class="card-body">
-              <form method="POST" enctype="multipart/form-data" id="editBuildingWebForm">
+              <form method="POST" action="<?= base_url(); ?>Admin/Building/EditWeb/<?= $building->building_id; ?>" enctype="multipart/form-data" id="editBuildingWebForm">
 
                 <!-- 1. Basic Info Section -->
                 <div class="section-card">
@@ -545,6 +545,13 @@
       if (webForm) {
         webForm.addEventListener('submit', function() {
           cleanMapEmbedUrl();
+          const directLink = document.querySelector('input[name="building_map_link"]');
+          if (directLink && directLink.value) {
+            directLink.value = directLink.value.replace(/'/g, '%27');
+          }
+          if (mapInput && mapInput.value) {
+            mapInput.value = mapInput.value.replace(/'/g, '%27');
+          }
         });
       }
     </script>

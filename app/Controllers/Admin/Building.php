@@ -216,13 +216,21 @@ class Building extends BaseController
             if (!empty($rawMap) && preg_match('/src=["\']([^"\']+)["\']/i', $rawMap, $matches)) {
                 $rawMap = $matches[1];
             }
+            if (!empty($rawMap)) {
+                $rawMap = str_replace("'", "%27", $rawMap);
+            }
+
+            $rawMapLink = trim($this->request->getPost('building_map_link') ?? '');
+            if (!empty($rawMapLink)) {
+                $rawMapLink = str_replace("'", "%27", $rawMapLink);
+            }
 
             $update_data = [
                 'building_name'              => $bName,
                 'building_tagline'           => trim($this->request->getPost('building_tagline') ?? ''),
                 'building_address'           => trim($this->request->getPost('building_address') ?? ''),
                 'building_map'               => $rawMap,
-                'building_map_link'          => trim($this->request->getPost('building_map_link') ?? ''),
+                'building_map_link'          => $rawMapLink,
                 'building_key_amenities'     => json_encode($amenitiesGrid, JSON_UNESCAPED_UNICODE),
                 'building_living_facilities' => json_encode($featuresList, JSON_UNESCAPED_UNICODE),
                 'building_image'             => $photoName,
@@ -441,8 +449,8 @@ class Building extends BaseController
             'towers' => [
                 'tagline' => 'Prathibha Layout · Second Cross Road, Kakkanad',
                 'address' => 'Prathibha Layout, Second Cross Road, Block Panchayath Office Road, Kusumagiri P.O, Kakkanad, Kerala 682030',
-                'mapEmbedUrl' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3929.0344879248346!2d76.34960057376456!3d10.01400997279611!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3b080d42064f8335%3A0xda4cdedd9ad56ec7!2sSAIYOOJYAM%20-%20Ladies%20Hostel%20in%20Kakkanad%20%7C%20Women\'s%20Hostel%20near%20Infopark%20and%20CSEZ!5e0!3m2!1sen!2sin!4v1791888413434!5m2!1sen!2sin',
-                'mapDirectUrl' => 'https://www.google.com/maps/place/SAIYOOJYAM+-+Ladies+Hostel+in+Kakkanad+%7C+Women\'s+Hostel+near+Infopark+and+CSEZ/@10.0140099,76.3496005,17z/data=!3m1!4b1!4m6!3m5!1s0x3b080d42064f8335:0xda4cdedd9ad56ec7!8m2!3d10.0140099!4d76.3496005',
+                'mapEmbedUrl' => 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3929.0344879248346!2d76.34960057376456!3d10.01400997279611!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3b080d42064f8335%3A0xda4cdedd9ad56ec7!2sSAIYOOJYAM%20-%20Ladies%20Hostel%20in%20Kakkanad%20%7C%20Women%27s%20Hostel%20near%20Infopark%20and%20CSEZ!5e0!3m2!1sen!2sin!4v1791888413434!5m2!1sen!2sin',
+                'mapDirectUrl' => 'https://www.google.com/maps/place/SAIYOOJYAM+-+Ladies+Hostel+in+Kakkanad+%7C+Women%27s+Hostel+near+Infopark+and+CSEZ/@10.0140099,76.3496005,17z/data=!3m1!4b1!4m6!3m5!1s0x3b080d42064f8335:0xda4cdedd9ad56ec7!8m2!3d10.0140099!4d76.3496005',
                 'whatsapp' => '917034111368',
                 'description' => 'Saiyoojyam TOWERS 1 & 2 located at Prathibha Layout, Kusumagiri, Kakkanad offer comfortable coliving spaces and modern amenities near Infopark.',
                 'amenitiesGrid' => [

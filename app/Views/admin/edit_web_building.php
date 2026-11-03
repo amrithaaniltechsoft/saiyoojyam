@@ -191,7 +191,7 @@
                   <div class="row mb-3">
                     <label class="col-sm-3 col-form-label font-medium">Google Map Embed URL</label>
                     <div class="col-sm-9">
-                      <textarea class="form-control" name="building_map" id="building_map_input" rows="3" placeholder="Paste Google Maps embed URL (e.g. https://www.google.com/maps/embed?pb=...)"><?= esc($mapEmbed) ?></textarea>
+                      <textarea class="form-control" name="map_embed_url" id="building_map_input" rows="3" placeholder="Paste Google Maps embed URL (e.g. https://www.google.com/maps/embed?pb=...)"><?= esc($mapEmbed) ?></textarea>
                       <small class="text-muted">Enter the embed URL (e.g. <code>https://www.google.com/maps/embed?pb=...</code>). If you paste an &lt;iframe&gt; code, the clean URL will be extracted automatically.</small>
                     </div>
                   </div>

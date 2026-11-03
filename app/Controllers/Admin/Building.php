@@ -212,7 +212,7 @@ class Building extends BaseController
                 $bName = $data['building']->building_name;
             }
 
-            $rawMap = trim($this->request->getPost('building_map') ?? '');
+            $rawMap = trim($this->request->getPost('map_embed_url') ?? $this->request->getPost('building_map') ?? '');
             if (!empty($rawMap) && preg_match('/src=["\']([^"\']+)["\']/i', $rawMap, $matches)) {
                 $rawMap = $matches[1];
             }

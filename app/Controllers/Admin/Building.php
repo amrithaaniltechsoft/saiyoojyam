@@ -212,11 +212,16 @@ class Building extends BaseController
                 $bName = $data['building']->building_name;
             }
 
+            $rawMap = trim($this->request->getPost('building_map') ?? '');
+            if (!empty($rawMap) && preg_match('/src=["\']([^"\']+)["\']/i', $rawMap, $matches)) {
+                $rawMap = $matches[1];
+            }
+
             $update_data = [
                 'building_name'              => $bName,
                 'building_tagline'           => trim($this->request->getPost('building_tagline') ?? ''),
                 'building_address'           => trim($this->request->getPost('building_address') ?? ''),
-                'building_map'               => trim($this->request->getPost('building_map') ?? ''),
+                'building_map'               => $rawMap,
                 'building_map_link'          => trim($this->request->getPost('building_map_link') ?? ''),
                 'building_key_amenities'     => json_encode($amenitiesGrid, JSON_UNESCAPED_UNICODE),
                 'building_living_facilities' => json_encode($featuresList, JSON_UNESCAPED_UNICODE),

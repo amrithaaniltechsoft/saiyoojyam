@@ -189,10 +189,10 @@
                   </div>
 
                   <div class="row mb-3">
-                    <label class="col-sm-3 col-form-label font-medium">Google Map Embed (URL or Iframe)</label>
+                    <label class="col-sm-3 col-form-label font-medium">Google Map Embed URL</label>
                     <div class="col-sm-9">
-                      <textarea class="form-control" name="building_map" rows="3" placeholder="Paste Google Maps embed iframe or URL (e.g. https://www.google.com/maps/embed?pb=...)"><?= esc($mapEmbed) ?></textarea>
-                      <small class="text-muted">You can paste the entire &lt;iframe src="..."&gt;&lt;/iframe&gt; code or just the URL.</small>
+                      <textarea class="form-control" name="building_map" id="building_map_input" rows="3" placeholder="Paste Google Maps embed URL (e.g. https://www.google.com/maps/embed?pb=...)"><?= esc($mapEmbed) ?></textarea>
+                      <small class="text-muted">Enter the embed URL (e.g. <code>https://www.google.com/maps/embed?pb=...</code>). If you paste an &lt;iframe&gt; code, the clean URL will be extracted automatically.</small>
                     </div>
                   </div>
 
@@ -522,6 +522,31 @@
         `;
         wrapper.appendChild(div);
       });
+
+      // Sanitize Google Maps Embed (Prevent ModSecurity 406 XSS/Iframe Trigger)
+      const mapInput = document.getElementById('building_map_input');
+      function cleanMapEmbedUrl() {
+        if (!mapInput) return;
+        const val = mapInput.value.trim();
+        if (val.toLowerCase().includes('<iframe') || val.includes('src=')) {
+          const match = val.match(/src=["']([^"']+)["']/i);
+          if (match && match[1]) {
+            mapInput.value = match[1];
+          }
+        }
+      }
+      if (mapInput) {
+        mapInput.addEventListener('input', cleanMapEmbedUrl);
+        mapInput.addEventListener('change', cleanMapEmbedUrl);
+        mapInput.addEventListener('paste', () => setTimeout(cleanMapEmbedUrl, 50));
+      }
+
+      const webForm = document.getElementById('editBuildingWebForm');
+      if (webForm) {
+        webForm.addEventListener('submit', function() {
+          cleanMapEmbedUrl();
+        });
+      }
     </script>
 </body>
 </html>

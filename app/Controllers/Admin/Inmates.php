@@ -1398,6 +1398,8 @@ $joins = array(
             $id = $this->request->getGet('id') ?? $this->request->getGet('inmates_id');
         }
 
+        $invoiceId = $this->request->getGet('invoice_id');
+
         $mpdf = new \Mpdf\Mpdf([
             'margin_top' => 10,
             'margin_bottom' => 10,
@@ -1407,41 +1409,130 @@ $joins = array(
 
         $db = \Config\Database::connect();
         $inmate = null;
+        $invRow = null;
+
+        // If an explicit invoice_id query param was passed, load that invoice first
+        if (!empty($invoiceId)) {
+            $invRow = $db->table('saiyoojyam_invoice')->where('invoice_id', (int) $invoiceId)->get()->getRow();
+            if ($invRow && empty($id)) {
+                $id = $invRow->invoice_inmates;
+            }
+        }
+
+        // Try to load inmate
         if (!empty($id)) {
             $inmate = $db->table('saiyoojyam_inmates')->where('inmates_id', (int) $id)->get()->getRow();
         }
 
+        // If inmate not found by ID, maybe $id passed was an invoice_id
+        if (!$inmate && !empty($id)) {
+            $maybeInv = $db->table('saiyoojyam_invoice')->where('invoice_id', (int) $id)->get()->getRow();
+            if ($maybeInv) {
+                $invRow = $maybeInv;
+                $inmate = $db->table('saiyoojyam_inmates')->where('inmates_id', (int) $invRow->invoice_inmates)->get()->getRow();
+            }
+        }
+
+        // If invoice not yet loaded and inmate is found, fetch matching or latest invoice
+        if (!$invRow && $inmate) {
+            $invRow = $db->table('saiyoojyam_invoice')
+                ->where('invoice_inmates', (string) $inmate->inmates_id)
+                ->orderBy('invoice_id', 'DESC')
+                ->get()->getRow();
+        }
+
         $guestName = $inmate ? $inmate->inmates_name : 'Guest';
+        $guestPhone = $inmate ? $inmate->inmates_phone_no : '';
         $joinDate = $inmate ? $inmate->inmates_check_in_date : date('Y-m-d');
         $inmateUid = $inmate ? $inmate->inmates_uid : '';
         $building = 'Saiyoojyam Ladies Hostel';
         $room = 'Room';
-        $rentPerMonth = 0.0;
-        $cautionDeposit = $inmate ? (float) $inmate->inmates_caution_deposit : 0.0;
-        $admissionFees = $inmate ? (float) $inmate->inmates_admission_fee : 0.0;
-        $totalPaid = 0.0;
-        $paymentMonth = date('Y-m-01');
+        $buildingHeaderName = 'Saiyoojyam Ladies Hostel';
+        $buildingAddressHtml = 'Prathibha Layout, Second Cross Road,<br>Block Panchayath Office Road, Kusumagiri P.O, Kakkanad, Kochi';
+        $buildingContact = '';
 
         if ($inmate) {
             $bRow = $db->table('saiyoojyam_building')->where('building_id', (int) $inmate->inmates_building)->get()->getRow();
             if ($bRow) {
                 $building = $bRow->building_name;
+                $buildingHeaderName = !empty($bRow->building_name) ? $bRow->building_name : 'Saiyoojyam Ladies Hostel';
+                if (!empty($bRow->building_address)) {
+                    $buildingAddressHtml = nl2br(htmlspecialchars($bRow->building_address));
+                }
+                if (!empty($bRow->building_whatsapp)) {
+                    $buildingContact = $bRow->building_whatsapp;
+                }
             }
             $rRow = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $inmate->inmates_rooms)->get()->getRow();
             if ($rRow) {
                 $room = 'Room ' . $rRow->rooms_name;
             }
-            $invRow = $db->table('saiyoojyam_invoice')->where('invoice_inmates', (string) $inmate->inmates_id)->orderBy('invoice_id', 'DESC')->get()->getRow();
+        }
+
+        $paymentMonth = date('Y-m-01');
+        $invoiceTotal = 0.0;
+        $paidAmount = 0.0;
+        $balanceAmount = 0.0;
+        $advanceAmount = 0.0;
+        $status = 1;
+        $invoiceNo = $invRow ? $invRow->invoice_id : '';
+        $invoicePaidDate = $invRow ? $invRow->invoice_paid_date : date('Y-m-d');
+
+        $cautionDeposit = $inmate ? (float) $inmate->inmates_caution_deposit : 0.0;
+        $admissionFees = $inmate ? (float) $inmate->inmates_admission_fee : 0.0;
+
+        if ($invRow) {
+            $paymentMonth   = $invRow->invoice_payment_month;
+            $invoiceTotal   = (float) $invRow->invoice_total;
+            $paidAmount     = (float) $invRow->invoice_paid_amount;
+            $balanceAmount  = (float) $invRow->invoice_balance;
+            $advanceAmount  = (float) $invRow->invoice_advance;
+            $status         = (int) $invRow->invoice_status;
+        } else {
+            // Fallback if no invoice exists yet (e.g. preview)
+            $tRow = ($inmate && !empty($inmate->inmates_tariffs)) ? $db->table('saiyoojyam_tariffs')->where('tariffs_id', (int) $inmate->inmates_tariffs)->get()->getRow() : null;
+            $rentRate = $tRow ? (float) $tRow->tariffs_price : 0.0;
+            $invoiceTotal = $rentRate + $cautionDeposit + $admissionFees;
+            $paidAmount = $invoiceTotal;
+            $balanceAmount = 0.0;
+            $status = 1;
+        }
+
+        // Determine if caution deposit and admission fee belong on this specific invoice
+        // They are one-time fees applicable ONLY to the first admission invoice
+        $isFirstInvoice = false;
+        if ($invRow && $inmate) {
+            $firstInv = $db->table('saiyoojyam_invoice')
+                ->where('invoice_inmates', (string) $inmate->inmates_id)
+                ->orderBy('invoice_id', 'ASC')
+                ->get()->getRow();
+            if ($firstInv && (int)$firstInv->invoice_id === (int)$invRow->invoice_id) {
+                $isFirstInvoice = true;
+            }
+        } elseif (!$invRow && $inmate) {
+            $isFirstInvoice = true;
+        }
+
+        if ($isFirstInvoice && ($cautionDeposit > 0 || $admissionFees > 0)) {
+            $displayCaution = $cautionDeposit;
+            $displayAdmission = $admissionFees;
+            $displayRent = max(0.0, $invoiceTotal - ($displayCaution + $displayAdmission));
+            if ($displayRent == 0 && $invRow && (float)$invRow->invoice_rent > 0) {
+                $displayRent = (float)$invRow->invoice_rent;
+            }
+        } else {
+            $displayCaution = 0.0;
+            $displayAdmission = 0.0;
+            // On regular recurring invoices, if invoice_rent was corrupted by the duplicate input name bug to equal balance, fall back to invoiceTotal
             if ($invRow) {
-                $paymentMonth = $invRow->invoice_payment_month;
-                $rentPerMonth = (float) $invRow->invoice_rent;
-                $totalPaid = (float) $invRow->invoice_paid_amount;
-            } else {
-                $tRow = $db->table('saiyoojyam_tariffs')->where('tariffs_id', (int) $inmate->inmates_tariffs)->get()->getRow();
-                if ($tRow) {
-                    $rentPerMonth = (float) $tRow->tariffs_price;
+                $rentInDb = (float)$invRow->invoice_rent;
+                if ($rentInDb > 0 && ($rentInDb != $balanceAmount || $balanceAmount == 0)) {
+                    $displayRent = $rentInDb;
+                } else {
+                    $displayRent = $invoiceTotal;
                 }
-                $totalPaid = $rentPerMonth + $cautionDeposit + $admissionFees;
+            } else {
+                $displayRent = $invoiceTotal;
             }
         }
 
@@ -1454,7 +1545,20 @@ $joins = array(
             }
         }
 
-        $rentPerDay = $rentPerMonth > 0 ? round($rentPerMonth / 30, 2) : 0;
+        // Status badge label and styling
+        $statusText = 'Fully Paid';
+        $statusColor = '#2e7d32'; // green
+        if ($status == 2) {
+            $statusText = 'Partially Paid';
+            $statusColor = '#e65100'; // orange
+        } elseif ($status == 3) {
+            $statusText = 'Advance Paid';
+            $statusColor = '#1565c0'; // blue
+        } elseif ($status == 0) {
+            $statusText = 'Unpaid';
+            $statusColor = '#c62828'; // red
+        }
+
         $logo = base_url('assets/admin/img/logo.png');
 
         $html = '
@@ -1466,87 +1570,105 @@ $joins = array(
     <div style="border: 1px solid #ddd; padding: 20px; height: 100%; box-sizing: border-box;">
 
         <!-- Header -->
-        <div style="text-align: center; margin-bottom: 20px;">
-            <img src="' . $logo . '" style="height: 50px; margin-bottom: 8px;">
-            <h2 style="margin: 4px 0; font-size: 20px;">Saiyoojyam Ladies Hostel</h2>
-            <div style="font-size: 11px; color: #555;">
-                Prathibha Layout, Second Cross Road,<br>
-                Block Panchayath Office Road, Kusumagiri P.O, Kakkanad, Kochi<br>
-                +91 98765 43210 | +91 99887 77665
+        <div style="text-align: center; margin-bottom: 15px;">
+            <img src="' . $logo . '" style="height: 50px; margin-bottom: 6px;">
+            <h2 style="margin: 2px 0 4px 0; font-size: 20px; color: #1e293b; font-weight: bold;">' . htmlspecialchars($buildingHeaderName) . '</h2>
+            <div style="font-size: 11px; color: #555; line-height: 1.4;">
+                ' . $buildingAddressHtml . '
+                ' . (!empty($buildingContact) ? '<br><span>Phone / WhatsApp: ' . htmlspecialchars($buildingContact) . '</span>' : '') . '
             </div>
         </div>
 
-        <hr style="border: none; border-top: 1px solid #aaa; margin-bottom: 20px;">
+        <hr style="border: none; border-top: 1px solid #aaa; margin-bottom: 15px;">
 
-        <!-- Title -->
-        <div style="text-align: center; margin-bottom: 20px;">
-            <h3 style="margin: 0; font-size: 18px; text-transform: uppercase;">INVOICE & RECEIPT</h3>
-            ' . ($inmateUid ? '<div style="font-size: 12px; color: #555; margin-top: 4px;">Booking ID: <strong>' . htmlspecialchars($inmateUid) . '</strong></div>' : '') . '
+        <!-- Title & Meta -->
+        <div style="text-align: center; margin-bottom: 15px;">
+            <h3 style="margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.5px;">INVOICE & RECEIPT</h3>
+            <div style="font-size: 12px; color: #555; margin-top: 5px;">
+                ' . ($invoiceNo ? 'Invoice No: <strong>#INV-' . htmlspecialchars($invoiceNo) . '</strong> &nbsp;|&nbsp; ' : '') . '
+                ' . ($inmateUid ? 'Booking ID: <strong>' . htmlspecialchars($inmateUid) . '</strong>' : '') . '
+                ' . ($invoicePaidDate && $invoicePaidDate != '0000-00-00' ? ' &nbsp;|&nbsp; Date: <strong>' . date('d M Y', strtotime($invoicePaidDate)) . '</strong>' : '') . '
+            </div>
         </div>
 
         <!-- Personal Info -->
-        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; background-color: #f9f9f9;">
-            <h4 style="margin: 0 0 10px; font-size: 14px;">Personal Details</h4>
-            <table style="width: 100%;">
+        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 12px; background-color: #f9f9f9;">
+            <h4 style="margin: 0 0 8px; font-size: 13px; text-transform: uppercase; color: #374151;">Personal Details</h4>
+            <table style="width: 100%; font-size: 12px;">
                 <tr>
-                    <td style="padding: 5px; width: 35%; font-weight: bold;">Name</td>
-                    <td style="padding: 5px;">' . htmlspecialchars($guestName) . '</td>
+                    <td style="padding: 4px; width: 25%; font-weight: bold; color: #555;">Name</td>
+                    <td style="padding: 4px; color: #111;">' . htmlspecialchars($guestName) . '</td>
+                    ' . (!empty($guestPhone) ? '<td style="padding: 4px; width: 20%; font-weight: bold; color: #555;">Phone</td><td style="padding: 4px; color: #111;">' . htmlspecialchars($guestPhone) . '</td>' : '<td></td><td></td>') . '
                 </tr>
                 <tr>
-                    <td style="padding: 5px; font-weight: bold;">Join Date</td>
-                    <td style="padding: 5px;">' . date('d M Y', strtotime($joinDate)) . '</td>
-                </tr>
-                <tr>
-                    <td style="padding: 5px; font-weight: bold;">Payment Month</td>
-                    <td style="padding: 5px;">' . $paymentMonthDisplay . '</td>
+                    <td style="padding: 4px; font-weight: bold; color: #555;">Join Date</td>
+                    <td style="padding: 4px; color: #111;">' . date('d M Y', strtotime($joinDate)) . '</td>
+                    <td style="padding: 4px; font-weight: bold; color: #555;">Payment Month</td>
+                    <td style="padding: 4px; color: #111;">' . $paymentMonthDisplay . '</td>
                 </tr>
             </table>
         </div>
 
         <!-- Room Info -->
-        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 15px; background-color: #fdfdfd;">
-            <h4 style="margin: 0 0 10px; font-size: 14px;">Room Details</h4>
-            <table style="width: 100%;">
+        <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 12px; background-color: #fdfdfd;">
+            <h4 style="margin: 0 0 8px; font-size: 13px; text-transform: uppercase; color: #374151;">Room Details</h4>
+            <table style="width: 100%; font-size: 12px;">
                 <tr>
-                    <td style="padding: 5px; width: 35%; font-weight: bold;">Building</td>
-                    <td style="padding: 5px;">' . htmlspecialchars($building) . '</td>
-                </tr>
-                <tr>
-                    <td style="padding: 5px; font-weight: bold;">Room</td>
-                    <td style="padding: 5px;">' . htmlspecialchars($room) . '</td>
+                    <td style="padding: 4px; width: 25%; font-weight: bold; color: #555;">Building</td>
+                    <td style="padding: 4px; color: #111;">' . htmlspecialchars($building) . '</td>
+                    <td style="padding: 4px; width: 20%; font-weight: bold; color: #555;">Room</td>
+                    <td style="padding: 4px; color: #111;">' . htmlspecialchars($room) . '</td>
                 </tr>
             </table>
         </div>
 
-        <!-- Rent Info -->
+        <!-- Payment Breakdown -->
         <div style="border: 1px solid #ccc; padding: 10px; background-color: #f9f9f9;">
-            <h4 style="margin: 0 0 10px; font-size: 14px;">Payment Breakdown</h4>
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="padding: 5px; width: 50%;">Rent Amount</td>
-                    <td style="padding: 5px; text-align: right;">₹' . number_format($rentPerMonth, 2) . '</td>
+            <h4 style="margin: 0 0 8px; font-size: 13px; text-transform: uppercase; color: #374151;">Payment Breakdown</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 6px; width: 60%; color: #374151;">Rent Amount</td>
+                    <td style="padding: 6px; text-align: right; color: #111;">₹' . number_format($displayRent, 2) . '</td>
                 </tr>
-                ' . ($cautionDeposit > 0 ? '
-                <tr>
-                    <td style="padding: 5px;">Caution Deposit</td>
-                    <td style="padding: 5px; text-align: right;">₹' . number_format($cautionDeposit, 2) . '</td>
+                ' . ($displayCaution > 0 ? '
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 6px; color: #374151;">Caution Deposit (One-time)</td>
+                    <td style="padding: 6px; text-align: right; color: #111;">₹' . number_format($displayCaution, 2) . '</td>
                 </tr>' : '') . '
-                ' . ($admissionFees > 0 ? '
-                <tr>
-                    <td style="padding: 5px;">Admission Fee</td>
-                    <td style="padding: 5px; text-align: right;">₹' . number_format($admissionFees, 2) . '</td>
+                ' . ($displayAdmission > 0 ? '
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 6px; color: #374151;">Admission Fee (One-time)</td>
+                    <td style="padding: 6px; text-align: right; color: #111;">₹' . number_format($displayAdmission, 2) . '</td>
                 </tr>' : '') . '
-                <tr style="border-top: 1px solid #bbb;">
-                    <td style="padding: 6px; font-weight: bold; font-size: 14px;">Total Paid</td>
-                    <td style="padding: 6px; font-weight: bold; font-size: 14px; color: #2e7d32; text-align: right;">₹' . number_format($totalPaid, 2) . ' (Fully Paid)</td>
+                <tr style="border-top: 2px solid #cbd5e1; background-color: #f1f5f9;">
+                    <td style="padding: 7px 6px; font-weight: bold; color: #0f172a;">Total Billed</td>
+                    <td style="padding: 7px 6px; text-align: right; font-weight: bold; color: #0f172a;">₹' . number_format($invoiceTotal, 2) . '</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 6px; font-weight: bold; color: #2e7d32;">Amount Paid</td>
+                    <td style="padding: 6px; text-align: right; font-weight: bold; color: #2e7d32;">₹' . number_format($paidAmount, 2) . '</td>
+                </tr>
+                ' . ($balanceAmount > 0 ? '
+                <tr style="border-bottom: 1px solid #e5e7eb; background-color: #fef2f2;">
+                    <td style="padding: 6px; font-weight: bold; color: #dc2626;">Balance Remaining</td>
+                    <td style="padding: 6px; text-align: right; font-weight: bold; color: #dc2626;">₹' . number_format($balanceAmount, 2) . '</td>
+                </tr>' : '') . '
+                ' . ($advanceAmount > 0 ? '
+                <tr style="border-bottom: 1px solid #e5e7eb; background-color: #eff6ff;">
+                    <td style="padding: 6px; font-weight: bold; color: #2563eb;">Advance Carried Forward</td>
+                    <td style="padding: 6px; text-align: right; font-weight: bold; color: #2563eb;">₹' . number_format($advanceAmount, 2) . '</td>
+                </tr>' : '') . '
+                <tr style="border-top: 1px solid #94a3b8;">
+                    <td style="padding: 8px 6px; font-weight: bold; font-size: 13px;">Payment Status</td>
+                    <td style="padding: 8px 6px; text-align: right; font-weight: bold; font-size: 13px; color: ' . $statusColor . ';">' . $statusText . '</td>
                 </tr>
             </table>
         </div>
 
         <!-- Footer -->
-        <div style="text-align: center; font-size: 12px; color: #666; margin-top: 30px;">
-            <p>Thank you for staying with us at Saiyoojyam.</p>
-            <p>For queries, contact the hostel office.</p>
+        <div style="text-align: center; font-size: 11px; color: #64748b; margin-top: 25px;">
+            <p style="margin: 3px 0;">Thank you for staying with us at Saiyoojyam.</p>
+            <p style="margin: 3px 0;">For queries, contact the hostel office.</p>
         </div>
 
     </div> <!-- End border wrapper -->
@@ -1558,7 +1680,7 @@ $joins = array(
 
         return $this->response
             ->setContentType('application/pdf')
-            ->setBody($mpdf->Output('invoice_' . ($inmateUid ?: $id) . '.pdf', 'I'));
+            ->setBody($mpdf->Output('invoice_' . ($invoiceNo ? 'INV' . $invoiceNo : ($inmateUid ?: $id)) . '.pdf', 'I'));
     }
 
 

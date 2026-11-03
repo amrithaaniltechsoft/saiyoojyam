@@ -311,7 +311,7 @@
 
                             <!-- Print Invoice -->
                             <a class="btn btn-sm btn-icon btn-outline-secondary p-1" 
-                               href="<?= base_url('Admin/Inmates/Print/' . $inv->invoice_inmates) ?>" 
+                               href="<?= base_url('Admin/Inmates/Print/' . $inv->invoice_inmates . '?invoice_id=' . $inv->invoice_id) ?>" 
                                target="_blank" 
                                title="Print Invoice">
                               <i class="icon-base bx bx-printer" style="font-size:17px;"></i>

@@ -203,7 +203,7 @@
                         <!--<div class="row mb-6 balance_amt_div" style="<?php if(!empty($last_paid_invoice->invoice_balance)){ echo "display:none"; } ?>">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Last Month’s Balance</label>
                           <div class="col-sm-10">
-                             <input type="text" class="form-control balance_amt" name="one_month_amount" id="basic-default-name" value="<?php if(isset($last_paid_invoice->invoice_balance)){ echo $last_paid_invoice->invoice_balance; }?>" readonly/>
+                             <input type="text" class="form-control balance_amt" name="last_month_balance" id="basic-default-name" value="<?php if(isset($last_paid_invoice->invoice_balance)){ echo $last_paid_invoice->invoice_balance; }?>" readonly/>
                           </div>
                         </div>--->
 
@@ -211,7 +211,7 @@
                         <div class="row mb-6 balance_amt_div" style="<?php echo (!empty($last_paid_invoice->invoice_balance) && $last_paid_invoice->invoice_balance!=0.00) ? '' : 'display:none'; ?>">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Last Month’s Balance</label>
                           <div class="col-sm-10">
-                            <input type="text" class="form-control balance_amt" name="one_month_amount" id="basic-default-name" 
+                            <input type="text" class="form-control balance_amt" name="last_month_balance" id="basic-default-name" 
                               value="<?php echo !empty($last_paid_invoice->invoice_balance) ? $last_paid_invoice->invoice_balance : ''; ?>" readonly/>
                           </div>
                         </div>
@@ -283,7 +283,7 @@
                         <th>Paid Amount</th>
                         <th>Status</th> 
                         <th>Payment History</th>
-                        <!--<th>Action</th>---> 
+                        <th>Action</th> 
                       </tr>
                     </thead>
                     <tbody class="table-border-bottom-0 payment_data">
@@ -323,6 +323,12 @@
                         <?php } ?>
 
                         <td><span class="btn history_btn history_clz" data-history="<?php echo $invoice->invoice_id; ?>">History</span></td>
+
+                        <td>
+                          <a href="<?= base_url('Admin/Inmates/Print/' . $inmates->inmates_id . '?invoice_id=' . $invoice->invoice_id) ?>" target="_blank" class="btn btn-sm btn-icon btn-outline-secondary p-1" title="Print Invoice">
+                            <i class="icon-base bx bx-printer" style="font-size:17px;"></i>
+                          </a>
+                        </td>
 
                       </tr>
 

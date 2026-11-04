@@ -291,6 +291,63 @@ class Inmates extends BaseController
                 @copy($uploadDirs[0] . $photoName, $uploadDirs[1] . $photoName);
             }
 
+            // Check for rapid duplicate submission (e.g. double-clicking Make Payment)
+            $recentInmate = $db->table('saiyoojyam_inmates')
+                ->where('inmates_rooms', $roomId)
+                ->where('inmates_check_in_date', $checkInDate)
+                ->groupStart()
+                    ->where('inmates_phone_no', $phone)
+                    ->orWhere('inmates_email', $email)
+                ->groupEnd()
+                ->where('inmates_created_at >=', date('Y-m-d H:i:s', strtotime('-60 seconds')))
+                ->orderBy('inmates_id', 'DESC')
+                ->get()
+                ->getRow();
+
+            if ($recentInmate) {
+                // Fetch the existing invoice for this recently created inmate
+                $existingInvoice = $db->table('saiyoojyam_invoice')
+                    ->where('invoice_inmates', (string) $recentInmate->inmates_id)
+                    ->orderBy('invoice_id', 'DESC')
+                    ->get()
+                    ->getRow();
+
+                $invPaymentMonth = $existingInvoice ? $existingInvoice->invoice_payment_month : $checkInDate;
+                $invJoinDay = (int) date('j', strtotime($checkInDate));
+
+                return $this->response->setJSON([
+                    'status'  => true,
+                    'message' => 'Room booking request submitted and payment received! Awaiting admin approval.',
+                    'data'    => [
+                        'inmates_id'               => (int) $recentInmate->inmates_id,
+                        'inmates_uid'              => $recentInmate->inmates_uid,
+                        'inmates_name'             => $recentInmate->inmates_name,
+                        'inmates_building'         => (int) $recentInmate->inmates_building,
+                        'inmates_rooms'            => (int) $recentInmate->inmates_rooms,
+                        'inmates_check_in_date'    => $recentInmate->inmates_check_in_date,
+                        'inmates_check_out_date'   => $recentInmate->inmates_check_out_date,
+                        'inmates_duration_of_stay' => (int) $recentInmate->inmates_duration_of_stay,
+                        'inmates_status'           => $recentInmate->inmates_status,
+                        'inmates_email'            => $recentInmate->inmates_email,
+                        'invoice'                  => $existingInvoice ? [
+                            'invoice_id'              => (int) $existingInvoice->invoice_id,
+                            'invoice_payment_month'   => $existingInvoice->invoice_payment_month,
+                            'payment_month_display'   => ($invJoinDay >= 21 ? date('M Y', strtotime($checkInDate)) . ' & ' . date('M Y', strtotime($invPaymentMonth)) : date('M Y', strtotime($invPaymentMonth))),
+                            'invoice_paid_date'       => $existingInvoice->invoice_paid_date,
+                            'invoice_rent'            => (float) $existingInvoice->invoice_rent,
+                            'invoice_caution_deposit' => (float) $recentInmate->inmates_caution_deposit,
+                            'invoice_admission_fee'   => (float) $recentInmate->inmates_admission_fee,
+                            'invoice_total'           => (float) $existingInvoice->invoice_total,
+                            'invoice_paid_amount'     => (float) $existingInvoice->invoice_paid_amount,
+                            'invoice_status'          => 'Fully Paid',
+                        ] : null,
+                        'receipt_url'              => base_url('Admin/Inmates/Receipt/' . $recentInmate->inmates_id),
+                        'print_url'                => base_url('Admin/Inmates/Print/' . $recentInmate->inmates_id),
+                        'api_print_url'            => base_url('api/inmates/print/' . $recentInmate->inmates_id),
+                    ],
+                ]);
+            }
+
             // 7. Insert Inmate Record into saiyoojyam_inmates
             $inmateData = [
                 'inmates_uid'              => '',

@@ -252,7 +252,7 @@
                       <div class="dropdown-divider my-2"></div>
                     </li>
                     <li>
-                      <a class="dropdown-item d-flex align-items-center" href="<?= site_url('logout') ?>" style="display: flex !important; align-items: center !important; white-space: nowrap !important;">
+                      <a class="dropdown-item d-flex align-items-center" href="<?= site_url('logout') ?>" onclick="try{sessionStorage.removeItem('admin_pending_alert_shown');}catch(e){}" style="display: flex !important; align-items: center !important; white-space: nowrap !important;">
                         <i class="icon-base bx bx-power-off icon-md me-2 text-danger" style="display: inline-flex !important; align-items: center;"></i><span>Log Out</span>
                       </a>
                     </li>

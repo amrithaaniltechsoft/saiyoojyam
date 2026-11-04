@@ -1154,7 +1154,7 @@ ul a {
             
 
 <!-- Modals Placed at Body Level to Prevent Z-Index Overlap -->
-<?php if (!empty($pending_bookings_count) && $pending_bookings_count > 0): ?>
+<?php if (!empty($show_pending_alert_modal) && !empty($pending_bookings_count) && $pending_bookings_count > 0): ?>
                 <!-- Pending Bookings Welcome Notification Modal -->
                 <div class="modal fade" id="pendingAlertModal" tabindex="-1" aria-labelledby="pendingAlertModalLabel" aria-hidden="true">
                   <div class="modal-dialog modal-dialog-centered">
@@ -1365,8 +1365,12 @@ ul a {
 <!-- Booking Approval Scripts Start -->
             <script>
               $(document).ready(function() {
-                // Show Pending Alert Modal on Page Load if pending bookings exist
-                if ($("#pendingAlertModal").length > 0) {
+                <?php if (!empty($show_pending_alert_modal) && !empty($pending_bookings_count) && $pending_bookings_count > 0): ?>
+                // Show Pending Alert Modal on Page Load only once right after login
+                if ($("#pendingAlertModal").length > 0 && !sessionStorage.getItem("admin_pending_alert_shown")) {
+                  try {
+                    sessionStorage.setItem("admin_pending_alert_shown", "1");
+                  } catch (e) {}
                   var alertModalEl = document.getElementById("pendingAlertModal");
                   if (alertModalEl && alertModalEl.parentNode !== document.body) {
                     document.body.appendChild(alertModalEl);
@@ -1378,6 +1382,7 @@ ul a {
                     $("#pendingAlertModal").modal("show");
                   }
                 }
+                <?php endif; ?>
 
                 $("#btn_alert_goto_requests").on("click", function() {
                   var alertModalEl = document.getElementById("pendingAlertModal");

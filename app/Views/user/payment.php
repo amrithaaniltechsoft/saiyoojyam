@@ -173,8 +173,14 @@ $("#areaCode").on("change", function() {
 </script>
 
 <script>
-        
+        var isPaymentProcessing = false;
         $('.confirm_payment').on('click',function(e){
+            if (isPaymentProcessing) {
+                e.preventDefault();
+                return false;
+            }
+            isPaymentProcessing = true;
+            $(this).css({'pointer-events': 'none', 'opacity': '0.6'});
             
             //e.preventDefault(); 
             var status = 1;

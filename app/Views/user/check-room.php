@@ -229,11 +229,25 @@
 <!--footer section end-->
 
 <script>
+  var isSubmitting = false;
   document.getElementById("bookingForm").addEventListener("submit", function (e) {
+    if (isSubmitting) {
+      e.preventDefault();
+      return false;
+    }
     if (!document.getElementById("consentCheck").checked) {
       e.preventDefault();
       alertify.set('notifier', 'position', 'top-right');
       alertify.error('Please accept the confirmation checkbox to proceed with your booking.');
+      return false;
+    }
+    isSubmitting = true;
+    var btn = document.getElementById("btnMakePayment");
+    if (btn) {
+      btn.disabled = true;
+      btn.innerText = "Processing...";
+      btn.style.opacity = "0.6";
+      btn.style.pointerEvents = "none";
     }
   });
 </script>

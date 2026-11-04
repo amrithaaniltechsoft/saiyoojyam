@@ -47,8 +47,13 @@ class Home extends BaseController
             $data['pending_bookings_count'] = $this->common_model->checkWhereCount('saiyoojyam_inmates', array('inmates_status' => 'pending'));
             $data['pending_bookings']       = $this->common_model->getPendingBookingRequests(); 
 
-           
-
+            // Only show pending bookings alert modal once right after login
+            $showPendingAlertModal = false;
+            if (session()->get('show_pending_alert_on_login') || session()->getFlashdata('show_pending_alert')) {
+                $showPendingAlertModal = true;
+                session()->remove('show_pending_alert_on_login');
+            }
+            $data['show_pending_alert_modal'] = $showPendingAlertModal;
 
         return view('admin/index',$data);
     }

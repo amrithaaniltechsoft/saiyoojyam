@@ -626,7 +626,7 @@ class Rooms extends BaseController
                     'wingInfo'          => $bInfo['name'],
                     'levelTag'          => 'LEVEL ' . (substr((string) ($r->rooms_name ?? '1'), 0, 1) ?: '1'),
                     'features'          => $features,
-                    'includesText'      => 'Includes 3 Homely Meals & 7:30 AM Tiffin • Daily Housekeeping',
+                    'includesText'      => 'Includes Breakfast, Lunch & Dinner',
                     'rentMonthly'           => number_format($rentPrice),
                     'rentPrice'             => (float) $rentPrice,
                     'rentPriceRaw'          => $rentPrice,
@@ -715,20 +715,45 @@ class Rooms extends BaseController
             // Specific category filter match
             if (!empty($filterParam) && $filterParam !== 'all') {
                 $fLower = strtolower($filterParam);
-                if (strpos($fLower, 'premier-') === 0 && $room['buildingKey'] !== 'premier') return false;
-                if (strpos($fLower, 'annex-') === 0 && $room['buildingKey'] !== 'annex') return false;
-                if ((strpos($fLower, 't1-') === 0 || strpos($fLower, 't2-') === 0 || strpos($fLower, 'towers-') === 0) && $room['buildingKey'] !== 'towers') return false;
 
+                // Exact match by roomTypeSlug or filterId
+                if (!empty($room['roomTypeSlug']) && strtolower($room['roomTypeSlug']) === $fLower) {
+                    return true;
+                }
+                if (!empty($room['filterId']) && strtolower($room['filterId']) === $fLower) {
+                    return true;
+                }
+
+                // Building-specific legacy prefix guards
+                if (strpos($fLower, 'premier-') === 0 && $room['buildingKey'] !== 'premier') return false;
+                if (strpos($fLower, 'annex-') === 0 && $room['buildingKey'] !== 'annex' && $room['buildingKey'] !== 'annex1') return false;
+                if (strpos($fLower, 't1-') === 0 && $room['buildingKey'] !== 'lh-tower-1' && $room['buildingKey'] !== 'towers') return false;
+                if (strpos($fLower, 't2-') === 0 && $room['buildingKey'] !== 'lh-tower-2' && $room['buildingKey'] !== 'towers') return false;
+
+                // Match AC / Non-AC
                 if (strpos($fLower, 'nonac') !== false || strpos($fLower, 'non-ac') !== false) {
                     if ($room['isAc']) return false;
                 } elseif (strpos($fLower, 'ac') !== false) {
                     if (!$room['isAc']) return false;
                 }
 
-                // Check sharing number in filter tag (e.g. "annex-2-ac" -> 2)
-                if (preg_match('/-(\d+)-?/', $fLower, $m)) {
-                    $shares = $m[1];
-                    if ($room['roomType'] !== $shares) return false;
+                // Check sharing number in filter tag (e.g. "8-share-...", "annex-2-ac" -> 2, "t2-8" -> 8)
+                if (preg_match('/(?:^|[^\d])(\d+)(?:[^\d]|$)/', $fLower, $m)) {
+                    $shares = (int) $m[1];
+                    $roomCap = (int) ($room['rooms_capacity'] ?? $room['capacity'] ?? $room['roomType'] ?? 0);
+                    if ($roomCap !== $shares) {
+                        return false;
+                    }
+                } elseif (strpos($fLower, 'single') !== false) {
+                    $roomCap = (int) ($room['rooms_capacity'] ?? $room['capacity'] ?? $room['roomType'] ?? 0);
+                    if ($roomCap !== 1) {
+                        return false;
+                    }
+                }
+
+                // If filterParam is a specific room type slug, and this room has a different roomTypeSlug:
+                if (!empty($room['roomTypeSlug']) && strpos($fLower, 'share') !== false && $room['roomTypeSlug'] !== $fLower) {
+                    return false;
                 }
             }
 

@@ -139,6 +139,11 @@
     <!-- Main JS -->
 
     <script src="<?php echo base_url();?>public/assets/admin/js/main.js"></script>
+    <script>
+      try {
+        sessionStorage.removeItem("admin_pending_alert_shown");
+      } catch (e) {}
+    </script>
 
     <!-- Page JS -->
 

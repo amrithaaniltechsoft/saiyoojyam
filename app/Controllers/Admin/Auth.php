@@ -51,6 +51,7 @@ class Auth extends BaseController
         $commonModel = new \App\Models\CommonModel();
         $pendingCount = $commonModel->checkWhereCount('saiyoojyam_inmates', ['inmates_status' => 'pending']);
         if ($pendingCount > 0) {
+            session()->set('show_pending_alert_on_login', 1);
             session()->setFlashdata('show_pending_alert', 1);
             return redirect()->to(base_url('Admin/Home#pending-bookings-section'))->withCookies();
         }
@@ -61,6 +62,7 @@ class Auth extends BaseController
     public function logout()
     {
         auth()->logout();
+        session()->remove('show_pending_alert_on_login');
 
         return redirect()->to('/login');
     }

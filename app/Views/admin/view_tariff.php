@@ -118,8 +118,12 @@
                         <td><?php echo number_format($tariff->tariffs_price,2);?></td>
                         
                         <td>
-                          <a class="dropdown-item" href="<?php echo base_url();?>Admin/Tariff/Edit/<?php echo $tariff->tariffs_id;?>"><i class="icon-base bx bx-edit-alt me-2"></i> </a>
-                          <a class="dropdown-item" href="<?php echo base_url();?>Admin/Tariff/Delete/<?php echo $tariff->tariffs_id; ?>" onclick="return confirm('Are you sure you want to delete this tariff?');"><i class="icon-base bx bx-trash me-2"></i> </a>
+                          <a class="dropdown-item" style="display:inline-block; width:auto;" href="<?php echo base_url();?>Admin/Tariff/Edit/<?php echo $tariff->tariffs_id;?>" title="Edit"><i class="icon-base bx bx-edit-alt me-2"></i> </a>
+                          <?php if(!empty($used_tariffs[$tariff->tariffs_id])): ?>
+                            <a class="dropdown-item text-danger" style="display:inline-block; width:auto; cursor:pointer;" href="javascript:void(0);" onclick="cannotDeleteTariff('<?php echo esc($used_tariffs[$tariff->tariffs_id]); ?>'); return false;" title="Cannot delete: In use by <?php echo esc($used_tariffs[$tariff->tariffs_id]); ?>"><i class="icon-base bx bx-trash me-2 text-danger" style="opacity: 0.65;"></i> </a>
+                          <?php else: ?>
+                            <a class="dropdown-item" style="display:inline-block; width:auto;" href="<?php echo base_url();?>Admin/Tariff/Delete/<?php echo $tariff->tariffs_id; ?>" onclick="return confirm('Are you sure you want to delete this tariff?');" title="Delete"><i class="icon-base bx bx-trash me-2"></i> </a>
+                          <?php endif; ?>
                         </td>
                         
 
@@ -161,6 +165,15 @@
             <!--Footer section end-->
 
             <script>
+
+              function cannotDeleteTariff(uids) {
+                var msg = 'Cannot delete: This tariff price is currently used by inmate(s)' + (uids ? ' (' + uids + ')' : '') + '.';
+                if (typeof alertify !== 'undefined') {
+                  alertify.error(msg).delay(8).dismissOthers();
+                } else {
+                  alert(msg);
+                }
+              }
 
               $('.build_clz').on('click',function(){
 

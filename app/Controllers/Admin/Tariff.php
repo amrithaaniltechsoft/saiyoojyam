@@ -50,6 +50,17 @@ class Tariff extends BaseController
 
         $data['tariffs'] = $this->common_model->buildingSearch('saiyoojyam_tariffs','tariffs_id','Desc',$joins,$building,$room_type);
 
+        $usedTariffs = [];
+        if (!empty($data['tariffs'])) {
+            foreach ($data['tariffs'] as $t) {
+                $usage = $this->getTariffUsage($t);
+                if ($usage) {
+                    $usedTariffs[$t->tariffs_id] = $usage['uid_text'];
+                }
+            }
+        }
+        $data['used_tariffs'] = $usedTariffs;
+
         $data['rooms_types'] = $this->common_model->FetchAll('saiyoojyam_room_type');
 
         $data['buildings'] = $this->common_model->FetchAll('saiyoojyam_building');
@@ -281,41 +292,131 @@ class Tariff extends BaseController
     }
 
 
-    public function Delete($id){
-
-        $tariff = $this->common_model->SingleRow('saiyoojyam_tariffs',array('tariffs_id' => $id));
-
-        if(!empty($tariff)){
-
-            $inmate_avaliable = $this->common_model->FetchWhere('saiyoojyam_inmates',array('inmates_rooms' => $tariff->tariffs_rooms, 'inmates_status' => 'active'));
-
-            if(!empty($inmate_avaliable)){
-                 
-                $flashdata = array(
-                    'type' => 'error',
-                    'msg'  => 'Cannot delete: Tariff is currently assigned to an active inmate',
-                );
-
-                $this->session->setFlashdata('alert',$flashdata);
-
-                return redirect()->to(site_url().'Admin/Tariff');
-            }
-
+    private function getTariffUsage($tariff)
+    {
+        if (empty($tariff)) {
+            return null;
         }
 
-        $this->common_model->DeleteData('saiyoojyam_tariff_history',array('tariff_history_tariff_id' => $id));
+        $db = \Config\Database::connect();
+        $tariffId = (int) $tariff->tariffs_id;
+        $roomId   = (int) $tariff->tariffs_rooms;
 
-        $this->common_model->DeleteData('saiyoojyam_tariffs',array('tariffs_id' => $id));
+        $usedInmates = [];
+
+        // 1. Direct tariff assignment in inmates (all statuses: active, pending, checked_out)
+        $inmatesByTariff = $db->table('saiyoojyam_inmates')
+            ->where('inmates_tariffs', $tariffId)
+            ->get()
+            ->getResult();
+        foreach ($inmatesByTariff as $inm) {
+            $usedInmates[$inm->inmates_id] = $inm;
+        }
+
+        // 2. Inmates currently or historically occupying the room of this tariff (all statuses)
+        if ($roomId > 0) {
+            $inmatesByRoom = $db->table('saiyoojyam_inmates')
+                ->where('inmates_rooms', $roomId)
+                ->get()
+                ->getResult();
+            foreach ($inmatesByRoom as $inm) {
+                $usedInmates[$inm->inmates_id] = $inm;
+            }
+
+            // 3. Inmate room transfer history
+            if ($db->tableExists('saiyoojyam_inmate_room_history')) {
+                $histRows = $db->table('saiyoojyam_inmate_room_history')
+                    ->groupStart()
+                        ->where('room_history_old_room', $roomId)
+                        ->orWhere('room_history_new_room', $roomId)
+                    ->groupEnd()
+                    ->get()
+                    ->getResult();
+                $histIds = [];
+                foreach ($histRows as $hr) {
+                    if (!empty($hr->room_history_inmates_id)) {
+                        $histIds[] = (int) $hr->room_history_inmates_id;
+                    }
+                }
+                if (!empty($histIds)) {
+                    $histInmates = $db->table('saiyoojyam_inmates')
+                        ->whereIn('inmates_id', array_unique($histIds))
+                        ->get()
+                        ->getResult();
+                    foreach ($histInmates as $inm) {
+                        $usedInmates[$inm->inmates_id] = $inm;
+                    }
+                }
+            }
+        }
+
+        // 4. Invoices check for linked inmates
+        $hasInvoices = false;
+        if (!empty($usedInmates) && $db->tableExists('saiyoojyam_invoice')) {
+            $inmateIds = array_keys($usedInmates);
+            $invCount = $db->table('saiyoojyam_invoice')
+                ->whereIn('invoice_inmates', $inmateIds)
+                ->countAllResults();
+            if ($invCount > 0) {
+                $hasInvoices = true;
+            }
+        }
+
+        if (empty($usedInmates) && !$hasInvoices) {
+            return null;
+        }
+
+        $uids = [];
+        foreach ($usedInmates as $inm) {
+            $uids[] = !empty($inm->inmates_uid) ? $inm->inmates_uid : ('#' . $inm->inmates_id);
+        }
+
+        return [
+            'count'    => count($usedInmates),
+            'inmates'  => $usedInmates,
+            'uid_text' => implode(', ', array_slice($uids, 0, 3)) . (count($uids) > 3 ? ' and ' . (count($uids) - 3) . ' more' : ''),
+        ];
+    }
+
+    public function Delete($id){
+
+        $tariff = $this->common_model->SingleRow('saiyoojyam_tariffs', array('tariffs_id' => $id));
+
+        if (empty($tariff)) {
+            $flashdata = array(
+                'type' => 'error',
+                'msg'  => 'Tariff not found',
+            );
+            $this->session->setFlashdata('alert', $flashdata);
+            return redirect()->to(site_url('Admin/Tariff'));
+        }
+
+        $usage = $this->getTariffUsage($tariff);
+
+        if (!empty($usage)) {
+            $uidStr = !empty($usage['uid_text']) ? ' (' . $usage['uid_text'] . ')' : '';
+            $flashdata = array(
+                'type' => 'error',
+                'msg'  => 'Cannot delete: This tariff price is currently used by inmate(s)' . $uidStr . '.',
+            );
+
+            $this->session->setFlashdata('alert', $flashdata);
+
+            return redirect()->to(site_url('Admin/Tariff'));
+        }
+
+        $this->common_model->DeleteData('saiyoojyam_tariff_history', array('tariff_history_tariff_id' => $id));
+
+        $this->common_model->DeleteData('saiyoojyam_tariffs', array('tariffs_id' => $id));
 
         $flashdata = array(
             'type' => 'success',
-            'msg' => 'Date Deleted Successfully',
+            'msg'  => 'Tariff Deleted Successfully',
         );
 
-        $this->session->setFlashdata('alert',$flashdata);
+        $this->session->setFlashdata('alert', $flashdata);
 
-        return redirect()->to(site_url().'Admin/Tariff');
-
+        return redirect()->to(site_url('Admin/Tariff'));
 
     }
 

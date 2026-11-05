@@ -213,6 +213,22 @@ class FoodQuality extends BaseController
                 'cta_secondary_button_link' => '/search'
             ]);
         }
+
+        $rowCheck = $db->table('saiyoojyam_food_quality')->get()->getRow();
+        if (!empty($rowCheck) && empty($rowCheck->weekly_schedule)) {
+            $defaultWeeklySchedule = [
+                ['day' => 'MONDAY', 'breakfast' => 'TEA, PUTTU & KADALA CURRY', 'lunch' => "RICE & VEGGIES\n(Thoran/ Mezhukku Puratti & Curries)", 'teaTime' => "TEA & ANY ONE SNACK\n(Uzhunnu Vada, Parippu Vada, Bread Baji, Pazham Pori, Bonda, Unniyappam, Kozhukatta)", 'dinner' => 'APPAM/ IDIYAPPAM & EGG/ VEG CURRY'],
+                ['day' => 'TUESDAY', 'breakfast' => 'TEA, DOSA, SAMBAR & CHUTNY', 'lunch' => 'RICE & VEGGIES', 'teaTime' => 'TEA & RUSK/ BISCUIT', 'dinner' => 'GHEE RICE & CHICKEN/ VEG CURRY'],
+                ['day' => 'WEDNESDAY', 'breakfast' => 'TEA, IDLY, SAMBAR & CHUTNY', 'lunch' => 'RICE, FISH FRY & VEGGIES', 'teaTime' => 'TEA & ONE SNACK', 'dinner' => 'CHAPATHI & EGG/ VEG CURRY'],
+                ['day' => 'THURSDAY', 'breakfast' => 'TEA, APPAM & STEW/ KURUMA', 'lunch' => 'RICE & VEGGIES', 'teaTime' => 'TEA & RUSK/ BISCUIT', 'dinner' => 'CHICKEN/ VEG BIRIYANI'],
+                ['day' => 'FRIDAY', 'breakfast' => 'TEA, PUTTU & KADALA CURRY', 'lunch' => 'RICE & VEGGIES', 'teaTime' => 'TEA & ONE SNACK', 'dinner' => 'CHAPATHI & VEG CURRY'],
+                ['day' => 'SATURDAY', 'breakfast' => 'TEA, DOSA, SAMBAR & CHUTNY', 'lunch' => 'RICE & VEGGIES', 'teaTime' => 'TEA & ONE SNACK', 'dinner' => 'POROTTA & CHICKEN/ VEG CURRY'],
+                ['day' => 'SUNDAY', 'breakfast' => 'TEA, PURI & POTATO CURRY', 'lunch' => 'RICE, FISH CURRY & VEGGIES', 'teaTime' => 'TEA & RUSK/ BISCUIT', 'dinner' => 'KANJI, THORAN & CHAMMANTHI/ PAPPAD'],
+            ];
+            $db->table('saiyoojyam_food_quality')->where('id', $rowCheck->id)->update([
+                'weekly_schedule' => json_encode($defaultWeeklySchedule)
+            ]);
+        }
     }
 
     public function index()

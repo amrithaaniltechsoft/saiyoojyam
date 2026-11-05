@@ -77,12 +77,52 @@ class About extends BaseController
             }
         }
 
+        $buildingsList = [];
+        if ($db->tableExists('saiyoojyam_building')) {
+            $bRows = $db->table('saiyoojyam_building')
+                        ->orderBy('building_id', 'ASC')
+                        ->get()
+                        ->getResult();
+            foreach ($bRows as $b) {
+                $dbSlug = strtolower(trim($b->building_slug ?? ''));
+                $cleanSlug = trim(preg_replace('/^saiyoojyam[-_]/i', '', $dbSlug));
+                if (!empty($cleanSlug)) {
+                    $slug = $cleanSlug;
+                } elseif (!empty($dbSlug)) {
+                    $slug = $dbSlug;
+                } else {
+                    $nameLower = strtolower(trim($b->building_name ?? $b->name ?? ''));
+                    $slug = preg_replace('/[^a-z0-9]+/i', '-', trim(str_replace('saiyoojyam', '', $nameLower)));
+                    $slug = trim($slug, '-');
+                    if (empty($slug)) {
+                        $slug = 'b-' . ($b->building_id ?? $b->id);
+                    }
+                }
+
+                $bImg = '';
+                if (!empty($b->building_image)) {
+                    $bImg = $baseUrl . 'public/uploads/buildings/' . $b->building_image;
+                }
+                $buildingsList[] = [
+                    'id'            => (int) ($b->building_id ?? $b->id ?? 0),
+                    'building_id'   => (int) ($b->building_id ?? $b->id ?? 0),
+                    'name'          => $b->building_name ?? $b->name ?? '',
+                    'building_name' => $b->building_name ?? $b->name ?? '',
+                    'slug'          => $slug,
+                    'tagline'       => $b->building_tagline ?? $b->tagline ?? '',
+                    'location'      => $b->building_address ?? $b->location ?? '',
+                    'image'         => $bImg,
+                ];
+            }
+        }
+
         $network = [
             'subtitle'    => $row->network_subtitle ?? '',
             'title'       => $row->network_title ?? '',
             'description' => strip_tags($networkDesc),
             'raw_desc'    => $networkDesc,
             'images'      => $networkImages,
+            'buildings'   => $buildingsList,
         ];
 
         $mission = [

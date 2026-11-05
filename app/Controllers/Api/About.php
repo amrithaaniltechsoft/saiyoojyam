@@ -167,21 +167,29 @@ class About extends BaseController
         ];
 
         // 6. Call To Action (Looking for a comfortable home in Kakkanad?)
-        $aboutWhatsapp = trim($row->cta_whatsapp_number ?? '');
-        if (empty($aboutWhatsapp) && $db->tableExists('saiyoojyam_contact')) {
+        // Fetch WhatsApp number directly from Table: saiyoojyam_contact
+        $contactWhatsapp = '';
+        if ($db->tableExists('saiyoojyam_contact')) {
             $contactRow = $db->table('saiyoojyam_contact')->where('contact_id', 1)->get()->getRow();
-            $num = !empty($contactRow->contact_whats_app) ? $contactRow->contact_whats_app : ($contactRow->contact_phone1 ?? '');
-            if (!empty($num)) {
-                $clean = preg_replace('/[^0-9]/', '', $num);
-                if (strlen($clean) === 11 && str_starts_with($clean, '0')) {
-                    $clean = substr($clean, 1);
+            if (empty($contactRow)) {
+                $contactRow = $db->table('saiyoojyam_contact')->get()->getRow();
+            }
+            if (!empty($contactRow)) {
+                $num = !empty($contactRow->contact_whats_app) ? $contactRow->contact_whats_app : ($contactRow->contact_phone1 ?? '');
+                if (!empty($num)) {
+                    $clean = preg_replace('/[^0-9]/', '', $num);
+                    if (strlen($clean) === 11 && str_starts_with($clean, '0')) {
+                        $clean = substr($clean, 1);
+                    }
+                    if (strlen($clean) === 10) {
+                        $clean = '91' . $clean;
+                    }
+                    $contactWhatsapp = $clean;
                 }
-                if (strlen($clean) === 10) {
-                    $clean = '91' . $clean;
-                }
-                $aboutWhatsapp = $clean;
             }
         }
+
+        $aboutWhatsapp = !empty($contactWhatsapp) ? $contactWhatsapp : trim($row->cta_whatsapp_number ?? '');
         if (empty($aboutWhatsapp)) {
             $aboutWhatsapp = '918129339122';
         }

@@ -72,17 +72,23 @@ class FoodQuality extends BaseController
             'items'       => $rawPillars,
         ];
 
-        // 3. Menu Schedule
+        // 3. Menu Schedule & Weekly Timetable
         $rawSchedule = !empty($row->menu_schedule) ? json_decode($row->menu_schedule, true) : [];
         if (!is_array($rawSchedule)) {
             $rawSchedule = [];
         }
 
+        $rawWeeklySchedule = !empty($row->weekly_schedule) ? json_decode($row->weekly_schedule, true) : [];
+        if (!is_array($rawWeeklySchedule)) {
+            $rawWeeklySchedule = [];
+        }
+
         $menu = [
-            'subtitle'    => $row->menu_subtitle ?? 'Daily Routine',
-            'title'       => $row->menu_title ?? 'Our Daily Meal Schedule & Menu',
-            'description' => $row->menu_description ?? '',
-            'schedule'    => $rawSchedule,
+            'subtitle'        => $row->menu_subtitle ?? 'Weekly Food Routine',
+            'title'           => $row->menu_title ?? 'Weekly Food Menu & Timetable',
+            'description'     => $row->menu_description ?? '',
+            'schedule'        => $rawSchedule,
+            'weeklySchedule'  => $rawWeeklySchedule,
         ];
 
         // 4. Gallery

@@ -25,6 +25,7 @@ class FoodQuality extends BaseController
               `menu_title` varchar(255) DEFAULT 'Our Daily Meal Schedule & Menu',
               `menu_description` text DEFAULT NULL,
               `menu_schedule` longtext DEFAULT NULL,
+              `weekly_schedule` longtext DEFAULT NULL,
               `gallery_subtitle` varchar(255) DEFAULT 'Campus Dining Experience',
               `gallery_title` varchar(255) DEFAULT 'Glimpse of Our Dining & Kitchen Spaces',
               `gallery_description` text DEFAULT NULL,
@@ -42,6 +43,10 @@ class FoodQuality extends BaseController
               `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
               PRIMARY KEY (`id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+        }
+
+        if (!$db->fieldExists('weekly_schedule', 'saiyoojyam_food_quality')) {
+            $db->query("ALTER TABLE saiyoojyam_food_quality ADD COLUMN weekly_schedule LONGTEXT DEFAULT NULL AFTER menu_schedule");
         }
 
         $row = $db->table('saiyoojyam_food_quality')->get()->getRow();
@@ -230,151 +235,51 @@ class FoodQuality extends BaseController
         $row = $db->table('saiyoojyam_food_quality')->get()->getRow();
 
         if ($this->request->getMethod() === 'POST') {
-            $uploadPath = FCPATH . 'uploads/food/';
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0777, true);
-            }
+            // Weekly Schedule (DAYS • BREAKFAST • LUNCH • TEA TIME • DINNER)
+            $weeklyDays = $this->request->getPost('weekly_day') ?? [];
+            $weeklyBreakfast = $this->request->getPost('weekly_breakfast') ?? [];
+            $weeklyLunch = $this->request->getPost('weekly_lunch') ?? [];
+            $weeklyTea = $this->request->getPost('weekly_tea') ?? [];
+            $weeklyDinner = $this->request->getPost('weekly_dinner') ?? [];
 
-            // 1. Hero Image
-            $heroPhoto = $this->request->getFile('hero_image');
-            $heroPhotoName = $row->hero_image ?? '';
-            if ($heroPhoto && $heroPhoto->isValid() && !$heroPhoto->hasMoved()) {
-                if (!empty($heroPhotoName) && file_exists($uploadPath . $heroPhotoName)) {
-                    @unlink($uploadPath . $heroPhotoName);
-                }
-                $heroPhotoName = $heroPhoto->getRandomName();
-                $heroPhoto->move($uploadPath, $heroPhotoName);
-            }
-
-            // 2. Pillars items
-            $pillarTitles = $this->request->getPost('pillar_title') ?? [];
-            $pillarSubtitles = $this->request->getPost('pillar_subtitle') ?? [];
-            $pillarDescs = $this->request->getPost('pillar_desc') ?? [];
-            $pillarIcons = $this->request->getPost('pillar_icon') ?? [];
-            $pillars = [];
-            for ($i = 0; $i < count($pillarTitles); $i++) {
-                if (!empty(trim($pillarTitles[$i]))) {
-                    $pillars[] = [
-                        'title' => trim($pillarTitles[$i]),
-                        'subtitle' => trim($pillarSubtitles[$i] ?? ''),
-                        'description' => trim($pillarDescs[$i] ?? ''),
-                        'icon' => trim($pillarIcons[$i] ?? 'Sparkles'),
-                    ];
-                }
-            }
-
-            // 3. Menu items
-            $mealNames = $this->request->getPost('meal_name') ?? [];
-            $mealTimes = $this->request->getPost('meal_time') ?? [];
-            $mealNotes = $this->request->getPost('meal_note') ?? [];
-            $mealBadges = $this->request->getPost('meal_badge') ?? [];
-            $mealIcons = $this->request->getPost('meal_icon') ?? [];
-            $mealItemsRaw = $this->request->getPost('meal_items') ?? [];
-            $meals = [];
-            for ($i = 0; $i < count($mealNames); $i++) {
-                if (!empty(trim($mealNames[$i]))) {
-                    $rawLines = explode("\n", str_replace("\r", "", $mealItemsRaw[$i] ?? ''));
-                    $cleanLines = [];
-                    foreach ($rawLines as $line) {
-                        $trimmed = trim($line);
-                        if (!empty($trimmed)) {
-                            $cleanLines[] = ltrim($trimmed, '-• ');
-                        }
+            $weeklyScheduleJson = $row->weekly_schedule ?? null;
+            if (!empty($weeklyDays)) {
+                $weeklyList = [];
+                for ($w = 0; $w < count($weeklyDays); $w++) {
+                    $dName = trim($weeklyDays[$w]);
+                    if (!empty($dName)) {
+                        $weeklyList[] = [
+                            'day'       => $dName,
+                            'breakfast' => trim($weeklyBreakfast[$w] ?? ''),
+                            'lunch'     => trim($weeklyLunch[$w] ?? ''),
+                            'teaTime'   => trim($weeklyTea[$w] ?? ''),
+                            'dinner'    => trim($weeklyDinner[$w] ?? ''),
+                        ];
                     }
-                    $meals[] = [
-                        'meal' => trim($mealNames[$i]),
-                        'time' => trim($mealTimes[$i] ?? ''),
-                        'readyNote' => trim($mealNotes[$i] ?? ''),
-                        'badge' => trim($mealBadges[$i] ?? ''),
-                        'icon' => trim($mealIcons[$i] ?? 'Utensils'),
-                        'menuItems' => $cleanLines
-                    ];
                 }
+                $weeklyScheduleJson = json_encode($weeklyList);
             }
 
-            // 4. Gallery Images (update captions, titles, and replacement images)
-            $existingGallery = !empty($row->gallery_images) ? json_decode($row->gallery_images, true) : [];
-            if (!is_array($existingGallery)) {
-                $existingGallery = [];
-            }
-
-            // Update captions/titles and replacement image for existing gallery items
-            $gTitles = $this->request->getPost('gallery_item_title') ?? [];
-            $gCaptions = $this->request->getPost('gallery_item_caption') ?? [];
-            foreach ($existingGallery as $gIdx => &$gItem) {
-                if (isset($gTitles[$gIdx])) {
-                    $gItem['title'] = trim($gTitles[$gIdx]);
-                }
-                if (isset($gCaptions[$gIdx])) {
-                    $gItem['caption'] = trim($gCaptions[$gIdx]);
-                }
-
-                // Check if user uploaded a replacement image for this specific gallery item
-                $replacementFile = $this->request->getFile("gallery_item_file_{$gIdx}");
-                if ($replacementFile && $replacementFile->isValid() && !$replacementFile->hasMoved()) {
-                    $oldImg = $gItem['image'] ?? '';
-                    if (!empty($oldImg) && !str_starts_with($oldImg, '/') && !str_starts_with($oldImg, 'http')) {
-                        $oldPath = $uploadPath . $oldImg;
-                        if (file_exists($oldPath)) {
-                            @unlink($oldPath);
-                        }
-                    }
-                    $newImgName = $replacementFile->getRandomName();
-                    $replacementFile->move($uploadPath, $newImgName);
-                    $gItem['image'] = $newImgName;
-                }
-            }
-            unset($gItem);
-
-            // 5. FAQ items
-            $faqQs = $this->request->getPost('faq_q') ?? [];
-            $faqAs = $this->request->getPost('faq_a') ?? [];
-            $faqs = [];
-            for ($i = 0; $i < count($faqQs); $i++) {
-                if (!empty(trim($faqQs[$i]))) {
-                    $faqs[] = [
-                        'q' => trim($faqQs[$i]),
-                        'a' => trim($faqAs[$i] ?? '')
-                    ];
-                }
-            }
-
-            // Build update array
             $updateData = [
-                'hero_subtitle'             => $this->request->getPost('hero_subtitle'),
-                'hero_title'                => $this->request->getPost('hero_title'),
-                'hero_description'          => $this->request->getPost('hero_description'),
-                'hero_image'                => $heroPhotoName,
-                'pillars_subtitle'          => $this->request->getPost('pillars_subtitle'),
-                'pillars_title'             => $this->request->getPost('pillars_title'),
-                'pillars_description'       => $this->request->getPost('pillars_description'),
-                'pillars_items'             => json_encode($pillars),
-                'menu_subtitle'             => $this->request->getPost('menu_subtitle'),
-                'menu_title'                => $this->request->getPost('menu_title'),
-                'menu_description'          => $this->request->getPost('menu_description'),
-                'menu_schedule'             => json_encode($meals),
-                'gallery_subtitle'          => $this->request->getPost('gallery_subtitle'),
-                'gallery_title'             => $this->request->getPost('gallery_title'),
-                'gallery_description'       => $this->request->getPost('gallery_description'),
-                'gallery_images'            => json_encode($existingGallery),
-                'faq_subtitle'              => $this->request->getPost('faq_subtitle'),
-                'faq_title'                 => $this->request->getPost('faq_title'),
-                'faq_description'           => $this->request->getPost('faq_description'),
-                'faq_items'                 => json_encode($faqs),
-                'cta_title'                 => $this->request->getPost('cta_title'),
-                'cta_description'           => $this->request->getPost('cta_description'),
-                'cta_whatsapp_number'       => $this->request->getPost('cta_whatsapp_number'),
-                'cta_whatsapp_button_text'  => $this->request->getPost('cta_whatsapp_button_text'),
-                'cta_secondary_button_text' => $this->request->getPost('cta_secondary_button_text'),
-                'cta_secondary_button_link' => $this->request->getPost('cta_secondary_button_link'),
-                'updated_at'                => date('Y-m-d H:i:s'),
+                'weekly_schedule' => $weeklyScheduleJson,
+                'updated_at'      => date('Y-m-d H:i:s'),
             ];
+
+            if ($this->request->getPost('menu_subtitle') !== null) {
+                $updateData['menu_subtitle'] = $this->request->getPost('menu_subtitle');
+            }
+            if ($this->request->getPost('menu_title') !== null) {
+                $updateData['menu_title'] = $this->request->getPost('menu_title');
+            }
+            if ($this->request->getPost('menu_description') !== null) {
+                $updateData['menu_description'] = $this->request->getPost('menu_description');
+            }
 
             $db->table('saiyoojyam_food_quality')->where('id', $row->id)->update($updateData);
 
             $this->session->setFlashdata('alert', [
                 'type' => 'success',
-                'msg'  => 'Food Quality page updated successfully!'
+                'msg'  => 'Weekly Food Menu updated successfully!'
             ]);
 
             return redirect()->to(site_url('Admin/FoodQuality'));

@@ -789,6 +789,22 @@ class Inmates extends BaseController
             ];
         }
 
+        $terms = [];
+        if ($db->tableExists('saiyoojyam_terms_conditions')) {
+            $termRows = $db->table('saiyoojyam_terms_conditions')->orderBy('id', 'ASC')->get()->getResult();
+            foreach ($termRows as $tRow) {
+                $terms[] = [
+                    'id'                => (int) $tRow->id,
+                    'title'             => $tRow->title ?? '',
+                    'small_description' => $tRow->small_description ?? '',
+                    'desc'              => $tRow->small_description ?? '',
+                    'pdf_file'          => $tRow->pdf_file ?? null,
+                    'pdf_url'           => !empty($tRow->pdf_file) ? base_url('public/uploads/terms/' . $tRow->pdf_file) : '',
+                    'download_url'      => base_url('api/terms/download/' . $tRow->id),
+                ];
+            }
+        }
+
         $dashboardData = [
             'inmate' => [
                 'id'               => (int) $inmate->inmates_id,
@@ -819,6 +835,7 @@ class Inmates extends BaseController
             'total_pending_amount_num' => $totalPendingAmount,
             'is_all_paid'           => $isAllPaid,
             'invoices'              => $formattedInvoices,
+            'terms'                 => $terms,
             'print_url'             => base_url('api/inmates/print/' . $id),
         ];
 

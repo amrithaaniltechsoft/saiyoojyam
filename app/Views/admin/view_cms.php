@@ -24,7 +24,12 @@
               <!-- Basic Bootstrap Table -->
                
               <div class="card">
-                <h5 class="card-header">View CMS</h5>
+                <div class="card-header d-flex align-items-center justify-content-between">
+                  <h5 class="mb-0">View CMS</h5>
+                  <a href="<?php echo base_url();?>Admin/Cms/Add" class="btn btn-primary btn-sm">
+                    <i class="bx bx-plus me-1"></i> Add CMS
+                  </a>
+                </div>
                 <div class="table-responsive text-nowrap">
                   <table class="table display" id="myTable">
                     <thead>
@@ -33,7 +38,6 @@
                         <th>Page</th>
                         <th>Title</th>
                         <th>Description</th>
-                        
                         <th>Action</th>
                       </tr>
                     </thead>
@@ -41,28 +45,21 @@
 
                       <?php $i=1; foreach($pagedata as $val){ ?> 
                       <tr>
-                       
                         <td><?php echo $i; ?></td>
-                        
-                        <td><?php echo $val->page; ?></td>
-
-                        <td><?php echo $val->cms_tittle; ?></td>
-
-                         <td><?php echo substr($val->cms_desc,0,80); ?></td>
-
-                        
-
-                        <td >
-                          <a class="dropdown-item" href="<?php echo base_url();?>Admin/Cms/Edit/<?php echo $val->id ; ?>"><i class="icon-base bx bx-edit-alt me-2"></i> </a>
-                          
+                        <td><span class="badge bg-label-primary"><?php echo $val->page; ?></span></td>
+                        <td><strong><?php echo $val->cms_tittle; ?></strong></td>
+                        <td><?php echo substr(strip_tags($val->cms_desc),0,90) . (strlen(strip_tags($val->cms_desc)) > 90 ? '...' : ''); ?></td>
+                        <td>
+                          <a class="btn btn-sm btn-icon btn-outline-primary me-1" href="<?php echo base_url();?>Admin/Cms/Edit/<?php echo $val->id ; ?>" title="Edit">
+                            <i class="icon-base bx bx-edit-alt"></i>
+                          </a>
+                          <a class="btn btn-sm btn-icon btn-outline-danger" href="<?php echo base_url();?>Admin/Cms/Delete/<?php echo $val->id ; ?>" onclick="return confirm('Are you sure you want to delete this CMS item?');" title="Delete">
+                            <i class="icon-base bx bx-trash"></i>
+                          </a>
                         </td>
-                       
                       </tr>
 
                       <?php $i++; } ?>
-                      
-                     
-                      
                       
                     </tbody>
                   </table>

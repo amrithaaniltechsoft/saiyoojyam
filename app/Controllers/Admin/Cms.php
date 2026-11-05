@@ -15,8 +15,77 @@ class Cms extends BaseController
         return view('admin/view_cms',$data);
     }
 
-    public function Edit($id){
+    public function Add(){
+        if($this->request->getMethod() === 'POST'){
+            $photo = $this->request->getFile('image');
+            $photoName = '';
 
+            $uploadPath = FCPATH . 'uploads/cms/';
+            $thumbPath  = FCPATH . 'uploads/cms/thumbs/';
+
+            if (!is_dir($uploadPath)) {
+                mkdir($uploadPath, 0777, true);
+            }
+
+            if (!is_dir($thumbPath)) {
+                mkdir($thumbPath, 0777, true);
+            }
+
+            $cmsType = 0;
+            if ($photo && $photo->isValid() && !$photo->hasMoved()) {
+                $photoName = $photo->getRandomName();
+                $photo->move($uploadPath, $photoName);
+
+                \Config\Services::image()
+                    ->withFile($uploadPath . $photoName)
+                    ->fit(300, 200, 'center')
+                    ->save($thumbPath . $photoName);
+
+                $cmsType = 1;
+            }
+
+            $insertData = [
+                'page'       => $this->request->getPost('page'),
+                'cms_type'   => $cmsType,
+                'cms_tittle' => $this->request->getPost('title'),
+                'cms_desc'   => $this->request->getPost('description'),
+                'cms_img'    => $photoName,
+            ];
+
+            $this->common_model->InsertData($insertData, 'saiyoojyam_cms');
+
+            $flashdata = array(
+                'type' => 'success',
+                'msg'  => 'CMS Added Successfully',
+            );
+
+            $this->session->setFlashdata('alert', $flashdata);
+            return redirect()->to(site_url('Admin/Cms'));
+        }
+
+        return view('admin/add_cms');
+    }
+
+    public function Delete($id){
+        $item = $this->common_model->SingleRow('saiyoojyam_cms', array('id' => $id));
+        if ($item) {
+            if (!empty($item->cms_img)) {
+                @unlink(FCPATH . 'uploads/cms/' . $item->cms_img);
+                @unlink(FCPATH . 'uploads/cms/thumbs/' . $item->cms_img);
+            }
+            $this->common_model->DeleteData(array('id' => $id), 'saiyoojyam_cms');
+
+            $flashdata = array(
+                'type' => 'success',
+                'msg'  => 'CMS Deleted Successfully',
+            );
+            $this->session->setFlashdata('alert', $flashdata);
+        }
+
+        return redirect()->to(site_url('Admin/Cms'));
+    }
+
+    public function Edit($id){
         $data['cms_data'] = $this->common_model->SingleRow('saiyoojyam_cms',array('id' => $id));
 
         if($this->request->getMethod() === 'POST'){

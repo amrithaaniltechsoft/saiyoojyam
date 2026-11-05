@@ -68,6 +68,16 @@
 
             <?php
              
+              $uriSegs = service('uri')->getSegments();
+              $seg2 = strtolower($uriSegs[1] ?? '');
+              $seg3 = strtolower($uriSegs[2] ?? '');
+              $seg4 = strtolower($uriSegs[3] ?? '');
+
+              $isWebsitePage = in_array($seg2, ['about', 'whychoose', 'foodquality', 'cms', 'contact', 'seo', 'termsconditions', 'terms']);
+              if ($isWebsitePage && session()->get('manage') !== 'website') {
+                  session()->set('manage', 'website');
+              }
+
               $website="";
               $booking="";
               if(empty(session()->get('manage')))
@@ -78,11 +88,6 @@
               {
               $website="active";
               }
-
-              $uriSegs = service('uri')->getSegments();
-              $seg2 = strtolower($uriSegs[1] ?? '');
-              $seg3 = strtolower($uriSegs[2] ?? '');
-              $seg4 = strtolower($uriSegs[3] ?? '');
 
             ?>
 
@@ -525,13 +530,40 @@
                 <div class="text-truncate" data-i18n="Account Settings">CMS</div>
               </a>
               <ul class="menu-sub">
-                 
-                <li class="menu-item <?= in_array($seg2, ['cms']) ? 'active' : '' ?>">
+                <li class="menu-item <?= (in_array($seg2, ['cms']) && $seg3 == 'add') ? 'active' : '' ?>">
+                  <a href="<?=  base_url();?>Admin/Cms/Add" class="menu-link">
+                    <div class="text-truncate" data-i18n="Add CMS">Add CMS</div>
+                  </a>
+                </li>
+                <li class="menu-item <?= (in_array($seg2, ['cms']) && in_array($seg3, ['', 'index', 'view'])) ? 'active' : '' ?>">
                   <a href="<?=  base_url();?>Admin/Cms" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">View / Edit CMS</div>
                   </a>
                 </li>
-                 
+              </ul>
+            </li>
+
+            <!--sidebar pages end-->
+
+
+            <!--sidebar pages start-->
+
+            <li class="menu-item <?= in_array($seg2, ['termsconditions', 'terms']) ? 'active open' : '' ?>">
+              <a href="javascript:void(0);" class="menu-link menu-toggle">
+                <i class="menu-icon tf-icons bx bx-file"></i>
+                <div class="text-truncate" data-i18n="Terms and Conditions">Terms &amp; Conditions</div>
+              </a>
+              <ul class="menu-sub">
+                <li class="menu-item <?= (in_array($seg2, ['termsconditions', 'terms']) && $seg3 == 'add') ? 'active' : '' ?>">
+                  <a href="<?=  base_url();?>Admin/TermsConditions/Add" class="menu-link">
+                    <div class="text-truncate" data-i18n="Add Terms & Conditions">Add Terms &amp; Conditions</div>
+                  </a>
+                </li>
+                <li class="menu-item <?= (in_array($seg2, ['termsconditions', 'terms']) && in_array($seg3, ['', 'index', 'view'])) ? 'active' : '' ?>">
+                  <a href="<?=  base_url();?>Admin/TermsConditions" class="menu-link">
+                    <div class="text-truncate" data-i18n="List Terms & Conditions">List Terms &amp; Conditions</div>
+                  </a>
+                </li>
               </ul>
             </li>
 

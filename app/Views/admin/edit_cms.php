@@ -23,7 +23,9 @@
                   <div class="card">
                     <div class="card-header d-flex align-items-center justify-content-between">
                       <h5 class="mb-0">Edit CMS</h5>
-                      
+                      <a href="<?php echo base_url('Admin/Cms'); ?>" class="btn btn-outline-secondary btn-sm">
+                        <i class="bx bx-arrow-back me-1"></i> Back to List
+                      </a>
                     </div>
                     <div class="card-body">
                       <form method="POST" enctype="multipart/form-data">
@@ -31,7 +33,7 @@
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="">Page</label>
                           <div class="col-sm-10">
-                            <input type="text" class="form-control" value="<?php echo $cms_data->page; ?>"  name="page" id=""  required readonly/>
+                            <input type="text" class="form-control" value="<?php echo $cms_data->page; ?>"  name="page" id=""  required />
                           </div>
                         </div>
 

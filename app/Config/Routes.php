@@ -66,10 +66,40 @@ $routes->post('Admin/FoodQuality/Edit', '\App\Controllers\Admin\FoodQuality::Edi
 $routes->get('Admin/FoodQuality/DeleteGalleryImage/(:any)', '\App\Controllers\Admin\FoodQuality::DeleteGalleryImage/$1');
 $routes->get('Admin/FoodQuality/DeleteHeroImage', '\App\Controllers\Admin\FoodQuality::DeleteHeroImage');
 
+$routes->get('Admin/TermsConditions', '\App\Controllers\Admin\TermsConditions::index');
+$routes->get('Admin/TermsConditions/View', '\App\Controllers\Admin\TermsConditions::View');
+$routes->get('Admin/TermsConditions/Add', '\App\Controllers\Admin\TermsConditions::Add');
+$routes->post('Admin/TermsConditions/Add', '\App\Controllers\Admin\TermsConditions::Add');
+$routes->get('Admin/TermsConditions/Edit/(:num)', '\App\Controllers\Admin\TermsConditions::Edit/$1');
+$routes->post('Admin/TermsConditions/Edit/(:num)', '\App\Controllers\Admin\TermsConditions::Edit/$1');
+$routes->get('Admin/TermsConditions/Delete/(:num)', '\App\Controllers\Admin\TermsConditions::Delete/$1');
+$routes->get('Admin/TermsConditions/DeletePdf/(:num)', '\App\Controllers\Admin\TermsConditions::DeletePdf/$1');
+$routes->get('Admin/TermsConditions/DeletePdf', '\App\Controllers\Admin\TermsConditions::DeletePdf');
+
+$routes->get('Admin/Terms', '\App\Controllers\Admin\TermsConditions::index');
+$routes->get('Admin/Terms/Add', '\App\Controllers\Admin\TermsConditions::Add');
+$routes->post('Admin/Terms/Add', '\App\Controllers\Admin\TermsConditions::Add');
+$routes->get('Admin/Terms/Edit/(:num)', '\App\Controllers\Admin\TermsConditions::Edit/$1');
+$routes->post('Admin/Terms/Edit/(:num)', '\App\Controllers\Admin\TermsConditions::Edit/$1');
+$routes->get('Admin/Terms/Delete/(:num)', '\App\Controllers\Admin\TermsConditions::Delete/$1');
+$routes->get('Admin/Terms/DeletePdf/(:num)', '\App\Controllers\Admin\TermsConditions::DeletePdf/$1');
+$routes->get('Admin/Terms/DeletePdf', '\App\Controllers\Admin\TermsConditions::DeletePdf');
+
+$routes->get('Admin/Cms', '\App\Controllers\Admin\Cms::index');
+$routes->get('Admin/Cms/Add', '\App\Controllers\Admin\Cms::Add');
+$routes->post('Admin/Cms/Add', '\App\Controllers\Admin\Cms::Add');
+$routes->get('Admin/Cms/Edit/(:num)', '\App\Controllers\Admin\Cms::Edit/$1');
+$routes->post('Admin/Cms/Edit/(:num)', '\App\Controllers\Admin\Cms::Edit/$1');
+$routes->get('Admin/Cms/Delete/(:num)', '\App\Controllers\Admin\Cms::Delete/$1');
+
 $routes->get('api/about', '\App\Controllers\Api\About::index');
 $routes->get('api/contact', '\App\Controllers\Api\Contact::index');
 $routes->get('api/food-quality', '\App\Controllers\Api\FoodQuality::index');
 $routes->get('api/why-choose', '\App\Controllers\Api\WhyChoose::index');
+$routes->get('api/terms', '\App\Controllers\Api\Terms::index');
+$routes->get('api/terms-and-conditions', '\App\Controllers\Api\Terms::index');
+$routes->get('api/terms/download/(:num)', '\App\Controllers\Api\Terms::download/$1');
+$routes->get('api/terms/download', '\App\Controllers\Api\Terms::download');
 $routes->get('api/cms/proprietor', '\App\Controllers\Api\Cms::proprietor');
 $routes->get('api/cms', '\App\Controllers\Api\Cms::index');
 $routes->get('api/seo', '\App\Controllers\Api\Seo::index');

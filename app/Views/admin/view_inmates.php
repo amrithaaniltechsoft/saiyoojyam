@@ -436,6 +436,8 @@
                             <span class="badge bg-label-danger">Inactive</span>
                           <?php } elseif(!empty($val->inmates_status) && $val->inmates_status == 'pending'){ ?>
                             <span class="badge bg-label-warning">Pending Approval</span>
+                          <?php } elseif(!empty($val->inmates_status) && ($val->inmates_status == 'rejected' || $val->inmates_status == 'cancelled')){ ?>
+                            <span class="badge bg-label-secondary"><?php echo ucfirst($val->inmates_status); ?></span>
                           <?php } elseif($isFutureCheckout) { ?>
                             <span class="badge bg-label-success">Active</span>
                             <small class="text-info d-block fw-semibold" style="font-size:10.5px;"><i class="fa fa-clock-o me-0.5"></i>Leaving <?php echo date('d-M', strtotime($val->inmates_check_out_date)); ?></small>

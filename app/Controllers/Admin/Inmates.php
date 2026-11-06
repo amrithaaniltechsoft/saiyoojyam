@@ -68,8 +68,8 @@ class Inmates extends BaseController
 
             } elseif(empty($status)){
 
-                // Exclude unapproved pending bookings from the official Inmates list
-                $conditions['inmates_status !='] = 'pending';
+                // Exclude unapproved pending bookings and rejected/cancelled bookings from official Inmates list
+                $conditions['inmates_status NOT IN'] = array('pending', 'rejected', 'cancelled');
 
             }
 
@@ -101,7 +101,12 @@ class Inmates extends BaseController
 
         $data['room_types'] = $this->common_model->FetchAll('saiyoojyam_room_type');
 
-        $data['reffers'] = $this->common_model->FetchWhereOrderby('saiyoojyam_inmates', array('inmates_status !=' => 'pending'), 'inmates_uid', 'ASC');
+        $db = \Config\Database::connect();
+        $data['reffers'] = $db->table('saiyoojyam_inmates')
+            ->whereNotIn('inmates_status', array('pending', 'rejected', 'cancelled'))
+            ->orderBy('inmates_uid', 'ASC')
+            ->get()
+            ->getResult();
 
         $data['active_ref'] = $ref;
 

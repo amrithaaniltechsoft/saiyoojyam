@@ -734,16 +734,25 @@ class CommonModel extends Model
 
         $query = $this->db->table('saiyoojyam_inmates');
 
+        $statusSpecified = false;
         if(!empty($cond)){
-
-            $query->where($cond);
-
-            if(!isset($cond['inmates_status']) && !isset($cond['inmates_status !='])){
-                $query->where('inmates_status !=', 'pending');
+            foreach($cond as $k => $v){
+                if(strpos($k, 'inmates_status') !== false){
+                    $statusSpecified = true;
+                    if(is_array($v) && (stripos($k, 'NOT IN') !== false || stripos($k, '!=') !== false)){
+                        $query->whereNotIn('inmates_status', $v);
+                        unset($cond[$k]);
+                    }
+                    break;
+                }
             }
+            if(!empty($cond)){
+                $query->where($cond);
+            }
+        }
 
-        } else {
-            $query->where('inmates_status !=', 'pending');
+        if(!$statusSpecified){
+            $query->whereNotIn('inmates_status', array('pending', 'rejected', 'cancelled'));
         }
 
         $query->orderBy('CASE WHEN inmates_status = "active" THEN 0 ELSE 1 END', 'ASC', false)
@@ -777,7 +786,7 @@ class CommonModel extends Model
             $query->where('i.inmates_status', $inmate_status);
 
         } else {
-            $query->where('i.inmates_status !=', 'pending');
+            $query->whereNotIn('i.inmates_status', array('pending', 'rejected', 'cancelled'));
         }
 
         $result = $query->get();
@@ -1166,7 +1175,7 @@ public function inmatesMonthRent($date_start,$date_end){
     ->join('saiyoojyam_tariffs', 'saiyoojyam_inmates.inmates_tariffs = saiyoojyam_tariffs.tariffs_id', 'left')
     
     ->where("DATE_FORMAT(inmates_check_in_date, '%Y') <= $currentYear", NULL, FALSE)
-    ->where('inmates_status !=', 'pending')
+    ->whereNotIn('inmates_status', array('pending', 'rejected', 'cancelled'))
 
     ->groupStart()
         ->where('inmates_status !=', 'checked_out')
@@ -1233,7 +1242,7 @@ public function inmatesBuilding($month, $year, $cond, $statusFilter = 'all'){
 
     $builder = $this->db->table('saiyoojyam_inmates')
         ->where($cond)
-        ->where('saiyoojyam_inmates.inmates_status !=', 'pending')
+        ->whereNotIn('saiyoojyam_inmates.inmates_status', array('pending', 'rejected', 'cancelled'))
         ->where('inmates_check_in_date <=', $target_month_end)
         ->groupStart()
             ->where('inmates_status !=', 'checked_out')

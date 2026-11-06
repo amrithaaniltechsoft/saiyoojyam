@@ -742,6 +742,9 @@ class CommonModel extends Model
                     if(is_array($v) && (stripos($k, 'NOT IN') !== false || stripos($k, '!=') !== false)){
                         $query->whereNotIn('inmates_status', $v);
                         unset($cond[$k]);
+                    } elseif(is_array($v) && stripos($k, 'IN') !== false){
+                        $query->whereIn('inmates_status', $v);
+                        unset($cond[$k]);
                     }
                     break;
                 }
@@ -752,7 +755,8 @@ class CommonModel extends Model
         }
 
         if(!$statusSpecified){
-            $query->whereNotIn('inmates_status', array('pending', 'rejected', 'cancelled'));
+            $query->whereIn('inmates_status', array('active', 'checked_out'))
+                  ->where('inmates_status !=', '');
         }
 
         $query->orderBy('CASE WHEN inmates_status = "active" THEN 0 ELSE 1 END', 'ASC', false)
@@ -786,7 +790,8 @@ class CommonModel extends Model
             $query->where('i.inmates_status', $inmate_status);
 
         } else {
-            $query->whereNotIn('i.inmates_status', array('pending', 'rejected', 'cancelled'));
+            $query->whereIn('i.inmates_status', array('active', 'checked_out'))
+                  ->where('i.inmates_status !=', '');
         }
 
         $result = $query->get();

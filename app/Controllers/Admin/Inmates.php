@@ -12,6 +12,24 @@ class Inmates extends BaseController
 {
     public function index($uri_status = null){
 
+        $db = \Config\Database::connect();
+
+        // 1. Auto-migration: ensure ENUM includes 'rejected' and 'cancelled' on server
+        try {
+            $colRes = $db->query("SHOW COLUMNS FROM saiyoojyam_inmates LIKE 'inmates_status'")->getRow();
+            if ($colRes && stripos($colRes->Type, "'rejected'") === false) {
+                $db->query("ALTER TABLE saiyoojyam_inmates MODIFY COLUMN inmates_status ENUM('pending','active','checked_out','rejected','cancelled') NOT NULL DEFAULT 'pending'");
+            }
+        } catch (\Throwable $e) {}
+
+        // 2. Auto-heal: convert any empty string or corrupted status records to 'rejected'
+        try {
+            $db->table('saiyoojyam_inmates')
+                ->where('inmates_status', '')
+                ->orWhere('inmates_status IS NULL', null, false)
+                ->update(['inmates_status' => 'rejected']);
+        } catch (\Throwable $e) {}
+
         $this->common_model->AutoCheckoutInmates();
 
         $ref = $this->request->getGet('ref');
@@ -68,8 +86,8 @@ class Inmates extends BaseController
 
             } elseif(empty($status)){
 
-                // Exclude unapproved pending bookings and rejected/cancelled bookings from official Inmates list
-                $conditions['inmates_status NOT IN'] = array('pending', 'rejected', 'cancelled');
+                // Only include legitimate active or checked-out inmates in official Inmates list
+                $conditions['inmates_status IN'] = array('active', 'checked_out');
 
             }
 
@@ -2505,6 +2523,14 @@ $joins = array(
             }
             return redirect()->back()->with("error", $msg);
         }
+
+        // Ensure column enum supports 'rejected'
+        try {
+            $colRes = $db->query("SHOW COLUMNS FROM saiyoojyam_inmates LIKE 'inmates_status'")->getRow();
+            if ($colRes && stripos($colRes->Type, "'rejected'") === false) {
+                $db->query("ALTER TABLE saiyoojyam_inmates MODIFY COLUMN inmates_status ENUM('pending','active','checked_out','rejected','cancelled') NOT NULL DEFAULT 'pending'");
+            }
+        } catch (\Throwable $e) {}
 
         $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->update([
             "inmates_status"         => "rejected",

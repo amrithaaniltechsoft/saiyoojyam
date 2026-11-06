@@ -348,6 +348,39 @@ class Inmates extends BaseController
                 ]);
             }
 
+            // Check for duplicate active / pending email to prevent account conflicts
+            if (!empty($email)) {
+                $existingActiveInmate = $db->table('saiyoojyam_inmates')
+                    ->where('LOWER(inmates_email)', strtolower($email))
+                    ->whereIn('inmates_status', ['active', 'pending'])
+                    ->get()
+                    ->getRow();
+
+                if ($existingActiveInmate) {
+                    $statusText = $existingActiveInmate->inmates_status === 'pending' ? 'a pending booking' : 'an active resident';
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'status'  => false,
+                        'message' => "The email '{$email}' is already registered to {$statusText} (" . ($existingActiveInmate->inmates_name ?: 'Resident') . "). Each resident must have their own unique email address for login and notifications.",
+                    ]);
+                }
+
+                // Also verify auth_identities to ensure no existing user account uses this email
+                if ($db->tableExists('auth_identities')) {
+                    $existingIdentity = $db->table('auth_identities')
+                        ->where('type', 'email_password')
+                        ->where('LOWER(secret)', strtolower($email))
+                        ->get()
+                        ->getRow();
+
+                    if ($existingIdentity) {
+                        return $this->response->setStatusCode(400)->setJSON([
+                            'status'  => false,
+                            'message' => "The email '{$email}' is already registered to an existing resident account. Please use a unique email address for each resident.",
+                        ]);
+                    }
+                }
+            }
+
             // 7. Insert Inmate Record into saiyoojyam_inmates
             $inmateData = [
                 'inmates_uid'              => '',

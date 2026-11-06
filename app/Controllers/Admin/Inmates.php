@@ -2199,6 +2199,22 @@ $joins = array(
         }
 
         // 1. Resolve or Create CodeIgniter Shield User
+        // Guard against duplicate email belonging to another active or pending resident
+        $otherInmateByEmail = $db->table("saiyoojyam_inmates")
+            ->where("inmates_id !=", $inmateId)
+            ->where("LOWER(inmates_email)", strtolower($email))
+            ->whereIn("inmates_status", ["active", "pending"])
+            ->get()
+            ->getRow();
+
+        if ($otherInmateByEmail) {
+            $msg = "The email '{$email}' is already registered to another resident ({$otherInmateByEmail->inmates_name}, UID: {$otherInmateByEmail->inmates_uid}). Each resident must have their own unique email address.";
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(["status" => false, "message" => $msg]);
+            }
+            return redirect()->back()->with("error", $msg);
+        }
+
         $existingEmailIdentity = $db->table("auth_identities")
             ->where("type", "email_password")
             ->where("LOWER(secret)", strtolower($email))
@@ -2214,6 +2230,22 @@ $joins = array(
         $now = date("Y-m-d H:i:s");
 
         if ($existingEmailIdentity) {
+            // Check if this identity belongs to a DIFFERENT inmate
+            $otherInmateByUser = $db->table("saiyoojyam_inmates")
+                ->where("inmates_id !=", $inmateId)
+                ->where("inmates_user_id", (int) $existingEmailIdentity->user_id)
+                ->whereIn("inmates_status", ["active", "pending"])
+                ->get()
+                ->getRow();
+
+            if ($otherInmateByUser) {
+                $msg = "The email '{$email}' is already in use by another resident account ({$otherInmateByUser->inmates_name}, UID: {$otherInmateByUser->inmates_uid}). Please enter a unique email address.";
+                if ($isAjax) {
+                    return $this->response->setStatusCode(400)->setJSON(["status" => false, "message" => $msg]);
+                }
+                return redirect()->back()->with("error", $msg);
+            }
+
             // An account already exists for this email address -> re-use and activate
             $existingUser = $db->table("users")->where("id", $existingEmailIdentity->user_id)->get()->getRow();
 

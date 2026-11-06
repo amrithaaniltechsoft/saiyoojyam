@@ -342,8 +342,8 @@ class Inmates extends BaseController
                             'invoice_status'          => 'Fully Paid',
                         ] : null,
                         'receipt_url'              => base_url('Admin/Inmates/Receipt/' . $recentInmate->inmates_id),
-                        'print_url'                => base_url('Admin/Inmates/Print/' . $recentInmate->inmates_id),
-                        'api_print_url'            => base_url('api/inmates/print/' . $recentInmate->inmates_id),
+                        'print_url'                => base_url('Admin/Inmates/Print/' . $recentInmate->inmates_id . ($existingInvoice ? '?invoice_id=' . $existingInvoice->invoice_id : '')),
+                        'api_print_url'            => base_url('api/inmates/print/' . $recentInmate->inmates_id . ($existingInvoice ? '?invoice_id=' . $existingInvoice->invoice_id : '')),
                     ],
                 ]);
             }
@@ -482,8 +482,8 @@ class Inmates extends BaseController
                         'invoice_status'          => 'Fully Paid',
                     ],
                     'receipt_url'              => base_url('Admin/Inmates/Receipt/' . $insertId),
-                    'print_url'                => base_url('Admin/Inmates/Print/' . $insertId),
-                    'api_print_url'            => base_url('api/inmates/print/' . $insertId),
+                    'print_url'                => base_url('Admin/Inmates/Print/' . $insertId . '?invoice_id=' . $invoiceId),
+                    'api_print_url'            => base_url('api/inmates/print/' . $insertId . '?invoice_id=' . $invoiceId),
                 ],
             ]);
         } catch (\Throwable $e) {
@@ -524,7 +524,7 @@ class Inmates extends BaseController
                 'building' => $building,
                 'room'     => $room,
                 'invoices' => $invoices,
-                'print_url' => base_url('api/inmates/print/' . $id),
+                'print_url' => base_url('api/inmates/print/' . $id . (!empty($invoices) ? '?invoice_id=' . $invoices[0]->invoice_id : '')),
             ],
         ]);
     }
@@ -751,7 +751,7 @@ class Inmates extends BaseController
                 'total'         => '₹' . number_format((float) $inv->invoice_total, 2),
                 'status'        => $statusLabel,
                 'status_code'   => (int) $inv->invoice_status,
-                'print_url'     => base_url('api/inmates/print/' . $id),
+                'print_url'     => base_url('api/inmates/print/' . $id . '?invoice_id=' . $inv->invoice_id),
             ];
         }
 
@@ -836,7 +836,7 @@ class Inmates extends BaseController
             'is_all_paid'           => $isAllPaid,
             'invoices'              => $formattedInvoices,
             'terms'                 => $terms,
-            'print_url'             => base_url('api/inmates/print/' . $id),
+            'print_url'             => base_url('api/inmates/print/' . $id . (!empty($invoices) ? '?invoice_id=' . $invoices[0]->invoice_id : '')),
         ];
 
         return $this->response->setJSON([

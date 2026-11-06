@@ -2502,7 +2502,7 @@ $joins = array(
         }
 
         $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->update([
-            "inmates_status"         => "checked_out",
+            "inmates_status"         => "rejected",
             "inmates_check_out_date" => date('Y-m-d'),
         ]);
 

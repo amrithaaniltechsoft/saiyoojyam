@@ -456,7 +456,7 @@ class Rooms extends BaseController
                 $availableBeds = 0;
                 $vacateDate = null;
 
-                if ($isSearchDateAvailable && ($ruleAMatches || $pastVacateFound)) {
+                if ($isSearchDateAvailable) {
                     $isEligible = true;
                     $availableFromDate = $searchDate;
                     $availableFromDisplay = 'Available Now';
@@ -816,9 +816,53 @@ class Rooms extends BaseController
         $this->setCorsHeaders();
 
         $db = \Config\Database::connect();
+
+        // Build building lookup map
+        $buildingMap = [];
+        if ($db->tableExists('saiyoojyam_building')) {
+            $bList = $db->table('saiyoojyam_building')->get()->getResult();
+            foreach ($bList as $b) {
+                $bId = (int) $b->building_id;
+                $rawSlug = trim($b->building_slug ?? '');
+                $cleanSlug = preg_replace('/^saiyoojyam[-_]/i', '', $rawSlug);
+                $buildingMap[$bId] = [
+                    'id'        => $bId,
+                    'slug'      => $cleanSlug,
+                    'full_slug' => $rawSlug,
+                    'name'      => trim($b->building_name ?? ''),
+                ];
+            }
+        }
+
+        // Support optional location/building_id filtering from query string
+        $locationParam = trim((string) ($this->request->getGet('location') ?? $this->request->getGet('building_id') ?? ''));
+        $filterBuildingId = null;
+        if ($locationParam !== '' && strtolower($locationParam) !== 'all') {
+            $locLower = strtolower($locationParam);
+            $cleanLoc = preg_replace('/^saiyoojyam[-_]/i', '', $locLower);
+            foreach ($buildingMap as $bId => $bInfo) {
+                if (
+                    (string) $bId === $locLower ||
+                    strtolower($bInfo['slug']) === $cleanLoc ||
+                    strtolower($bInfo['full_slug']) === $locLower ||
+                    strtolower($bInfo['name']) === $locLower ||
+                    stripos($bInfo['name'], $locLower) !== false
+                ) {
+                    $filterBuildingId = $bId;
+                    break;
+                }
+            }
+            if ($filterBuildingId === null && is_numeric($locationParam)) {
+                $filterBuildingId = (int) $locationParam;
+            }
+        }
+
         $roomTypes = [];
         if ($db->tableExists('saiyoojyam_room_type')) {
             $builder = $db->table('saiyoojyam_room_type');
+            if ($filterBuildingId !== null) {
+                $builder->where('room_type_building_id', $filterBuildingId);
+            }
             $builder->orderBy('room_type_name', 'ASC');
             $roomTypes = $builder->get()->getResult();
         }
@@ -845,6 +889,8 @@ class Rooms extends BaseController
                 'slug'           => $slug,
                 'shares'         => $shares,
                 'building_id'    => $bId,
+                'building_slug'  => $buildingMap[$bId]['slug'] ?? '',
+                'building_name'  => $buildingMap[$bId]['name'] ?? '',
                 'room_type_name' => $name,
             ];
         }

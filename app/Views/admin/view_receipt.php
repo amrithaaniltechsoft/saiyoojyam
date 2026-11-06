@@ -621,7 +621,15 @@
 
                           var data = JSON.parse(response);
 
-                          $('.payment_data').html(data.payment_data)
+                          if ($.fn.DataTable.isDataTable('#myTable')) {
+                            $('#myTable').DataTable().destroy();
+                          }
+
+                          $('.payment_data').html(data.payment_data);
+
+                          $('#myTable').DataTable({
+                            "order": [[0, "desc"]]
+                          });
 
                           alertify.success(data.msg).delay(3).dismissOthers();
 

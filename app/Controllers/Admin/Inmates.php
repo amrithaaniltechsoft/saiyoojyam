@@ -1219,10 +1219,21 @@ $joins = array(
 
             $response['payment_data'] = "";
 
+            $ciDay = !empty($inmates->inmates_check_in_date) ? (int)date('j', strtotime($inmates->inmates_check_in_date)) : 0;
+            $ciMonthDate = !empty($inmates->inmates_check_in_date) ? date('Y-m-01', strtotime($inmates->inmates_check_in_date)) : '';
+            $nextMonthDate = !empty($inmates->inmates_check_in_date) ? date('Y-m-01', strtotime('first day of next month', strtotime($inmates->inmates_check_in_date))) : '';
+
             foreach($invoices as $invoice){
 
+                $tablePayMonthDisplay = date('M-Y', strtotime($invoice->invoice_payment_month));
+                if ($ciDay >= 21 && $invoice->invoice_payment_month == $nextMonthDate) {
+                    $tablePayMonthDisplay = date('M-Y', strtotime($ciMonthDate)) . ' & ' . date('M-Y', strtotime($invoice->invoice_payment_month));
+                }
+
+                $printUrl = base_url('Admin/Inmates/Print/' . $inmates->inmates_id . '?invoice_id=' . $invoice->invoice_id);
+
                 $response['payment_data'] .= "<tr>
-                        <td>".date('M-Y',strtotime($invoice->invoice_payment_month))."</td>
+                        <td data-order='".$invoice->invoice_payment_month."'>".$tablePayMonthDisplay."</td>
                         <td>".$invoice->invoice_paid_date."</td>
                         <td>".$invoice->invoice_total."</td>
                         <td>".$invoice->invoice_paid_amount."</td>";
@@ -1245,7 +1256,11 @@ $joins = array(
 
                         $response['payment_data'] .="<td><span class='btn history_btn history_clz' data-history=".$invoice->invoice_id.">History</span></td>";
 
-                        
+                        $response['payment_data'] .="<td>
+                          <a href='".$printUrl."' target='_blank' class='btn btn-sm btn-icon btn-outline-secondary p-1' title='Print Invoice'>
+                            <i class='icon-base bx bx-printer' style='font-size:17px;'></i>
+                          </a>
+                        </td>";
                       
                 $response['payment_data'] .= "</tr>";
             }

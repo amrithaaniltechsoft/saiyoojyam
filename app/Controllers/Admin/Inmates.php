@@ -20,6 +20,7 @@ class Inmates extends BaseController
             if ($colRes && stripos($colRes->Type, "'rejected'") === false) {
                 $db->query("ALTER TABLE saiyoojyam_inmates MODIFY COLUMN inmates_status ENUM('pending','active','checked_out','rejected','cancelled') NOT NULL DEFAULT 'pending'");
             }
+            $db->query("ALTER TABLE saiyoojyam_inmates MODIFY COLUMN inmates_place_of_work varchar(255) NOT NULL DEFAULT ''");
         } catch (\Throwable $e) {}
 
         // 2. Auto-heal: convert any empty string or corrupted status records to 'rejected'

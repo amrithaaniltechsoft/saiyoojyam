@@ -194,17 +194,6 @@
 
             <!--sidebar pages end-->
 
-            <!--sidebar pages start-->
-
-            <li class="menu-item">
-              <a href="<?=  base_url();?>Admin/Rooms/Available" target="_blank" class="menu-link">
-                <i class="menu-icon tf-icons bx bx-hotel"></i>
-                <div class="text-truncate" data-i18n="Available Rooms">Available Rooms</div>
-              </a>
-            </li>
-
-            <!--sidebar pages end-->
-
 
 
             <!--sidebar pages start-->
@@ -319,7 +308,7 @@
 
             <!--sidebar pages start-->
 
-            <li class="menu-item <?= $seg2 == 'inmates' ? 'active open' : '' ?>">
+            <li class="menu-item <?= ($seg2 == 'inmates' || ($seg2 == 'rooms' && $seg3 == 'available')) ? 'active open' : '' ?>">
               <a href="javascript:void(0);" class="menu-link menu-toggle">
                 <i class="menu-icon tf-icons bx bx-dock-top"></i>
                 <div class="text-truncate" data-i18n="Account Settings">Inmates</div>
@@ -348,6 +337,12 @@
                 <li class="menu-item">
                   <a href="<?=  base_url();?>Admin/Inmates/RentalDetails" target="_blank" class="menu-link">
                     <div class="text-truncate" data-i18n="Notifications">Rental Calander </div>
+                  </a>
+                </li>
+
+                <li class="menu-item <?= ($seg2 == 'rooms' && $seg3 == 'available') ? 'active' : '' ?>">
+                  <a href="<?=  base_url();?>Admin/Rooms/Available" target="_blank" class="menu-link">
+                    <div class="text-truncate" data-i18n="Notifications">Available Rooms</div>
                   </a>
                 </li>
 

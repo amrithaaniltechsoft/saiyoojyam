@@ -2503,6 +2503,11 @@ $joins = array(
             $updateInmate["inmates_phone_no"] = $phone;
         }
 
+        $postedCheckOut = $this->request->getPost("check_out_date");
+        if (!empty($postedCheckOut) && $postedCheckOut !== '0000-00-00') {
+            $updateInmate["inmates_check_out_date"] = date('Y-m-d', strtotime($postedCheckOut));
+        }
+
         $db->table("saiyoojyam_inmates")->where("inmates_id", $inmateId)->update($updateInmate);
 
         // 5. Send Approval Email to User with Credentials
@@ -2510,6 +2515,18 @@ $joins = array(
         $roomRow = $db->table("saiyoojyam_rooms")->where("rooms_id", (int) $inmate->inmates_rooms)->get()->getRow();
         $buildingName = $buildingRow ? $buildingRow->building_name : "Saiyoojyam Hostel";
         $roomName = $roomRow ? "Room " . $roomRow->rooms_name : "Room #" . $inmate->inmates_rooms;
+
+        $finalCheckOut = !empty($postedCheckOut) && $postedCheckOut !== '0000-00-00'
+            ? date('Y-m-d', strtotime($postedCheckOut))
+            : (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date !== '0000-00-00' ? $inmate->inmates_check_out_date : null);
+        $isShortTermBooking = ((int) $inmate->inmates_duration_of_stay === 1);
+        $checkOutRow = '';
+        if ($isShortTermBooking && !empty($finalCheckOut)) {
+            $checkOutRow = '<tr>
+                        <td class="details-label">Check-out Date:</td>
+                        <td class="details-value">' . date("d M Y", strtotime($finalCheckOut)) . '</td>
+                    </tr>';
+        }
 
         $emailSent = false;
         $emailError = null;
@@ -2597,6 +2614,7 @@ $joins = array(
                         <td class="details-label">Check-in Date:</td>
                         <td class="details-value">' . date("d M Y", strtotime($inmate->inmates_check_in_date)) . '</td>
                     </tr>
+                    ' . $checkOutRow . '
                 </table>
             </div>
 

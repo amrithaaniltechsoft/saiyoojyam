@@ -547,6 +547,9 @@ ul a {
                                 $rName = !empty($booking->rooms_name) ? 'Room ' . $booking->rooms_name : 'Room #' . $booking->inmates_rooms;
                                 $rtName = !empty($booking->room_type_name) ? $booking->room_type_name : '';
                                 $checkInFmt = !empty($booking->inmates_check_in_date) ? date('d-m-Y', strtotime($booking->inmates_check_in_date)) : '-';
+                                $isShortTerm = ($booking->inmates_duration_of_stay == 1 || strtolower(trim($booking->duration_stay ?? '')) === 'short term');
+                                $checkOutFmt = (!empty($booking->inmates_check_out_date) && $booking->inmates_check_out_date != '0000-00-00') ? date('d-m-Y', strtotime($booking->inmates_check_out_date)) : '-';
+                                $rawCheckOut = (!empty($booking->inmates_check_out_date) && $booking->inmates_check_out_date != '0000-00-00') ? $booking->inmates_check_out_date : '';
                                 $paidAmt = !empty($booking->invoice_paid_amount) ? $booking->invoice_paid_amount : (!empty($booking->invoice_total) ? $booking->invoice_total : ($booking->inmates_caution_deposit + $booking->inmates_admission_fee));
                                 $idProofUrl = !empty($booking->inmates_id_proof) ? base_url('uploads/inmates/' . $booking->inmates_id_proof) : '';
                                 $photoUrl = !empty($booking->inmates_photo) ? base_url('uploads/inmates/' . $booking->inmates_photo) : '';
@@ -573,10 +576,15 @@ ul a {
                                     <div class="text-primary fw-medium" style="font-size:12px;">
                                       <?php echo esc($rName); ?> <?php echo $rtName ? '(' . esc($rtName) . ')' : ''; ?>
                                     </div>
-                                    <span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:11px;"><?php echo esc($booking->duration_stay ?: 'Long Term'); ?></span>
+                                    <span class="badge" style="background:<?php echo $isShortTerm ? '#fef3c7;color:#92400e;' : '#e0f2fe;color:#0369a1;'; ?>font-size:11px;"><?php echo esc($booking->duration_stay ?: ($isShortTerm ? 'Short Term' : 'Long Term')); ?></span>
                                   </td>
                                   <td>
                                     <span class="fw-semibold text-dark"><?php echo $checkInFmt; ?></span>
+                                    <?php if ($isShortTerm && $checkOutFmt !== '-'): ?>
+                                      <div class="text-danger" style="font-size:11.5px;margin-top:2px;" title="Check-out Date">
+                                        <i class="fa fa-calendar-times-o me-1"></i>Out: <strong><?php echo $checkOutFmt; ?></strong>
+                                      </div>
+                                    <?php endif; ?>
                                   </td>
                                   <td>
                                     <div class="fw-bold text-success" style="font-size:14px;">
@@ -618,6 +626,10 @@ ul a {
                                         data-phone="<?php echo esc($booking->inmates_phone_no); ?>"
                                         data-room="<?php echo esc($rName . ' - ' . $bName); ?>"
                                         data-checkin="<?php echo $checkInFmt; ?>"
+                                        data-checkout="<?php echo $checkOutFmt; ?>"
+                                        data-raw-checkout="<?php echo $rawCheckOut; ?>"
+                                        data-duration="<?php echo esc($booking->duration_stay ?: ($isShortTerm ? 'Short Term' : 'Long Term')); ?>"
+                                        data-isshortterm="<?php echo $isShortTerm ? '1' : '0'; ?>"
                                         data-paid="<?php echo number_format((float)$paidAmt, 2); ?>"
                                       >
                                         <i class="fa fa-check-circle me-1"></i>Approve &amp; Set Login
@@ -1239,7 +1251,13 @@ ul a {
                               <span class="badge bg-primary font-monospace" id="modal_display_uid">IN000000</span>
                             </div>
                             <div class="text-muted" style="font-size:12px;">
-                              <span id="modal_display_room">Room</span> · Check-in: <strong id="modal_display_checkin">-</strong> · Paid: <strong class="text-success" id="modal_display_paid">₹0</strong>
+                              <span id="modal_display_room">Room</span> · Check-in: <strong id="modal_display_checkin">-</strong>
+                              <span id="modal_checkout_banner_wrapper" style="display:none;"> · Check-out: <strong id="modal_display_checkout" class="text-danger">-</strong></span>
+                              · Paid: <strong class="text-success" id="modal_display_paid">₹0</strong>
+                            </div>
+                            <div class="mt-2 pt-1 border-top d-flex align-items-center gap-1" style="border-color:#ffd4c4 !important;">
+                              <span class="text-muted" style="font-size:11px;">Stay Plan:</span>
+                              <span class="badge" id="modal_display_duration" style="background:#e0f2fe;color:#0369a1;font-size:11px;">Long Term</span>
                             </div>
                           </div>
 
@@ -1279,6 +1297,19 @@ ul a {
                               <span class="input-group-text bg-light text-muted"><i class="fa fa-phone"></i></span>
                               <input type="tel" class="form-control bg-light" name="phone" id="modal_phone" required readonly placeholder="e.g. 9876543210" style="cursor:default;">
                             </div>
+                          </div>
+
+                          <!-- Check Out Date (Shown only if Short Term) -->
+                          <div class="mb-3" id="modal_checkout_field_wrapper" style="display:none;">
+                            <label class="form-label fw-semibold text-dark d-flex align-items-center justify-content-between" for="modal_checkout_date" style="font-size:13px;">
+                              <span>Check Out Date <span class="badge bg-danger text-white ms-1" style="font-size:10.5px;">Short Term</span></span>
+                              <small class="text-muted fw-normal" style="font-size:11px;">Expected check-out date</small>
+                            </label>
+                            <div class="input-group">
+                              <span class="input-group-text bg-light text-danger"><i class="fa fa-calendar-times-o"></i></span>
+                              <input type="date" class="form-control" name="check_out_date" id="modal_checkout_date">
+                            </div>
+                            <small class="text-muted" style="font-size:11px;">Expected check-out date for this short-term resident</small>
                           </div>
 
                           <!-- Password with Toggle & Generator -->
@@ -1501,6 +1532,10 @@ ul a {
                   var phone = $(this).data("phone");
                   var room = $(this).data("room");
                   var checkin = $(this).data("checkin");
+                  var checkout = $(this).data("checkout") || "-";
+                  var rawCheckout = $(this).data("raw-checkout") || "";
+                  var duration = $(this).data("duration") || "Long Term";
+                  var isShortTerm = $(this).data("isshortterm") == "1" || String(duration).toLowerCase().indexOf("short") !== -1;
                   var paid = $(this).data("paid");
 
                   $("#modal_inmate_id").val(id);
@@ -1509,6 +1544,20 @@ ul a {
                   $("#modal_display_room").text(room);
                   $("#modal_display_checkin").text(checkin);
                   $("#modal_display_paid").text("₹" + paid);
+
+                  // Short Term vs Long Term Check-Out Handling
+                  if (isShortTerm) {
+                    $("#modal_checkout_banner_wrapper").show();
+                    $("#modal_display_checkout").text(checkout);
+                    $("#modal_checkout_field_wrapper").show();
+                    $("#modal_checkout_date").val(rawCheckout);
+                    $("#modal_display_duration").text("Short Term").css({"background": "#fef3c7", "color": "#92400e"});
+                  } else {
+                    $("#modal_checkout_banner_wrapper").hide();
+                    $("#modal_checkout_field_wrapper").hide();
+                    $("#modal_checkout_date").val("");
+                    $("#modal_display_duration").text(duration).css({"background": "#e0f2fe", "color": "#0369a1"});
+                  }
 
                   $("#modal_username").val(sanitizeUsername(name));
                   $("#modal_email").val(email || "");
@@ -1529,6 +1578,20 @@ ul a {
                     modal.show();
                   } else {
                     $("#approveBookingModal").modal("show");
+                  }
+                });
+
+                $("#modal_checkout_date").on("change", function() {
+                  var val = $(this).val();
+                  if (val) {
+                    var parts = val.split("-");
+                    if (parts.length === 3) {
+                      $("#modal_display_checkout").text(parts[2] + "-" + parts[1] + "-" + parts[0]);
+                    } else {
+                      $("#modal_display_checkout").text(val);
+                    }
+                  } else {
+                    $("#modal_display_checkout").text("-");
                   }
                 });
 

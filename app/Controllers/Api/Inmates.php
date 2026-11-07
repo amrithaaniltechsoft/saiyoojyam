@@ -304,25 +304,58 @@ class Inmates extends BaseController
 
             // Check Room Availability
             if ($roomRow) {
-                $checkOutHorizon = (!empty($checkOutDate) && $checkOutDate !== '0000-00-00') ? $checkOutDate : '9999-12-31';
-                $occupiedCount = $db->table('saiyoojyam_inmates')
-                    ->where('inmates_rooms', (int) $roomRow->rooms_id)
-                    ->whereNotIn('inmates_status', ['checked_out', 'checkout', 'rejected', 'cancelled', 'inactive'])
-                    ->where('inmates_check_in_date <', $checkOutHorizon)
-                    ->groupStart()
-                        ->where('inmates_check_out_date >', $checkInDate)
-                        ->orWhere('inmates_check_out_date IS NULL')
-                        ->orWhere('inmates_check_out_date', '')
-                        ->orWhere('inmates_check_out_date', '0000-00-00')
-                    ->groupEnd()
-                    ->countAllResults();
-
                 $cap = (int) $roomRow->rooms_capacity;
-                if ($occupiedCount >= $cap) {
-                    return $this->response->setStatusCode(400)->setJSON([
-                        'status'  => false,
-                        'message' => 'Sorry, Room ' . $roomRow->rooms_name . ' is not available for the selected stay dates. All ' . $cap . ' beds are fully booked. Please select another room or choose different dates.',
-                    ]);
+                if ($cap > 0) {
+                    $checkOutHorizon = (!empty($checkOutDate) && $checkOutDate !== '0000-00-00') ? $checkOutDate : '9999-12-31';
+
+                    // Fetch all active/pending bookings for this room that could overlap the requested stay window
+                    $existingBookings = $db->table('saiyoojyam_inmates')
+                        ->where('inmates_rooms', (int) $roomRow->rooms_id)
+                        ->whereNotIn('inmates_status', ['checked_out', 'checkout', 'rejected', 'cancelled', 'inactive'])
+                        ->where('inmates_check_in_date <', $checkOutHorizon)
+                        ->groupStart()
+                            ->where('inmates_check_out_date >', $checkInDate)
+                            ->orWhere('inmates_check_out_date IS NULL')
+                            ->orWhere('inmates_check_out_date', '')
+                            ->orWhere('inmates_check_out_date', '0000-00-00')
+                        ->groupEnd()
+                        ->get()
+                        ->getResult();
+
+                    // Check peak simultaneous occupancy at critical transition dates:
+                    // 1) The requested check-in date
+                    // 2) The check-in dates of all overlapping bookings within the requested stay
+                    $criticalDates = [$checkInDate];
+                    foreach ($existingBookings as $eb) {
+                        $cIn = $eb->inmates_check_in_date ?? '';
+                        if (!empty($cIn) && $cIn >= $checkInDate && $cIn < $checkOutHorizon) {
+                            $criticalDates[] = $cIn;
+                        }
+                    }
+                    $criticalDates = array_unique($criticalDates);
+
+                    $isFullyBooked = false;
+                    foreach ($criticalDates as $testDate) {
+                        $simultaneousOccupants = 0;
+                        foreach ($existingBookings as $eb) {
+                            $cIn = $eb->inmates_check_in_date ?? '';
+                            $cOut = (!empty($eb->inmates_check_out_date) && $eb->inmates_check_out_date !== '0000-00-00') ? $eb->inmates_check_out_date : '9999-12-31';
+                            if (!empty($cIn) && $cIn <= $testDate && $cOut > $testDate) {
+                                $simultaneousOccupants++;
+                            }
+                        }
+                        if ($simultaneousOccupants >= $cap) {
+                            $isFullyBooked = true;
+                            break;
+                        }
+                    }
+
+                    if ($isFullyBooked) {
+                        return $this->response->setStatusCode(400)->setJSON([
+                            'status'  => false,
+                            'message' => 'Sorry, Room ' . $roomRow->rooms_name . ' is not available for the selected stay dates. All ' . $cap . ' beds are fully booked. Please select another room or choose different dates.',
+                        ]);
+                    }
                 }
             }
 

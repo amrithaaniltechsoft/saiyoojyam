@@ -250,6 +250,23 @@ class Inmates extends BaseController
                 return;
             }
 
+            // Check if email belongs to another active or pending resident (in Add mode)
+            $db = \Config\Database::connect();
+            if (!empty($email)) {
+                $conflictInmate = $db->table('saiyoojyam_inmates')
+                    ->where('LOWER(inmates_email)', strtolower($email))
+                    ->whereIn('inmates_status', ['active', 'pending'])
+                    ->get()
+                    ->getRow();
+
+                if ($conflictInmate) {
+                    $response['status'] = false;
+                    $response['msg'] = "The email '{$email}' is already registered to another resident ({$conflictInmate->inmates_name}).";
+                    echo json_encode($response);
+                    return;
+                }
+            }
+
             $roomId = $this->request->getPost('inmates_rooms');
             $buildingId = $this->request->getPost('inmates_building');
             $roomTypeId = $this->request->getPost('inmates_room_type');
@@ -425,6 +442,26 @@ class Inmates extends BaseController
                 return;
             }
 
+            // Check if email belongs to another active or pending resident (in Edit mode)
+            $db = \Config\Database::connect();
+            if (!empty($email) && strtolower($email) !== strtolower((string)($data['inmate']->inmates_email ?? ''))) {
+                $conflictInmate = $db->table('saiyoojyam_inmates')
+                    ->where('inmates_id !=', $id)
+                    ->where('LOWER(inmates_email)', strtolower($email))
+                    ->whereIn('inmates_status', ['active', 'pending'])
+                    ->get()
+                    ->getRow();
+
+                if ($conflictInmate) {
+                    $flashdata = [
+                        'type' => 'error',
+                        'msg'  => "The email '{$email}' is already registered to another resident ({$conflictInmate->inmates_name}, UID: {$conflictInmate->inmates_uid}).",
+                    ];
+                    $this->session->setFlashdata('alert', $flashdata);
+                    return redirect()->to(site_url('Admin/Inmates/Edit/' . $id));
+                }
+            }
+
             $update_data = [
 
                 'inmates_name'             => $this->request->getPost('inmates_name'),
@@ -475,6 +512,42 @@ class Inmates extends BaseController
             }
 
             $this->common_model->EditData($update_data,array('inmates_id' => $id),'saiyoojyam_inmates');
+
+            // Sync updated email & name to resident login credentials (auth_identities & saiyoojyam_users)
+            $userId = (int) ($data['inmate']->inmates_user_id ?? 0);
+            if ($userId <= 0 && !empty($data['inmate']->inmates_email)) {
+                $identRow = $db->table('auth_identities')
+                    ->where('type', 'email_password')
+                    ->where('LOWER(secret)', strtolower($data['inmate']->inmates_email))
+                    ->get()
+                    ->getRow();
+                if ($identRow) {
+                    $userId = (int) $identRow->user_id;
+                    $db->table('saiyoojyam_inmates')->where('inmates_id', $id)->update(['inmates_user_id' => $userId]);
+                }
+            }
+
+            if ($userId > 0 && !empty($email)) {
+                $now = date('Y-m-d H:i:s');
+                // Update login email in auth_identities so the inmate can log in with the new email
+                $db->table('auth_identities')
+                    ->where('user_id', $userId)
+                    ->where('type', 'email_password')
+                    ->update([
+                        'secret'     => $email,
+                        'updated_at' => $now,
+                    ]);
+
+                // Update saiyoojyam_users table if present
+                if ($db->tableExists('saiyoojyam_users')) {
+                    $db->table('saiyoojyam_users')
+                        ->where('users_id', $userId)
+                        ->update([
+                            'users_email' => $email,
+                            'users_name'  => $this->request->getPost('inmates_name'),
+                        ]);
+                }
+            }
 
             $flashdata = array(
                 'type' => 'success',

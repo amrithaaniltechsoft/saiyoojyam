@@ -291,6 +291,21 @@ class Inmates extends BaseController
                 @copy($uploadDirs[0] . $photoName, $uploadDirs[1] . $photoName);
             }
 
+            // Mandatory ID proof and Profile photo validation
+            if (empty($idProofName)) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'status'  => false,
+                    'message' => 'ID proof document is mandatory. Please upload your ID proof to proceed.',
+                ]);
+            }
+
+            if (empty($photoName)) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'status'  => false,
+                    'message' => 'Profile photo is mandatory. Please upload your profile photo to proceed.',
+                ]);
+            }
+
             // Check for rapid duplicate submission (e.g. double-clicking Make Payment)
             $recentInmate = $db->table('saiyoojyam_inmates')
                 ->where('inmates_rooms', $roomId)

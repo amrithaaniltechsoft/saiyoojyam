@@ -379,7 +379,7 @@ class Inmates extends BaseController
                     ]);
                 }
 
-                // Also verify auth_identities to ensure no existing user account uses this email
+                // Also verify auth_identities to ensure no other ACTIVE or PENDING resident account uses this email
                 if ($db->tableExists('auth_identities')) {
                     $existingIdentity = $db->table('auth_identities')
                         ->where('type', 'email_password')
@@ -388,10 +388,35 @@ class Inmates extends BaseController
                         ->getRow();
 
                     if ($existingIdentity) {
-                        return $this->response->setStatusCode(400)->setJSON([
-                            'status'  => false,
-                            'message' => "The email '{$email}' is already registered to an existing resident account. Please use a unique email address for each resident.",
-                        ]);
+                        // Check if this identity belongs to an admin or superadmin account
+                        if ($db->tableExists('auth_groups_users')) {
+                            $isAdmin = $db->table('auth_groups_users')
+                                ->where('user_id', (int) $existingIdentity->user_id)
+                                ->whereIn('group', ['admin', 'superadmin'])
+                                ->countAllResults() > 0;
+
+                            if ($isAdmin) {
+                                return $this->response->setStatusCode(400)->setJSON([
+                                    'status'  => false,
+                                    'message' => "The email '{$email}' is registered as an administrator account. Please use a personal email address for your resident booking.",
+                                ]);
+                            }
+                        }
+
+                        // Check if this account belongs to an ACTIVE or PENDING resident
+                        $activeUserInmate = $db->table('saiyoojyam_inmates')
+                            ->where('inmates_user_id', (int) $existingIdentity->user_id)
+                            ->whereIn('inmates_status', ['active', 'pending'])
+                            ->get()
+                            ->getRow();
+
+                        if ($activeUserInmate) {
+                            $statusText = $activeUserInmate->inmates_status === 'pending' ? 'a pending booking' : 'an active resident';
+                            return $this->response->setStatusCode(400)->setJSON([
+                                'status'  => false,
+                                'message' => "The email '{$email}' is already registered to {$statusText} (" . ($activeUserInmate->inmates_name ?: 'Resident') . "). Each resident must have their own unique email address for login and notifications.",
+                            ]);
+                        }
                     }
                 }
             }

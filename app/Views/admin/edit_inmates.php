@@ -197,33 +197,6 @@
                       <h5 class="mb-0">Edit Inmates</h5>
                     </div>
                     <div class="card-body">
-                      <?php 
-                        $flashAlert = session()->getFlashdata('alert');
-                        $flashErr = session()->getFlashdata('error');
-                        $flashSucc = session()->getFlashdata('success');
-                        $bannerType = null;
-                        $bannerMsg = null;
-
-                        if (!empty($flashAlert) && is_array($flashAlert)) {
-                            $bannerType = (($flashAlert['type'] ?? '') === 'success') ? 'success' : 'danger';
-                            $bannerMsg  = $flashAlert['msg'] ?? '';
-                        } elseif (!empty($flashErr)) {
-                            $bannerType = 'danger';
-                            $bannerMsg  = is_array($flashErr) ? implode(', ', $flashErr) : $flashErr;
-                        } elseif (!empty($flashSucc)) {
-                            $bannerType = 'success';
-                            $bannerMsg  = is_array($flashSucc) ? implode(', ', $flashSucc) : $flashSucc;
-                        }
-                      ?>
-
-                      <?php if (!empty($bannerMsg)): ?>
-                        <div class="alert alert-<?= $bannerType; ?> alert-dismissible fade show d-flex align-items-center mb-4" role="alert" style="font-size: 14px; font-weight: 500;">
-                          <i class="fa <?= $bannerType === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'; ?> me-2 fs-5"></i>
-                          <div class="flex-grow-1"><?= esc($bannerMsg); ?></div>
-                          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                      <?php endif; ?>
-
                       <form id="edit_form" enctype="multipart/form-data" method="POST" novalidate action="<?php echo base_url();?>Admin/Inmates/Edit/<?php echo $inmate->inmates_id; ?>">
 
                         <div class="row mb-6">

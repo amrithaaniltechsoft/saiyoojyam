@@ -414,7 +414,7 @@ class Rooms extends BaseController
                 $ruleAMatches = ($freeBedsToday > 0 && $searchDate >= $today && $searchDate <= $todayPlus10 && $isSearchDateAvailable);
 
                 // Check for beds vacated in past window [searchDate - 10 days, searchDate]
-                // OR beds scheduled to vacate in upcoming window (searchDate, searchDate + 5 days]
+                // OR beds scheduled to vacate on upcoming dates
                 $pastVacateFound = false;
                 $upcomingVacateFound = false;
                 $earliestUpcomingDate = null;
@@ -431,14 +431,17 @@ class Rooms extends BaseController
                             if ($isSearchDateAvailable) {
                                 $pastVacateFound = true;
                             }
-                        } elseif ($outDate > $searchDate && $outDate <= $windowEnd) {
-                            // Bed scheduled to vacate in upcoming window (searchDate, searchDate + 5 days]:
-                            // It must be genuinely available starting from outDate (not immediately 100% full on subsequent days)
+                        } elseif ($outDate > $searchDate) {
+                            // Bed scheduled to vacate on an upcoming date:
+                            // Check if genuinely available starting from outDate (sustained free beds)
                             if ($hasSustainedAvailability($outDate, 2)) {
-                                $upcomingVacateFound = true;
-                                $upcomingVacatingBeds++;
-                                if ($earliestUpcomingDate === null || $outDate < $earliestUpcomingDate) {
-                                    $earliestUpcomingDate = $outDate;
+                                $freeCountAtOut = $getFreeBedsOnDate($outDate);
+                                if ($freeCountAtOut > 0) {
+                                    if ($earliestUpcomingDate === null || $outDate < $earliestUpcomingDate) {
+                                        $earliestUpcomingDate = $outDate;
+                                        $upcomingVacatingBeds = $freeCountAtOut;
+                                        $upcomingVacateFound = true;
+                                    }
                                 }
                             }
                         }
@@ -447,8 +450,8 @@ class Rooms extends BaseController
 
                 // Eligibility check:
                 // 1) If free beds exist on search date AND room meets Rule A or had a bed vacate in [searchDate - 10 days, searchDate]
-                // 2) OR if room has an upcoming bed vacating within 5 days later (searchDate, searchDate + 5 days]
-                // If all beds are booked on search date and NO genuine upcoming beds are vacating, exclude this room!
+                // 2) OR if room has an upcoming bed vacating on a future date
+                // 3) OR if viewing a specific property page ($locationParam), show the tariff-configured room as Currently Full so users can inspect details
                 $isEligible = false;
                 $isUpcomingVacancy = false;
                 $availableFromDate = $searchDate;
@@ -471,9 +474,17 @@ class Rooms extends BaseController
                     $formattedVacate = date('M j, Y', strtotime($earliestUpcomingDate));
                     $availableFromDisplay = "Available from {$formattedVacate}";
                     $bedsFreeText = "Available from " . date('M j', strtotime($earliestUpcomingDate));
+                } elseif (!empty($locationParam)) {
+                    // Property showcase page: keep configured room visible
+                    $isEligible = true;
+                    $isUpcomingVacancy = true;
+                    $availableFromDate = $searchDate;
+                    $availableFromDisplay = 'Currently Full';
+                    $bedsFreeText = 'Currently Full';
+                    $availableBeds = 0;
                 }
 
-                if (!$isEligible || $availableBeds <= 0) {
+                if (!$isEligible) {
                     continue;
                 }
 

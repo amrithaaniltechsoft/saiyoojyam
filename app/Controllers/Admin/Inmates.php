@@ -444,7 +444,10 @@ class Inmates extends BaseController
 
             // Check if email belongs to another active or pending resident (in Edit mode)
             $db = \Config\Database::connect();
-            if (!empty($email) && strtolower($email) !== strtolower((string)($data['inmate']->inmates_email ?? ''))) {
+            $userId = (int) ($data['inmate']->inmates_user_id ?? 0);
+
+            if (!empty($email)) {
+                // 1. Check saiyoojyam_inmates for another active or pending resident with this email
                 $conflictInmate = $db->table('saiyoojyam_inmates')
                     ->where('inmates_id !=', $id)
                     ->where('LOWER(inmates_email)', strtolower($email))
@@ -459,6 +462,37 @@ class Inmates extends BaseController
                     ];
                     $this->session->setFlashdata('alert', $flashdata);
                     return redirect()->to(site_url('Admin/Inmates/Edit/' . $id));
+                }
+
+                // 2. Check auth_identities to ensure no unique constraint collision
+                if ($db->tableExists('auth_identities')) {
+                    $existingIdentity = $db->table('auth_identities')
+                        ->where('type', 'email_password')
+                        ->where('LOWER(secret)', strtolower($email))
+                        ->get()
+                        ->getRow();
+
+                    if ($existingIdentity && (int)$existingIdentity->user_id !== $userId) {
+                        // Check if that user_id is linked to another active or pending resident
+                        $otherResident = $db->table('saiyoojyam_inmates')
+                            ->where('inmates_id !=', $id)
+                            ->where('inmates_user_id', (int)$existingIdentity->user_id)
+                            ->whereIn('inmates_status', ['active', 'pending'])
+                            ->get()
+                            ->getRow();
+
+                        if ($otherResident) {
+                            $flashdata = [
+                                'type' => 'error',
+                                'msg'  => "The email '{$email}' is already registered to another resident ({$otherResident->inmates_name}, UID: {$otherResident->inmates_uid}).",
+                            ];
+                            $this->session->setFlashdata('alert', $flashdata);
+                            return redirect()->to(site_url('Admin/Inmates/Edit/' . $id));
+                        } else {
+                            // The identity belongs to a deleted or orphaned account - remove it to free the email
+                            $db->table('auth_identities')->where('id', (int)$existingIdentity->id)->delete();
+                        }
+                    }
                 }
             }
 
@@ -529,23 +563,47 @@ class Inmates extends BaseController
 
             if ($userId > 0 && !empty($email)) {
                 $now = date('Y-m-d H:i:s');
-                // Update login email in auth_identities so the inmate can log in with the new email
-                $db->table('auth_identities')
-                    ->where('user_id', $userId)
-                    ->where('type', 'email_password')
-                    ->update([
-                        'secret'     => $email,
-                        'updated_at' => $now,
-                    ]);
+                try {
+                    $currentIdentity = $db->table('auth_identities')
+                        ->where('user_id', $userId)
+                        ->where('type', 'email_password')
+                        ->get()
+                        ->getRow();
 
-                // Update saiyoojyam_users table if present
-                if ($db->tableExists('saiyoojyam_users')) {
-                    $db->table('saiyoojyam_users')
-                        ->where('users_id', $userId)
-                        ->update([
-                            'users_email' => $email,
-                            'users_name'  => $this->request->getPost('inmates_name'),
+                    if ($currentIdentity) {
+                        // Update existing identity
+                        $db->table('auth_identities')
+                            ->where('id', (int) $currentIdentity->id)
+                            ->update([
+                                'secret'     => $email,
+                                'updated_at' => $now,
+                            ]);
+                    } else {
+                        // Insert if missing
+                        $cleanUser = preg_replace('/[^a-zA-Z0-9]/', '', strtolower($this->request->getPost('inmates_name') ?: 'inmate'));
+                        $db->table('auth_identities')->insert([
+                            'user_id'     => $userId,
+                            'type'        => 'email_password',
+                            'name'        => '',
+                            'secret'      => $email,
+                            'secret2'     => password_hash('Saiy' . rand(100, 999) . '@' . date('y'), PASSWORD_DEFAULT),
+                            'force_reset' => 0,
+                            'created_at'  => $now,
+                            'updated_at'  => $now,
                         ]);
+                    }
+
+                    // Update saiyoojyam_users table if present
+                    if ($db->tableExists('saiyoojyam_users')) {
+                        $db->table('saiyoojyam_users')
+                            ->where('users_id', $userId)
+                            ->update([
+                                'users_email' => $email,
+                                'users_name'  => $this->request->getPost('inmates_name'),
+                            ]);
+                    }
+                } catch (\Throwable $e) {
+                    log_message('error', 'Failed updating auth_identities on inmate edit: ' . $e->getMessage());
                 }
             }
 

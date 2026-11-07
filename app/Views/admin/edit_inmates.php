@@ -301,9 +301,26 @@
                         </div>
 
                         <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="basic-default-name">Email</label>
+                          <label class="col-sm-2 col-form-label" for="html5-email-input">Email (Login ID)</label>
                           <div class="col-sm-10">
-                            <input type="email" class="form-control" name="inmates_email" id="html5-email-input" value="<?php echo esc($inmate->inmates_email ?? '');?>" placeholder="inmate@example.com"/>
+                            <div class="input-group">
+                              <span class="input-group-text bg-light text-muted border-end-0" id="email_lock_icon">
+                                <i class="fa fa-lock text-warning" style="font-size:15px;"></i>
+                              </span>
+                              <input type="email" class="form-control border-start-0 bg-light text-muted" name="inmates_email" id="html5-email-input" value="<?php echo esc($inmate->inmates_email ?? '');?>" data-original-email="<?php echo esc($inmate->inmates_email ?? '');?>" placeholder="inmate@example.com" readonly/>
+                              <button class="btn btn-outline-warning px-3" type="button" id="btn_unlock_email" title="Click to unlock and change email">
+                                <i class="fa fa-pencil me-1"></i> Change Email
+                              </button>
+                            </div>
+                            <div id="email_change_notice" class="mt-2 d-none">
+                              <div class="alert alert-warning py-2 px-3 mb-0 d-flex align-items-center" style="font-size:12.5px; border-radius:6px;">
+                                <i class="fa fa-info-circle me-2 fs-5"></i>
+                                <span><strong>Login Access Notice:</strong> Updating this email will change the resident's login username. Their existing password will remain unchanged.</span>
+                              </div>
+                            </div>
+                            <small class="text-muted d-block mt-1" id="email_help_text" style="font-size:11.5px;">
+                              <i class="fa fa-shield me-1 text-primary"></i> Locked to prevent accidental changes to resident login access. Click <strong>Change Email</strong> to modify.
+                            </small>
                           </div>
                         </div>
 
@@ -543,6 +560,35 @@
                     $('#check_out-date-input').val('');
                     $('.build_clz').val('');
                     $('.room_clz').val('');
+                  }
+                });
+
+                // Toggle Email readonly lock to prevent accidental login credential overwrites
+                $('#btn_unlock_email').on('click', function(e) {
+                  e.preventDefault();
+                  var $emailInput = $('#html5-email-input');
+                  var isReadonly = $emailInput.prop('readonly');
+
+                  if (isReadonly) {
+                    $emailInput.prop('readonly', false)
+                      .removeClass('bg-light text-muted')
+                      .addClass('bg-white text-dark border-warning')
+                      .focus();
+
+                    $('#email_lock_icon i').removeClass('fa-lock text-warning').addClass('fa-unlock text-danger');
+                    $(this).removeClass('btn-outline-warning').addClass('btn-outline-secondary').html('<i class="fa fa-undo me-1"></i> Cancel');
+                    $('#email_change_notice').removeClass('d-none');
+                    $('#email_help_text').hide();
+                  } else {
+                    var orig = $emailInput.data('original-email') || '';
+                    $emailInput.val(orig).prop('readonly', true)
+                      .removeClass('bg-white text-dark border-warning')
+                      .addClass('bg-light text-muted');
+
+                    $('#email_lock_icon i').removeClass('fa-unlock text-danger').addClass('fa-lock text-warning');
+                    $(this).removeClass('btn-outline-secondary').addClass('btn-outline-warning').html('<i class="fa fa-pencil me-1"></i> Change Email');
+                    $('#email_change_notice').addClass('d-none');
+                    $('#email_help_text').show();
                   }
                 });
 

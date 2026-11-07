@@ -225,35 +225,37 @@
 
 
     <?php
-
-
-      if(session()->getFlashdata('alert'))
-
-      {
       $alert = session()->getFlashdata('alert');
-      $type = $alert['type'];
-      $msg = $alert['msg'];
+      $flashError = session()->getFlashdata('error');
+      $flashSuccess = session()->getFlashdata('success');
+      $alertType = null;
+      $alertMsg = null;
 
+      if (!empty($alert) && is_array($alert)) {
+          $alertType = $alert['type'] ?? 'info';
+          $alertMsg  = $alert['msg'] ?? '';
+      } elseif (!empty($flashError)) {
+          $alertType = 'error';
+          $alertMsg  = is_array($flashError) ? implode(', ', $flashError) : $flashError;
+      } elseif (!empty($flashSuccess)) {
+          $alertType = 'success';
+          $alertMsg  = is_array($flashSuccess) ? implode(', ', $flashSuccess) : $flashSuccess;
+      }
+
+      if (!empty($alertType) && !empty($alertMsg)) {
       ?>
-
       <script>
-      
-      <?php if($type=="success") { ?>
-
-      alertify.success('<?php echo $msg; ?>').delay(8).dismissOthers();
-
-      <?php } ?>
-
-      <?php if($type=="error") { ?>
-      alertify.error('<?php echo $msg; ?>').delay(8).dismissOthers();
-      <?php } ?>
-
-
-
-
+        $(document).ready(function() {
+          var msg = <?= json_encode($alertMsg); ?>;
+          <?php if ($alertType === "success") { ?>
+            alertify.success(msg).delay(8).dismissOthers();
+          <?php } elseif ($alertType === "error") { ?>
+            alertify.error(msg).delay(8).dismissOthers();
+          <?php } else { ?>
+            alertify.message(msg).delay(8).dismissOthers();
+          <?php } ?>
+        });
       </script>
-
-
     <?php } ?>
 
     <!-- ### -->

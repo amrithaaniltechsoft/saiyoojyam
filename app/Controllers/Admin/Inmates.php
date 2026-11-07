@@ -424,22 +424,20 @@ class Inmates extends BaseController
             }
 
             if($check_out_date != '0000-00-00' && strtotime($check_out_date) <= strtotime($check_in_date)){
-
-                $response['status'] = false;
-
-                $response['msg'] = 'Check out date must be after the check in date';
-
-                echo json_encode($response);
-
-                return;
+                $this->session->setFlashdata('alert', [
+                    'type' => 'error',
+                    'msg'  => 'Check out date must be after the check in date',
+                ]);
+                return redirect()->to(site_url('Admin/Inmates/Edit/' . $id));
             }
 
             $email = trim((string)$this->request->getPost('inmates_email'));
             if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $response['status'] = false;
-                $response['msg'] = 'Please enter a valid email address.';
-                echo json_encode($response);
-                return;
+                $this->session->setFlashdata('alert', [
+                    'type' => 'error',
+                    'msg'  => 'Please enter a valid email address.',
+                ]);
+                return redirect()->to(site_url('Admin/Inmates/Edit/' . $id));
             }
 
             // Check if email belongs to another active or pending resident (in Edit mode)

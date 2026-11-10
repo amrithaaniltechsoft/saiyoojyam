@@ -32,7 +32,7 @@ class Inmates extends BaseController
         }
 
         try {
-            $db = Database::connect();
+            $db = Database::connect('default');
 
             // Support both JSON body and multipart/form-data
             $input = [];
@@ -610,7 +610,7 @@ class Inmates extends BaseController
     public function receipt($id)
     {
         $this->setCorsHeaders();
-        $db = Database::connect();
+        $db = Database::connect('default');
 
         $inmate = $db->table('saiyoojyam_inmates')->where('inmates_id', (int) $id)->get()->getRow();
         if (!$inmate) {
@@ -648,7 +648,7 @@ class Inmates extends BaseController
     public function dashboard($paramId = null)
     {
         $this->setCorsHeaders();
-        $db = Database::connect();
+        $db = Database::connect('default');
 
         $inmateId = (int) ($paramId ?: $this->request->getGet('inmate_id') ?: $this->request->getGet('inmates_id') ?: 0);
         $userId   = (int) ($this->request->getGet('user_id') ?: 0);
@@ -752,7 +752,7 @@ class Inmates extends BaseController
 
                 if ($bal > 0) {
                     $mName = !empty($mKey) ? date('F Y', strtotime($mKey)) : 'Stay Period';
-                    $isOverdue = (!empty($mKey) && strtotime($mKey) < strtotime(date('Y-m-01')));
+                    $dueInfo = $this->resolveBillDueDateAndStatus($mKey, $inmate->inmates_check_in_date ?? '', $status);
                     $totalPendingAmount += $bal;
 
                     // Resolve the room occupied during this invoice month
@@ -771,9 +771,9 @@ class Inmates extends BaseController
                         'rent_amount_num'   => $rentAmt,
                         'total_payable'     => '₹' . number_format($bal, 2),
                         'total_payable_num' => $bal,
-                        'due_date'          => !empty($mKey) ? date('05 M Y', strtotime($mKey)) : '05th of month',
-                        'is_overdue'        => $isOverdue,
-                        'status'            => ($status === 2) ? 'Partially Paid' : ($isOverdue ? 'Overdue' : 'Due Soon'),
+                        'due_date'          => $dueInfo['due_date'],
+                        'is_overdue'        => $dueInfo['is_overdue'],
+                        'status'            => $dueInfo['status'],
                         'is_partial'        => ($status === 2),
                         'invoice_id'        => (int) $inv->invoice_id,
                         'meals_included'    => true,
@@ -814,7 +814,7 @@ class Inmates extends BaseController
             $mKey = $curr->format('Y-m-01');
             if (!isset($invoicedMonths[$mKey])) {
                 $mName = $curr->format('F Y');
-                $isOverdue = ($curr < $targetDate);
+                $dueInfo = $this->resolveBillDueDateAndStatus($mKey, $inmate->inmates_check_in_date ?? '', 0);
 
                 // Exact backend rent calculation (split month prorate / effective tariff / vacating / checkin)
                 $calculatedRent = $this->calculateMonthRentForInmate($db, $inmate, $mKey, $currentMonthlyRent);
@@ -834,9 +834,9 @@ class Inmates extends BaseController
                     'rent_amount_num'   => $calculatedRent,
                     'total_payable'     => '₹' . number_format($calculatedRent, 2),
                     'total_payable_num' => $calculatedRent,
-                    'due_date'          => $curr->format('05 M Y'),
-                    'is_overdue'        => $isOverdue,
-                    'status'            => $isOverdue ? 'Overdue' : 'Due Soon',
+                    'due_date'          => $dueInfo['due_date'],
+                    'is_overdue'        => $dueInfo['is_overdue'],
+                    'status'            => $dueInfo['status'],
                     'is_partial'        => false,
                     'invoice_id'        => null,
                     'meals_included'    => true,
@@ -994,7 +994,7 @@ class Inmates extends BaseController
     {
         $this->setCorsHeaders();
         $input = $this->request->getJSON(true) ?: $this->request->getPost();
-        $db = Database::connect();
+        $db = Database::connect('default');
 
         $inmateId = (int) ($input['inmate_id'] ?? $input['inmates_id'] ?? 0);
         $userId   = (int) ($input['user_id'] ?? 0);
@@ -1122,6 +1122,46 @@ class Inmates extends BaseController
             $db->table('saiyoojyam_invoice')->insert($invData);
             return (int) $db->insertID();
         }
+    }
+
+    private function resolveBillDueDateAndStatus($monthKey, $checkInDate = '', $invoiceStatus = 0)
+    {
+        $pm = date('Y-m', strtotime($monthKey));
+        $todayYmd = date('Y-m-d');
+
+        // Default due date: 5th of the billing month
+        $dueDateYmd = date('Y-m-05', strtotime($monthKey));
+
+        // If this billing month is the inmate's check-in month and they joined after the 5th,
+        // their initial due date is their check-in date (they shouldn't be given a due date in the past before they checked in)
+        if (!empty($checkInDate) && $checkInDate !== '0000-00-00') {
+            $ciYm = date('Y-m', strtotime($checkInDate));
+            if ($ciYm === $pm) {
+                $ciDay = (int) date('j', strtotime($checkInDate));
+                if ($ciDay > 5) {
+                    $dueDateYmd = date('Y-m-d', strtotime($checkInDate));
+                }
+            }
+        }
+
+        $dueDateDisplay = date('d M Y', strtotime($dueDateYmd));
+        $isOverdue = ($todayYmd > $dueDateYmd);
+
+        if ((int)$invoiceStatus === 2) {
+            $statusLabel = 'Partially Paid';
+        } elseif ($isOverdue) {
+            $statusLabel = 'Overdue';
+        } elseif ($todayYmd === $dueDateYmd) {
+            $statusLabel = 'Due Today';
+        } else {
+            $statusLabel = 'Due Soon';
+        }
+
+        return [
+            'due_date'   => $dueDateDisplay,
+            'is_overdue' => $isOverdue,
+            'status'     => $statusLabel,
+        ];
     }
 
     private function calculateMonthRentForInmate($db, $inmate, $monthKey, $fallbackRent = 0.0)
@@ -1410,7 +1450,7 @@ class Inmates extends BaseController
     public function printReceipt($id)
     {
         $this->setCorsHeaders();
-        $db = Database::connect();
+        $db = Database::connect('default');
 
         $invoiceId = $this->request->getGet('invoice_id');
         $inmate = null;

@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-  <testsuite name="RoomTransferRentTest" file="C:\xampp\htdocs\saiyoojyam\tests\unit\RoomTransferRentTest.php" tests="1" assertions="13" errors="0" failures="0" skipped="0" time="0.088796">
-    <testcase name="testTariffLookupAndSplitMonthCalculation" file="C:\xampp\htdocs\saiyoojyam\tests\unit\RoomTransferRentTest.php" line="13" class="RoomTransferRentTest" classname="RoomTransferRentTest" assertions="13" time="0.088796"/>
+  <testsuite name="DebugDashboardTest" file="C:\xampp\htdocs\saiyoojyam\tests\unit\DebugDashboardTest.php" tests="1" assertions="0" errors="1" failures="0" skipped="0" time="0.056004">
+    <testcase name="testDashboard" file="C:\xampp\htdocs\saiyoojyam\tests\unit\DebugDashboardTest.php" line="8" class="DebugDashboardTest" classname="DebugDashboardTest" assertions="0" time="0.056004">
+      <error type="CodeIgniter\Exceptions\CriticalError">DebugDashboardTest::testDashboard&#13;
+CodeIgniter\Exceptions\CriticalError: The required PHP extension "sqlite3" is not loaded. Install and enable it to use "SQLite3" driver.
+&#13;
+C:\xampp\htdocs\saiyoojyam\system\Database\Database.php:182
+C:\xampp\htdocs\saiyoojyam\system\Database\Database.php:59
+C:\xampp\htdocs\saiyoojyam\system\Database\Config.php:82
+C:\xampp\htdocs\saiyoojyam\system\Model.php:155
+C:\xampp\htdocs\saiyoojyam\app\Controllers\BaseController.php:63
+C:\xampp\htdocs\saiyoojyam\tests\unit\DebugDashboardTest.php:12</error>
+    </testcase>
   </testsuite>
 </testsuites>

@@ -56,9 +56,13 @@ class Tariff extends BaseController
         }
         $data['used_tariffs'] = $usedTariffs;
 
-        $data['rooms_types'] = $this->common_model->FetchAll('saiyoojyam_room_type');
+        if (!empty($building)) {
+            $data['rooms_types'] = $this->common_model->FetchWhereOrderby('saiyoojyam_room_type', array('room_type_building_id' => $building), 'room_type_name', 'ASC');
+        } else {
+            $data['rooms_types'] = $this->common_model->FetchAllOrder('saiyoojyam_room_type', 'room_type_name', 'ASC');
+        }
 
-        $data['buildings'] = $this->common_model->FetchAll('saiyoojyam_building');
+        $data['buildings'] = $this->common_model->FetchAllOrder('saiyoojyam_building', 'building_name', 'ASC');
 
         return view('admin/view_tariff',$data);
     }

@@ -1,0 +1,1 @@
+{"version":1,"defects":{"RoomTransferRentTest::testTariffLookupAndSplitMonthCalculation":8},"times":{"HealthTest::testIsDefinedAppPath":0.344,"HealthTest::testBaseUrlHasBeenSet":0.228,"RoomTransferRentTest::testTariffLookupAndSplitMonthCalculation":0.074}}

@@ -166,11 +166,11 @@ class Ajax extends BaseController
             $typeTariffKeys = [];
 
             foreach ($tariffRows as $tRow) {
+                if (!empty($tRow->tariffs_building) && !empty($tRow->tariffs_room_types)) {
+                    $typeTariffKeys[$tRow->tariffs_building . '_' . $tRow->tariffs_room_types] = (float)$tRow->tariffs_price;
+                }
                 if (!empty($tRow->tariffs_rooms)) {
                     $directTariffRoomIds[(int)$tRow->tariffs_rooms] = (float)$tRow->tariffs_price;
-                }
-                if (!empty($tRow->tariffs_building) && !empty($tRow->tariffs_room_types) && empty($tRow->tariffs_rooms)) {
-                    $typeTariffKeys[$tRow->tariffs_building . '_' . $tRow->tariffs_room_types] = (float)$tRow->tariffs_price;
                 }
             }
 
@@ -308,13 +308,16 @@ class Ajax extends BaseController
             $available_count = max(0, $capacity - $occupied_count);
             $occupancy_pct = $capacity > 0 ? round(($occupied_count / $capacity) * 100) : 0;
 
-            // Tariff for this room
-            $tariff = $this->common_model->SingleRow('saiyoojyam_tariffs', array('tariffs_rooms' => $room_id));
-            if(!$tariff && !empty($room->rooms_type)){
+            // Tariff for this room: Check room type first, then room ID
+            $tariff = null;
+            if(!empty($room->rooms_type)){
                 $tariff = $this->common_model->SingleRow('saiyoojyam_tariffs', array(
                     'tariffs_room_types' => $room->rooms_type,
                     'tariffs_building'   => $room->rooms_building
                 ));
+            }
+            if(!$tariff){
+                $tariff = $this->common_model->SingleRow('saiyoojyam_tariffs', array('tariffs_rooms' => $room_id));
             }
 
             // Inmates in this room on selected date

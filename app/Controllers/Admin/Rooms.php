@@ -208,22 +208,23 @@ class Rooms extends BaseController
 
     public function Delete($id){
 
-        $tariffs = $this->common_model->FetchWhere('saiyoojyam_tariffs',array('tariffs_rooms' => $id));
+        $db = \Config\Database::connect();
+        $inmates = $db->table('saiyoojyam_inmates')->where('inmates_rooms', (int)$id)->get()->getResult();
 
-        if(empty($tariffs)){
+        if(empty($inmates)){
 
             $this->common_model->DeleteData('saiyoojyam_rooms',array('rooms_id' => $id));
 
             $flashdata = array(
                 'type' => 'success',
-                'msg'  => 'Date Deleted Successfully',
+                'msg'  => 'Room Deleted Successfully',
             );
 
         }else{
 
             $flashdata = array(
                 'type' => 'error',
-                'msg'  => 'Cannot delete: Date is currently in use',
+                'msg'  => 'Cannot delete: Room is currently assigned to inmate(s)',
             );
         }
 

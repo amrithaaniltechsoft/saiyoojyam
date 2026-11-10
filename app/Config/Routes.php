@@ -107,6 +107,7 @@ $routes->get('api/seo/(:any)', '\App\Controllers\Api\Seo::page/$1');
 $routes->get('api/building', '\App\Controllers\Api\Building::index');
 $routes->get('api/building/(:any)', '\App\Controllers\Api\Building::detail/$1');
 $routes->match(['GET', 'POST', 'OPTIONS'], 'api/rooms/check-availability', '\App\Controllers\Api\Rooms::checkAvailability');
+$routes->get('api/rooms/room-types', '\App\Controllers\Api\Rooms::roomTypes');
 $routes->get('api/rooms', '\App\Controllers\Api\Rooms::index');
 $routes->get('api/rooms/(:any)', '\App\Controllers\Api\Rooms::index');
 $routes->get('api/room-types', '\App\Controllers\Api\Rooms::roomTypes');

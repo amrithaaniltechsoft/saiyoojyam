@@ -92,7 +92,6 @@
                         <th>Sl no</th>
                         <th>Building</th>
                         <th>Room Type</th>
-                        <th>Rooms</th>
                         <th>Caution deposit</th>
                         <th>Admission fees</th>
                         <th>Price</th>
@@ -108,8 +107,6 @@
                         <td><?php echo $tariff->building_name;?></td>
                         
                         <td><?php echo $tariff->room_type_name;?></td>
-
-                        <td><?php echo $tariff->rooms_name;?></td>
 
                         <td><?php echo number_format($tariff->building_caution_deposit,2);?></td>
 

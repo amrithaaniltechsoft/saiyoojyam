@@ -35,10 +35,9 @@
                           <table class="table table-bordered align-middle" id="tariff_table">
                             <thead class="table-light">
                               <tr>
-                                <th style="width: 25%;">Building <span class="text-danger">*</span></th>
-                                <th style="width: 25%;">Room Type <span class="text-danger">*</span></th>
-                                <th style="width: 25%;">Room <span class="text-danger">*</span></th>
-                                <th style="width: 20%;">Monthly Rent (₹) <span class="text-danger">*</span></th>
+                                <th style="width: 38%;">Building <span class="text-danger">*</span></th>
+                                <th style="width: 38%;">Room Type <span class="text-danger">*</span></th>
+                                <th style="width: 19%;">Monthly Rent (₹) <span class="text-danger">*</span></th>
                                 <th style="width: 5%; text-align: center;">Action</th>
                               </tr>
                             </thead>
@@ -61,15 +60,7 @@
                                   </select>
                                 </td>
                                 <td>
-                                  <select class="form-select room_clz" name="tariffs_rooms[]" required>
-                                    <option value="" <?php echo empty($selected_room_id) ? 'selected' : ''; ?> disabled>Select Rooms</option>
-                                    <?php if(!empty($preselected_rooms)){ foreach($preselected_rooms as $rm){ ?>
-                                      <option value="<?php echo $rm->rooms_id; ?>" <?php echo (!empty($selected_room_id) && $selected_room_id == $rm->rooms_id) ? 'selected' : ''; ?>><?php echo $rm->rooms_name; ?></option>
-                                    <?php } } ?>
-                                  </select>
-                                </td>
-                                <td>
-                                  <input type="number" class="form-control" min="0" step="0.01" name="tariffs_price[]" placeholder="e.g., 5000" required <?php echo !empty($selected_room_id) ? 'autofocus' : ''; ?>/>
+                                  <input type="number" class="form-control" min="0" step="0.01" name="tariffs_price[]" placeholder="e.g., 5000" required <?php echo !empty($selected_type_id) ? 'autofocus' : ''; ?>/>
                                 </td>
                                 <td class="text-center">
                                   <button type="button" class="btn text-danger remove-row-btn" style="display: none;">
@@ -114,9 +105,6 @@
                   <?php if(!empty($selected_type_id)): ?>
                   $('#tariff_tbody .tariff-row:first .room_type_clz').val('<?php echo $selected_type_id; ?>');
                   <?php endif; ?>
-                  <?php if(!empty($selected_room_id)): ?>
-                  $('#tariff_tbody .tariff-row:first .room_clz').val('<?php echo $selected_room_id; ?>');
-                  <?php endif; ?>
 
                   function updateRemoveButtons() {
                     var rowCount = $('#tariff_tbody .tariff-row').length;
@@ -134,7 +122,6 @@
 
                     newRow.find('select.build_clz').val('');
                     newRow.find('select.room_type_clz').html('<option value="" selected disabled>Select Room Type</option>');
-                    newRow.find('select.room_clz').html('<option value="" selected disabled>Select Rooms</option>');
                     newRow.find('input').val('');
 
                     $('#tariff_tbody').append(newRow);
@@ -155,7 +142,6 @@
                     var Id = $(this).val();
 
                     $row.find('.room_type_clz').html('<option value="" selected disabled>Select Room Type</option>');
-                    $row.find('.room_clz').html('<option value="" selected disabled>Select Rooms</option>');
 
                     if (Id) {
                       $.ajax({
@@ -165,27 +151,6 @@
                         success: function (data) {
                           var res = JSON.parse(data);
                           $row.find('.room_type_clz').html(res.rooms);
-                        }
-                      });
-                    }
-                  });
-
-                  /* Fetch rooms by room type and building */
-                  $('#tariff_tbody').on('change', '.room_type_clz', function () {
-                    var $row = $(this).closest('tr');
-                    var buildId = $row.find('.build_clz').val();
-                    var typeId = $(this).val();
-
-                    $row.find('.room_clz').html('<option value="" selected disabled>Select Rooms</option>');
-
-                    if (typeId) {
-                      $.ajax({
-                        url: "<?php echo base_url(); ?>Admin/Ajax/tariffRooms",
-                        type: "POST",
-                        data: { building_id: buildId, room_type_id: typeId },
-                        success: function (data) {
-                          var res = JSON.parse(data);
-                          $row.find('.room_clz').html(res.rooms);
                         }
                       });
                     }
@@ -208,7 +173,6 @@
                             $('#tariff_tbody .tariff-row:gt(0)').remove();
                             form[0].reset();
                             $('#tariff_tbody .room_type_clz').html('<option value="" selected disabled>Select Room Type</option>');
-                            $('#tariff_tbody .room_clz').html('<option value="" selected disabled>Select Rooms</option>');
                             updateRemoveButtons();
                           } else {
                             alertify.error(data.msg).delay(4).dismissOthers();

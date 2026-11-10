@@ -350,18 +350,26 @@ class Rooms extends BaseController
                 $bId = (int) $r->rooms_building;
                 $typeId = (int) $r->rooms_type;
 
-                // STRICT: Only rooms specifically listed in saiyoojyam_tariffs.tariffs_rooms are shown
-                if (isset($tariffsByRoom[$roomId]) && $tariffsByRoom[$roomId] > 0) {
+                $typeKey = $bId . '_' . $typeId;
+
+                // Rate is added against room type: All rooms against that room type have that rate
+                if (isset($tariffsByType[$typeKey]) && $tariffsByType[$typeKey] > 0) {
+                    $rentPrice = $tariffsByType[$typeKey];
+                    $hasTariff = true;
+                    $af = (float) ($tariffsMetaByType[$typeKey]['admission_fees'] ?? 0);
+                    $cd = (float) ($tariffsMetaByType[$typeKey]['caution_deposit'] ?? 0);
+                } elseif (isset($tariffsByRoom[$roomId]) && $tariffsByRoom[$roomId] > 0) {
                     $rentPrice = $tariffsByRoom[$roomId];
                     $hasTariff = true;
                     $af = (float) ($tariffsMetaByRoom[$roomId]['admission_fees'] ?? 0);
                     $cd = (float) ($tariffsMetaByRoom[$roomId]['caution_deposit'] ?? 0);
-                    if ($af <= 0 && !empty($buildingMap[$bId]['admission_fees'])) {
-                        $af = (float) $buildingMap[$bId]['admission_fees'];
-                    }
-                    if ($cd <= 0 && !empty($buildingMap[$bId]['caution_deposit'])) {
-                        $cd = (float) $buildingMap[$bId]['caution_deposit'];
-                    }
+                }
+
+                if ($af <= 0 && !empty($buildingMap[$bId]['admission_fees'])) {
+                    $af = (float) $buildingMap[$bId]['admission_fees'];
+                }
+                if ($cd <= 0 && !empty($buildingMap[$bId]['caution_deposit'])) {
+                    $cd = (float) $buildingMap[$bId]['caution_deposit'];
                 }
 
                 // If this room has NO tariff added in saiyoojyam_tariffs, skip it completely
@@ -885,6 +893,22 @@ class Rooms extends BaseController
             $roomTypes = $builder->get()->getResult();
         }
 
+        $typeTariffs = [];
+        if ($db->tableExists('saiyoojyam_tariffs')) {
+            $tRows = $db->table('saiyoojyam_tariffs')->get()->getResult();
+            foreach ($tRows as $tr) {
+                if (!empty($tr->tariffs_building) && !empty($tr->tariffs_room_types)) {
+                    $key = $tr->tariffs_building . '_' . $tr->tariffs_room_types;
+                    $typeTariffs[$key] = [
+                        'tariff_id'       => (int) $tr->tariffs_id,
+                        'price'           => (float) $tr->tariffs_price,
+                        'admission_fees'  => (float) $tr->tariffs_admission_fees,
+                        'caution_deposit' => (float) $tr->tariffs_caution_deposit,
+                    ];
+                }
+            }
+        }
+
         $formatted = [];
         foreach ($roomTypes as $rt) {
             $name = trim($rt->room_type_name ?? '');
@@ -901,6 +925,9 @@ class Rooms extends BaseController
                 $shares = 1;
             }
 
+            $tKey = $bId . '_' . (int) $rt->room_type_id;
+            $tf = $typeTariffs[$tKey] ?? null;
+
             $formatted[] = [
                 'id'                 => (int) $rt->room_type_id,
                 'value'              => $slug ?: (string) $rt->room_type_id,
@@ -914,6 +941,11 @@ class Rooms extends BaseController
                 'building_slug'      => $buildingMap[$bId]['slug'] ?? '',
                 'building_name'      => $buildingMap[$bId]['name'] ?? '',
                 'room_type_name'     => $name,
+                'price'              => $tf ? $tf['price'] : 0,
+                'monthly_rent'       => $tf ? $tf['price'] : 0,
+                'admission_fees'     => $tf ? $tf['admission_fees'] : 0,
+                'caution_deposit'    => $tf ? $tf['caution_deposit'] : 0,
+                'has_tariff'         => $tf !== null && $tf['price'] > 0,
             ];
         }
 

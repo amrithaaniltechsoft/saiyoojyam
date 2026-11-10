@@ -272,15 +272,18 @@ class Inmates extends BaseController
             $roomTypeId = $this->request->getPost('inmates_room_type');
 
             $db = \Config\Database::connect();
-            $tariff = $db->table('saiyoojyam_tariffs')
-                ->where('tariffs_rooms', $roomId)
-                ->get()
-                ->getRow();
-
-            if (!$tariff && !empty($roomTypeId)) {
+            $tariff = null;
+            if (!empty($buildingId) && !empty($roomTypeId)) {
                 $tariff = $db->table('saiyoojyam_tariffs')
                     ->where('tariffs_building', $buildingId)
                     ->where('tariffs_room_types', $roomTypeId)
+                    ->get()
+                    ->getRow();
+            }
+
+            if (!$tariff && !empty($roomId)) {
+                $tariff = $db->table('saiyoojyam_tariffs')
+                    ->where('tariffs_rooms', $roomId)
                     ->get()
                     ->getRow();
             }
@@ -632,17 +635,24 @@ class Inmates extends BaseController
         $data['building'] = $this->common_model->FetchAllOrder('saiyoojyam_building','building_name','ASC');
 
         $db = \Config\Database::connect();
-        $tariffRoomIds = $db->table('saiyoojyam_tariffs')
-            ->select('tariffs_rooms')
-            ->where('tariffs_rooms >', 0)
-            ->get()
-            ->getResultArray();
-        $tariffRoomIdList = array_map('intval', array_column($tariffRoomIds, 'tariffs_rooms'));
+        $tariffRows = $db->table('saiyoojyam_tariffs')->get()->getResult();
+        $tariffRoomIdList = [];
+        $tariffRoomTypeList = [];
+        foreach ($tariffRows as $tr) {
+            if (!empty($tr->tariffs_rooms)) {
+                $tariffRoomIdList[] = (int) $tr->tariffs_rooms;
+            }
+            if (!empty($tr->tariffs_room_types)) {
+                $tariffRoomTypeList[(int) $tr->tariffs_building][] = (int) $tr->tariffs_room_types;
+            }
+        }
 
         $allRooms = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms',array('rooms_building' => $data['inmate']->inmates_building),'rooms_name','ASC');
         $filteredRooms = [];
+        $bId = (int)$data['inmate']->inmates_building;
+        $allowedTypes = $tariffRoomTypeList[$bId] ?? [];
         foreach($allRooms as $r){
-            if(in_array((int)$r->rooms_id, $tariffRoomIdList) || (int)$r->rooms_id === (int)($data['inmate']->inmates_rooms ?? 0)){
+            if(in_array((int)$r->rooms_type, $allowedTypes, true) || in_array((int)$r->rooms_id, $tariffRoomIdList, true) || (int)$r->rooms_id === (int)($data['inmate']->inmates_rooms ?? 0)){
                 $filteredRooms[] = $r;
             }
         }
@@ -2102,20 +2112,6 @@ $joins = array(
     private function findTariffForRoom($room_id, $building_id = null, $room_type_id = null){
         $db = \Config\Database::connect('default');
 
-        if (!empty($room_id)) {
-            $t = $db->table('saiyoojyam_tariffs')
-                ->where('tariffs_rooms', (string)$room_id)
-                ->get()
-                ->getRow();
-            if ($t) return $t;
-
-            $t = $db->table('saiyoojyam_tariffs')
-                ->where("FIND_IN_SET(" . $db->escape((string)$room_id) . ", tariffs_rooms) > 0")
-                ->get()
-                ->getRow();
-            if ($t) return $t;
-        }
-
         if (!empty($building_id) && !empty($room_type_id)) {
             $t = $db->table('saiyoojyam_tariffs')
                 ->where('tariffs_building', (int)$building_id)
@@ -2135,6 +2131,20 @@ $joins = array(
                     ->getRow();
                 if ($t) return $t;
             }
+        }
+
+        if (!empty($room_id)) {
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where('tariffs_rooms', (string)$room_id)
+                ->get()
+                ->getRow();
+            if ($t) return $t;
+
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where("FIND_IN_SET(" . $db->escape((string)$room_id) . ", tariffs_rooms) > 0")
+                ->get()
+                ->getRow();
+            if ($t) return $t;
         }
 
         return null;

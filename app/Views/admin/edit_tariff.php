@@ -23,62 +23,29 @@
                   <div class="card">
                     <div class="card-header d-flex align-items-center justify-content-between">
                       <h5 class="mb-0">Edit Tariff</h5>
-                      
                     </div>
                     <div class="card-body">
                       <form method="POST" enctype="multipart/form-data">
-
-                         
-                        
-
-
                         <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="basic-default-name">Rooms</label>
-                          <div class="col-sm-4">
-                              <select id="" class="form-select room_clz" name="tariffs_rooms" required disabled>
-
-                               
-                                <?php foreach($rooms as $room){?> 
-                                  <option value="<?php echo $room->rooms_id;?>" <?php if($tariff->tariffs_rooms	== $room->rooms_id){echo "selected"; }?>><?php echo $room->rooms_name;?></option>
-                                <?php } ?>
-                              
-                              
-                              </select>
-                              <input type="hidden" name="tariffs_rooms" value="<?php echo $tariff->tariffs_rooms;?>">
+                          <div class="col-sm-6">
+                            <label class="form-label">Building</label>
+                            <input type="text" class="form-control" value="<?php echo $tariff->building_name;?>" readonly/>
+                            <input type="hidden" name="tariffs_building" value="<?php echo $tariff->tariffs_building;?>">
                           </div>
-                          <div class="col-sm-3" style="margin-top: -23px;">
-                            <label>Building</label>
-                            <input type="text" class="form-control build_clz" value="<?php echo $tariff->building_name;?>"  name="" id="" placeholder="Tower1" required readonly/>
-                            <input type="hidden" name="tariffs_building"  class="build_id_clz" value="<?php echo $tariff->tariffs_building;?>">
-                          </div>
-                          <div class="col-sm-3" style="margin-top: -23px;">
-                            <label>Room Type</label>
-                            <input type="text" class="form-control room_type_clz" value="<?php echo $tariff->room_type_name;?>"   name="" id="" placeholder="3 Share" required readonly/>
-                            <input type="hidden" name="tariffs_room_types" class="room_type_id_clz" value="<?php echo $tariff->tariffs_room_types;?>">
+                          <div class="col-sm-6">
+                            <label class="form-label">Room Type</label>
+                            <input type="text" class="form-control" value="<?php echo $tariff->room_type_name;?>" readonly/>
+                            <input type="hidden" name="tariffs_room_types" value="<?php echo $tariff->tariffs_room_types;?>">
                           </div>
                         </div>
 
-
-
-
-
-                         
-
-<div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="basic-default-name">Monthly Rent</label>
+                        <div class="row mb-6">
+                          <label class="col-sm-2 col-form-label" for="basic-default-name">Monthly Rent (₹)</label>
                           <div class="col-sm-10">
-                              <input type="number" class="form-control" name="tariffs_price" min="0" step="0.01" value="<?php echo $tariff->tariffs_price; ?>" id="basic-default-name" placeholder="e.g., 3" required>
+                              <input type="number" class="form-control" name="tariffs_price" min="0" step="0.01" value="<?php echo $tariff->tariffs_price; ?>" id="basic-default-name" placeholder="e.g., 5000" required>
                           </div>
-</div>
+                        </div>
 
-                        
-
-
-                      
-
-
-                        
-                          
                         <div class="row justify-content-end">
                           <div class="col-sm-10">
                             <button type="submit" class="btn btn-primary">Update</button>
@@ -89,7 +56,6 @@
                   </div>
                 </div>
                 <!-- Basic with Icons -->
-                
               </div>
 
               <div class="row mb-6 gy-6">
@@ -140,53 +106,5 @@
 
             <!-- / Footer -->
 
-
-            <script>
-
-              /*fetch building and room type by room*/
-
-                function onRoomChange(){ 
-
-                  var Id =  $('.room_clz').val();
-
-                  $.ajax({
-                        url: "<?php echo base_url(); ?>Admin/Ajax/Rooms",
-                        type: "POST",
-                        data: {ID :Id, },
-                        success: function(data) {
-
-                          var data = JSON.parse(data);
-
-                          $('.build_clz').val(data.building);
-
-                          $('.room_type_clz').val(data.room_type);
-
-                          $('.build_id_clz').val(data.building_id);
-
-                          $('.room_type_id_clz').val(data.room_type_id);
-
-                        }
-                  });
-
-                
-    
-                }
-
-                /*auto fill building & room type from selected room on page load*/
-                $(document).ready(function(){
-                  if(!$('.build_clz').val() || !$('.room_type_clz').val()){
-                    $(".room_clz").trigger('change');
-                  }
-                });
-
-                /*end section*/
-                
-                $(".room_clz").on('change', onRoomChange);
-                onRoomChange();
-            </script>
-
-            
-
-   
   </body>
 </html>

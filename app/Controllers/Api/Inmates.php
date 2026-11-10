@@ -237,21 +237,35 @@ class Inmates extends BaseController
             $monthlyBaseRent = 0.0;
 
             if ($db->tableExists('saiyoojyam_tariffs')) {
-                // Find tariff matching this exact room
+                // Find tariff matching this room type (or room)
                 $tariffs = $db->table('saiyoojyam_tariffs')
                     ->orderBy('tariffs_id', 'DESC')
                     ->get()
                     ->getResult();
 
-                foreach ($tariffs as $tf) {
-                    if (!empty($tf->tariffs_rooms)) {
-                        $rList = array_map('intval', explode(',', (string) $tf->tariffs_rooms));
-                        if (in_array($roomId, $rList, true)) {
+                if (!empty($roomObj->rooms_building) && !empty($roomObj->rooms_type)) {
+                    foreach ($tariffs as $tf) {
+                        if ((int)$tf->tariffs_building === (int)$roomObj->rooms_building && (int)$tf->tariffs_room_types === (int)$roomObj->rooms_type) {
                             $tariffId = (int) $tf->tariffs_id;
                             $cautionDeposit = (float) ($tf->tariffs_caution_deposit ?? 0);
                             $admissionFee = (float) ($tf->tariffs_admission_fees ?? 0);
                             $monthlyBaseRent = (float) ($tf->tariffs_price ?? 0);
                             break;
+                        }
+                    }
+                }
+
+                if ($tariffId === 0) {
+                    foreach ($tariffs as $tf) {
+                        if (!empty($tf->tariffs_rooms)) {
+                            $rList = array_map('intval', explode(',', (string) $tf->tariffs_rooms));
+                            if (in_array($roomId, $rList, true)) {
+                                $tariffId = (int) $tf->tariffs_id;
+                                $cautionDeposit = (float) ($tf->tariffs_caution_deposit ?? 0);
+                                $admissionFee = (float) ($tf->tariffs_admission_fees ?? 0);
+                                $monthlyBaseRent = (float) ($tf->tariffs_price ?? 0);
+                                break;
+                            }
                         }
                     }
                 }
@@ -1228,20 +1242,6 @@ class Inmates extends BaseController
 
     private function findTariffForRoom($db, $room_id, $building_id = null, $room_type_id = null)
     {
-        if (!empty($room_id)) {
-            $t = $db->table('saiyoojyam_tariffs')
-                ->where('tariffs_rooms', (string) $room_id)
-                ->get()
-                ->getRow();
-            if ($t) return $t;
-
-            $t = $db->table('saiyoojyam_tariffs')
-                ->where("FIND_IN_SET(" . $db->escape((string)$room_id) . ", tariffs_rooms) > 0")
-                ->get()
-                ->getRow();
-            if ($t) return $t;
-        }
-
         if (!empty($building_id) && !empty($room_type_id)) {
             $t = $db->table('saiyoojyam_tariffs')
                 ->where('tariffs_building', (int) $building_id)
@@ -1261,6 +1261,20 @@ class Inmates extends BaseController
                     ->getRow();
                 if ($t) return $t;
             }
+        }
+
+        if (!empty($room_id)) {
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where('tariffs_rooms', (string) $room_id)
+                ->get()
+                ->getRow();
+            if ($t) return $t;
+
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where("FIND_IN_SET(" . $db->escape((string)$room_id) . ", tariffs_rooms) > 0")
+                ->get()
+                ->getRow();
+            if ($t) return $t;
         }
 
         return null;

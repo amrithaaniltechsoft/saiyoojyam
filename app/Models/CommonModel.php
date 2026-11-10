@@ -1076,7 +1076,7 @@ public function buildingSearch($table,$order_key,$order,$joins,$building,$room_t
 
     if(!empty($room_type)){
    
-        $query->where('rooms_type',$room_type);
+        $query->where('tariffs_room_types',$room_type);
 
     }
 
@@ -1266,21 +1266,24 @@ public function inmatesBuilding($month, $year, $cond, $statusFilter = 'all'){
     $result = [];
 
     foreach($inmates as $inmate){
-        $tariff = $this->db->table('saiyoojyam_tariffs')
-            ->where('tariffs_building', $inmate->inmates_building)
-            ->where('tariffs_rooms', $inmate->inmates_rooms)
-            ->get()->getRow();
+        $tariff = null;
+        if (!empty($inmate->inmates_building) && !empty($inmate->inmates_room_type)) {
+            $tariff = $this->db->table('saiyoojyam_tariffs')
+                ->where('tariffs_building', $inmate->inmates_building)
+                ->where('tariffs_room_types', $inmate->inmates_room_type)
+                ->get()->getRow();
+        }
+
+        if (!$tariff && !empty($inmate->inmates_rooms)) {
+            $tariff = $this->db->table('saiyoojyam_tariffs')
+                ->where('tariffs_building', $inmate->inmates_building)
+                ->where('tariffs_rooms', $inmate->inmates_rooms)
+                ->get()->getRow();
+        }
 
         if (!$tariff && !empty($inmate->inmates_rooms)) {
             $tariff = $this->db->table('saiyoojyam_tariffs')
                 ->where("FIND_IN_SET(" . $this->db->escape((string)$inmate->inmates_rooms) . ", tariffs_rooms) > 0")
-                ->get()->getRow();
-        }
-
-        if (!$tariff && !empty($inmate->inmates_room_type)) {
-            $tariff = $this->db->table('saiyoojyam_tariffs')
-                ->where('tariffs_building', $inmate->inmates_building)
-                ->where('tariffs_room_types', $inmate->inmates_room_type)
                 ->get()->getRow();
         }
 

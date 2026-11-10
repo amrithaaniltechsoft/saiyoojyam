@@ -26,13 +26,13 @@
                 <h5 class="card-header">View Tariff</h5>
                 <div class="card-body pb-2">
 
-                  <form id="filter_form" method="GET" action="<?php echo base_url('Admin/Tariff'); ?>">
+                  <form id="filter_form" method="GET" action="<?php echo base_url(); ?>Admin/Tariff">
                     <?php 
                       $selected_building  = !empty($_GET['building']) ? $_GET['building'] : '';
                       $selected_room_type = !empty($_GET['room_type']) ? $_GET['room_type'] : '';
                     ?>
 
-                    <div class="row g-3 align-items-center justify-content-end mb-3">
+                    <div class="row g-3 align-items-center justify-content-center mb-3">
                       <div class="col-md-4 col-lg-3">
                         <select id="building_filter" class="form-select build_clz" name="building">
                           <option value="">All Buildings</option>
@@ -52,7 +52,7 @@
                       </div>
 
                       <div class="col-auto">
-                        <a href="<?php echo base_url('Admin/Tariff'); ?>" class="btn btn-outline-secondary" title="Reset filter">
+                        <a href="<?php echo base_url(); ?>Admin/Tariff" class="btn btn-outline-secondary" title="Reset filter">
                           <i class="bx bx-reset me-1"></i> Reset
                         </a>
                       </div>
@@ -148,10 +148,27 @@
               }
 
               $(document).ready(function() {
-                // Auto-submit on building change (clear room type so all rooms in building show)
+                // When building changes: fetch room types of that building via AJAX and submit
                 $('#filter_form .build_clz').on('change', function() {
-                  $('#filter_form .room_clz').val('');
-                  $('#filter_form').submit();
+                  var buildId = $(this).val();
+
+                  $.ajax({
+                    url: "<?php echo base_url(); ?>Admin/Ajax/tariffRoomTypes",
+                    type: "POST",
+                    data: { ID: buildId, filter_mode: 1 },
+                    success: function(data) {
+                      try {
+                        var res = JSON.parse(data);
+                        $('#filter_form .room_clz').html(res.rooms);
+                      } catch (e) {}
+                      $('#filter_form .room_clz').val('');
+                      $('#filter_form').submit();
+                    },
+                    error: function() {
+                      $('#filter_form .room_clz').val('');
+                      $('#filter_form').submit();
+                    }
+                  });
                 });
 
                 // Auto-submit on room type change

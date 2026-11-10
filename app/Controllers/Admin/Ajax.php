@@ -34,20 +34,27 @@ class Ajax extends BaseController
 
         if($this->request->getMethod() === 'POST'){
 
-            $id =  $this->request->getpost('ID');
+            $id =  $this->request->getPost('ID');
+            $filterMode = (bool) $this->request->getPost('filter_mode');
 
-            $rooms = $this->common_model->FetchWhere('saiyoojyam_room_type',array('room_type_building_id' => $id));
+            if(!empty($id)){
+                $rooms = $this->common_model->FetchWhereOrderby('saiyoojyam_room_type', array('room_type_building_id' => $id), 'room_type_name', 'ASC');
+            } else {
+                $rooms = $this->common_model->FetchAllOrder('saiyoojyam_room_type', 'room_type_name', 'ASC');
+            }
 
-            $data['rooms'] = "<option value='' selected disabled>Select Room Types</option>";
+            if ($filterMode) {
+                $data['rooms'] = "<option value=''>All Room Types</option>";
+            } else {
+                $data['rooms'] = "<option value='' selected disabled>Select Room Type</option>";
+            }
 
             foreach($rooms as $room){
-                
                 $data['rooms'] .= "<option value='".$room->room_type_id."'>".$room->room_type_name."</option>";
-
             }
 
             echo json_encode($data);
- 
+
         }
     }
 

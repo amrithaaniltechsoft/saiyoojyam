@@ -49,7 +49,7 @@
                         <td><?php echo $page_data->room_type_name;?></td>
 
                         <td><?php echo $page_data->rooms_name;?></td>
-                        <td><?php echo $page_data->rooms_capacity;?></td>
+                        <td><?php echo $page_data->room_type_capacity ?? $page_data->rooms_capacity;?></td>
                         <td><?php echo $page_data->rooms_ac_type;?></td>
                         <td>
                           <a class="dropdown-item" href="<?php echo base_url();?>Admin/Rooms/EditWeb/<?php echo $page_data->rooms_id;?>"><i class="icon-base bx bx-edit-alt me-2"></i> </a>

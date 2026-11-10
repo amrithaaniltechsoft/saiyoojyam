@@ -123,7 +123,9 @@ class Rooms extends BaseController
             $isAc = !$isNonAc && stripos($rtName, 'ac') !== false;
 
             $shares = 1;
-            if (preg_match('/(\d+)\s*(?:share|bed|sharing)/i', $rtName, $m)) {
+            if (isset($rt->room_type_capacity) && (int) $rt->room_type_capacity > 0) {
+                $shares = (int) $rt->room_type_capacity;
+            } elseif (preg_match('/(\d+)\s*(?:share|bed|sharing)/i', $rtName, $m)) {
                 $shares = (int) $m[1];
             } elseif (stripos($rtName, 'single') !== false) {
                 $shares = 1;
@@ -132,27 +134,31 @@ class Rooms extends BaseController
             $filterId = !empty($rtSlug) ? $rtSlug : ($bKey . '-' . strtolower(preg_replace('/[^a-z0-9]+/i', '-', $rtName)));
 
             $categoryObj = [
-                'id'       => $filterId,
-                'label'    => $rtName,
-                'shares'   => $shares,
-                'isAc'     => $isAc,
-                'building' => $bKey,
-                'dbId'     => (int) $rt->room_type_id,
+                'id'                 => $filterId,
+                'label'              => $rtName,
+                'shares'             => $shares,
+                'capacity'           => $shares,
+                'room_type_capacity' => $shares,
+                'isAc'               => $isAc,
+                'building'           => $bKey,
+                'dbId'               => (int) $rt->room_type_id,
             ];
 
             $roomTypeMap[$rt->room_type_id] = [
-                'id'             => (int) $rt->room_type_id,
-                'value'          => (string) $rt->room_type_id,
-                'label'          => $rtName,
-                'name'           => $rtName,
-                'room_type_name' => $rtName,
-                'room_type_id'   => (int) $rt->room_type_id,
-                'building_id'    => $bId,
-                'building_key'   => $bKey,
-                'slug'           => $rtSlug,
-                'shares'         => $shares,
-                'isAc'           => $isAc,
-                'filterId'       => $filterId,
+                'id'                 => (int) $rt->room_type_id,
+                'value'              => (string) $rt->room_type_id,
+                'label'              => $rtName,
+                'name'               => $rtName,
+                'room_type_name'     => $rtName,
+                'room_type_id'       => (int) $rt->room_type_id,
+                'room_type_capacity' => $shares,
+                'capacity'           => $shares,
+                'building_id'        => $bId,
+                'building_key'       => $bKey,
+                'slug'               => $rtSlug,
+                'shares'             => $shares,
+                'isAc'               => $isAc,
+                'filterId'           => $filterId,
             ];
 
             if ($bKey) {
@@ -274,7 +280,7 @@ class Rooms extends BaseController
         if ($db->tableExists('saiyoojyam_rooms')) {
             $builder = $db->table('saiyoojyam_rooms');
             if ($db->tableExists('saiyoojyam_room_type')) {
-                $builder->select('saiyoojyam_rooms.*, saiyoojyam_room_type.room_type_name, saiyoojyam_room_type.room_type_slug, saiyoojyam_room_type.room_type_building_id');
+                $builder->select('saiyoojyam_rooms.*, saiyoojyam_room_type.room_type_name, saiyoojyam_room_type.room_type_slug, saiyoojyam_room_type.room_type_building_id, saiyoojyam_room_type.room_type_capacity');
                 $builder->join('saiyoojyam_room_type', 'saiyoojyam_room_type.room_type_id = saiyoojyam_rooms.rooms_type', 'left');
             }
             $builder->orderBy('saiyoojyam_rooms.rooms_building', 'ASC')->orderBy('saiyoojyam_rooms.rooms_name', 'ASC');
@@ -302,7 +308,8 @@ class Rooms extends BaseController
                 ];
 
                 $bKey = $bInfo['slug'];
-                $capacity = (int) ($r->rooms_capacity ?? 0);
+                // Priority: Room Type capacity > room capacity
+                $capacity = (int) ($r->room_type_capacity ?? $rtInfo['capacity'] ?? $r->rooms_capacity ?? 0);
                 if ($capacity <= 0) {
                     $typeNameProbe = $rtNameJoined ?: $rtInfo['name'];
                     if (preg_match('/(\d+)\s*(?:share|bed|sharing)/i', $typeNameProbe, $m)) {
@@ -886,23 +893,27 @@ class Rooms extends BaseController
             $bId = (int) ($rt->room_type_building_id ?? 0);
 
             $shares = 0;
-            if (preg_match('/(\d+)\s*(?:share|bed|sharing)/i', $name, $m)) {
+            if (isset($rt->room_type_capacity) && (int) $rt->room_type_capacity > 0) {
+                $shares = (int) $rt->room_type_capacity;
+            } elseif (preg_match('/(\d+)\s*(?:share|bed|sharing)/i', $name, $m)) {
                 $shares = (int) $m[1];
             } elseif (stripos($name, 'single') !== false) {
                 $shares = 1;
             }
 
             $formatted[] = [
-                'id'             => (int) $rt->room_type_id,
-                'value'          => $slug ?: (string) $rt->room_type_id,
-                'label'          => $name,
-                'name'           => $name,
-                'slug'           => $slug,
-                'shares'         => $shares,
-                'building_id'    => $bId,
-                'building_slug'  => $buildingMap[$bId]['slug'] ?? '',
-                'building_name'  => $buildingMap[$bId]['name'] ?? '',
-                'room_type_name' => $name,
+                'id'                 => (int) $rt->room_type_id,
+                'value'              => $slug ?: (string) $rt->room_type_id,
+                'label'              => $name,
+                'name'               => $name,
+                'slug'               => $slug,
+                'shares'             => $shares,
+                'capacity'           => $shares,
+                'room_type_capacity' => $shares,
+                'building_id'        => $bId,
+                'building_slug'      => $buildingMap[$bId]['slug'] ?? '',
+                'building_name'      => $buildingMap[$bId]['name'] ?? '',
+                'room_type_name'     => $name,
             ];
         }
 

@@ -66,14 +66,6 @@
                         </div>
 
 
-                        <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="basic-default-name">Capacity</label>
-                          <div class="col-sm-10">
-                              <input type="number" class="form-control" name="rooms_capacity" value="<?php echo $rooms->rooms_capacity;?>" id="basic-default-name" placeholder="e.g., 3" required>
-                          </div>
-                        </div>
-
-
                         <!--<div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Ac Type</label>
                           <div class="col-sm-10">

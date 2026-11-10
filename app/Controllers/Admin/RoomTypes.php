@@ -27,6 +27,7 @@ class RoomTypes extends BaseController
             $insert_data = $this->request->getPost();
 
             $insert_data['room_type_name'] = preg_replace('/\s+/', ' ', trim($insert_data['room_type_name']));
+            $insert_data['room_type_capacity'] = !empty($insert_data['room_type_capacity']) ? max(1, (int)$insert_data['room_type_capacity']) : 1;
 
             $existing = $this->common_model->SingleRowTrimmedWhere('saiyoojyam_room_type','room_type_name',$insert_data['room_type_name'],array('room_type_building_id' => $insert_data['room_type_building_id']));
 
@@ -85,10 +86,12 @@ class RoomTypes extends BaseController
             }
 
             $update_data['room_type_slug'] = $slug;
-
-
+            $update_data['room_type_capacity'] = !empty($update_data['room_type_capacity']) ? max(1, (int)$update_data['room_type_capacity']) : 1;
 
             $this->common_model->EditData($update_data,array('room_type_id' => $id),'saiyoojyam_room_type');
+
+            // Keep rooms_capacity for existing rooms of this room type synchronized
+            $this->common_model->EditData(['rooms_capacity' => (int)$update_data['room_type_capacity']], array('rooms_type' => $id), 'saiyoojyam_rooms');
 
             $flashdata = array(
                 'type' => 'success',

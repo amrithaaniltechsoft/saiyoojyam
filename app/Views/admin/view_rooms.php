@@ -49,15 +49,20 @@
                         <td><?php echo $build->building_name; ?></td>
                         <?php } } ?>
                         
-                        <?php foreach($room_types as $room_type){
+                        <?php 
+                        $curCap = $page_data->rooms_capacity;
+                        foreach($room_types as $room_type){
                           if($room_type->room_type_id  == $page_data->rooms_type){
+                            if(!empty($room_type->room_type_capacity)){
+                              $curCap = $room_type->room_type_capacity;
+                            }
                         ?> 
                         <td><?php echo $room_type->room_type_name;?></td>
 
                         <?php } } ?>
 
                         <td><?php echo $page_data->rooms_name;?></td>
-                        <td><?php echo $page_data->rooms_capacity;?></td>
+                        <td><?php echo $curCap;?></td>
                         
                         <td>
                           <a class="dropdown-item" href="<?php echo base_url();?>Admin/Rooms/Edit/<?php echo $page_data->rooms_id;?>"><i class="icon-base bx bx-edit-alt me-2"></i> </a>

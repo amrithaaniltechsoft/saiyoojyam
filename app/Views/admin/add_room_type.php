@@ -52,6 +52,13 @@
                           </div>
                         </div>
 
+                        <div class="row mb-6">
+                          <label class="col-sm-2 col-form-label" for="basic-default-capacity">Capacity</label>
+                          <div class="col-sm-10">
+                              <input type="number" class="form-control" name="room_type_capacity" id="basic-default-capacity" placeholder="e.g., 3" min="1" required>
+                          </div>
+                        </div>
+
                        
 
 

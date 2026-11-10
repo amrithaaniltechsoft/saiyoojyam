@@ -44,21 +44,25 @@ class Rooms extends BaseController
             }
 
             $room_type_name = '';
+            $room_capacity = $room->rooms_capacity;
             foreach($room_types as $rtype){
                 if($rtype->room_type_id == $room->rooms_type){
                     $room_type_name = $rtype->room_type_name;
+                    if (!empty($rtype->room_type_capacity)) {
+                        $room_capacity = (int) $rtype->room_type_capacity;
+                    }
                     break;
                 }
             }
 
-            $avail_count = $room->rooms_capacity - $occupied_count;
+            $avail_count = $room_capacity - $occupied_count;
 
             $available_rooms[] = [
                 'room_id'        => $room->rooms_id,
                 'room_name'      => $room->rooms_name,
                 'building_name'  => $building_name,
                 'room_type_name' => $room_type_name,
-                'capacity'       => $room->rooms_capacity,
+                'capacity'       => $room_capacity,
                 'occupied'       => $occupied_count,
                 'available'      => $avail_count > 0 ? $avail_count : 0,
                 'status'         => $avail_count > 0 ? 'Available' : 'Full'
@@ -94,6 +98,14 @@ class Rooms extends BaseController
 
 
                 $insert_data = $this->request->getPost();
+
+                // Capacity comes from selected Room Type
+                if (!empty($insert_data['rooms_type'])) {
+                    $selectedRoomType = $this->common_model->SingleRow('saiyoojyam_room_type', array('room_type_id' => $insert_data['rooms_type']));
+                    if ($selectedRoomType && !empty($selectedRoomType->room_type_capacity)) {
+                        $insert_data['rooms_capacity'] = (int) $selectedRoomType->room_type_capacity;
+                    }
+                }
 
                 $insert_data['rooms_slug'] = $this->common_model->CreateSlug($insert_data['rooms_name'],'rooms_name','saiyoojyam_rooms');
 
@@ -160,6 +172,14 @@ class Rooms extends BaseController
                 }
 
                 $update_data['rooms_slug'] = $slug;
+
+                // Capacity comes from selected Room Type
+                if (!empty($update_data['rooms_type'])) {
+                    $selectedRoomType = $this->common_model->SingleRow('saiyoojyam_room_type', array('room_type_id' => $update_data['rooms_type']));
+                    if ($selectedRoomType && !empty($selectedRoomType->room_type_capacity)) {
+                        $update_data['rooms_capacity'] = (int) $selectedRoomType->room_type_capacity;
+                    }
+                }
 
                 $update_data['rooms_updated_at'] = date('Y-m-d'); 
 

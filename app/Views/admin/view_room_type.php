@@ -31,9 +31,8 @@
                         <th>Sl no</th>
                         <th>Building</th>
                         <th>Room Type</th>
-                        
+                        <th>Capacity</th>
                         <th>Action</th>
-                        
                       </tr>
                     </thead>
                     <tbody class="table-border-bottom-0">
@@ -47,6 +46,7 @@
                         <td><?php echo $build->building_name; ?></td>
                         <?php } } ?>
                         <td><?php echo $page_data->room_type_name;?></td>
+                        <td><?php echo $page_data->room_type_capacity ?? 1;?></td>
                         
                         <td>
                           <a class="dropdown-item" href="<?php echo base_url();?>Admin/RoomTypes/Edit/<?php echo $page_data->room_type_id;?>"><i class="icon-base bx bx-edit-alt me-2"></i> </a>

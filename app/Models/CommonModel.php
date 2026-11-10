@@ -1271,6 +1271,25 @@ public function inmatesBuilding($month, $year, $cond, $statusFilter = 'all'){
             ->where('tariffs_rooms', $inmate->inmates_rooms)
             ->get()->getRow();
 
+        if (!$tariff && !empty($inmate->inmates_rooms)) {
+            $tariff = $this->db->table('saiyoojyam_tariffs')
+                ->where("FIND_IN_SET(" . $this->db->escape((string)$inmate->inmates_rooms) . ", tariffs_rooms) > 0")
+                ->get()->getRow();
+        }
+
+        if (!$tariff && !empty($inmate->inmates_room_type)) {
+            $tariff = $this->db->table('saiyoojyam_tariffs')
+                ->where('tariffs_building', $inmate->inmates_building)
+                ->where('tariffs_room_types', $inmate->inmates_room_type)
+                ->get()->getRow();
+        }
+
+        if (!$tariff && !empty($inmate->inmates_tariffs)) {
+            $tariff = $this->db->table('saiyoojyam_tariffs')
+                ->where('tariffs_id', (int)$inmate->inmates_tariffs)
+                ->get()->getRow();
+        }
+
         $rent = $tariff ? $tariff->tariffs_price : '0.00';
 
         $join_day = (int)date('j', strtotime($inmate->inmates_check_in_date));

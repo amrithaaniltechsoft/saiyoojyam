@@ -36,13 +36,13 @@
                       <div class="about-imgt">
                                 <img src="<?php echo base_url();?>public/assets/img/about-img-01.png" alt="Image" class="aa-img-one">
                                 <img src="<?php echo base_url();?>public/assets/img/about-img-02.jpg" alt="Image" class="aa-img-two">
-                                 <img src="<?php echo base_url();?>public/assets/img/about-img-03.jpg" alt="Image" class="aa-img-three">
+                                <img src="<?php echo base_url();?>public/assets/img/about-img-03.jpg" alt="Image" class="aa-img-three">
                             </div>
                     
                      
                      </div>
-                     <div class="col-md-12 col-lg-6 ">
-					              <div class="ff-content ">
+                     <div class="col-md-12 col-lg-6">
+					              <div class="ff-content">
                           <div class="section-title style1  mb-20">
                             <h2>Our Facilities</h2>
                           </div>

@@ -685,11 +685,18 @@ class Inmates extends BaseController
 
         $id = (int) $inmate->inmates_id;
 
-        // Fetch Related Data
+        // Auto-sync inmates_tariffs if out of sync with current room
+        $currentTariff = $this->findTariffForRoom($db, $inmate->inmates_rooms, $inmate->inmates_building, $inmate->inmates_room_type);
+        if ($currentTariff && (int)($inmate->inmates_tariffs ?? 0) !== (int)$currentTariff->tariffs_id) {
+            $db->table('saiyoojyam_inmates')->where('inmates_id', $id)->update(['inmates_tariffs' => (int)$currentTariff->tariffs_id]);
+            $inmate->inmates_tariffs = $currentTariff->tariffs_id;
+        }
+
+        // Fetch Related Data for Inmate's Current Room
         $building = $db->table('saiyoojyam_building')->where('building_id', (int) $inmate->inmates_building)->get()->getRow();
         $room = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $inmate->inmates_rooms)->get()->getRow();
         $roomType = $db->table('saiyoojyam_room_type')->where('room_type_id', (int) $inmate->inmates_room_type)->get()->getRow();
-        $tariff = $db->table('saiyoojyam_tariffs')->where('tariffs_id', (int) $inmate->inmates_tariffs)->get()->getRow();
+        $tariff = $currentTariff ?: ($db->table('saiyoojyam_tariffs')->where('tariffs_id', (int) $inmate->inmates_tariffs)->get()->getRow());
 
         // Invoices (fetch chronologically for accurate calculation, then format in reverse)
         $invoices = $db->table('saiyoojyam_invoice')
@@ -717,11 +724,12 @@ class Inmates extends BaseController
             }
         }
 
-        $monthlyRent = 0.0;
+        $currentMonthlyRent = 0.0;
         if ($tariff && !empty($tariff->tariffs_price)) {
-            $monthlyRent = (float) $tariff->tariffs_price;
+            $currentMonthlyRent = (float) $tariff->tariffs_price;
         } elseif (!empty($invoices)) {
-            $monthlyRent = (float) $invoices[0]->invoice_rent;
+            $latestInv = end($invoices);
+            $currentMonthlyRent = (float) $latestInv->invoice_rent;
         }
 
         $invoicedMonths = [];
@@ -747,13 +755,20 @@ class Inmates extends BaseController
                     $isOverdue = (!empty($mKey) && strtotime($mKey) < strtotime(date('Y-m-01')));
                     $totalPendingAmount += $bal;
 
+                    // Resolve the room occupied during this invoice month
+                    $invRoomId = $this->getEffectiveRoomId($db, $id, $mKey);
+                    $invRoom = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $invRoomId)->get()->getRow();
+                    $invRoomLabel = ($invRoom ? 'Room ' . $invRoom->rooms_name : 'Hostel Bed') . ($invRoom && $invRoom->rooms_ac_type ? ' ' . $invRoom->rooms_ac_type : '') . ' Rent (Monthly)';
+
+                    $rentAmt = (float)$inv->invoice_rent > 0 ? (float)$inv->invoice_rent : ((float)$inv->invoice_total > 0 ? (float)$inv->invoice_total : $bal);
+
                     $pendingBills[] = [
                         'month_key'         => $mKey,
                         'month_name'        => $mName,
                         'period'            => $mName . ' Rent',
-                        'room_label'        => $roomLabelStr,
-                        'rent_amount'       => '₹' . number_format($bal, 2),
-                        'rent_amount_num'   => $bal,
+                        'room_label'        => $invRoomLabel,
+                        'rent_amount'       => '₹' . number_format($rentAmt, 2),
+                        'rent_amount_num'   => $rentAmt,
                         'total_payable'     => '₹' . number_format($bal, 2),
                         'total_payable_num' => $bal,
                         'due_date'          => !empty($mKey) ? date('05 M Y', strtotime($mKey)) : '05th of month',
@@ -800,17 +815,25 @@ class Inmates extends BaseController
             if (!isset($invoicedMonths[$mKey])) {
                 $mName = $curr->format('F Y');
                 $isOverdue = ($curr < $targetDate);
-                $totalPendingAmount += $monthlyRent;
+
+                // Exact backend rent calculation (split month prorate / effective tariff / vacating / checkin)
+                $calculatedRent = $this->calculateMonthRentForInmate($db, $inmate, $mKey, $currentMonthlyRent);
+                $totalPendingAmount += $calculatedRent;
+
+                // Effective room occupied during this month
+                $effRoomId = $this->getEffectiveRoomId($db, $id, $mKey);
+                $effRoom = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $effRoomId)->get()->getRow();
+                $effRoomLabel = ($effRoom ? 'Room ' . $effRoom->rooms_name : 'Hostel Bed') . ($effRoom && $effRoom->rooms_ac_type ? ' ' . $effRoom->rooms_ac_type : '') . ' Rent (Monthly)';
 
                 $pendingBills[] = [
                     'month_key'         => $mKey,
                     'month_name'        => $mName,
                     'period'            => $mName . ' Rent',
-                    'room_label'        => $roomLabelStr,
-                    'rent_amount'       => '₹' . number_format($monthlyRent, 2),
-                    'rent_amount_num'   => $monthlyRent,
-                    'total_payable'     => '₹' . number_format($monthlyRent, 2),
-                    'total_payable_num' => $monthlyRent,
+                    'room_label'        => $effRoomLabel,
+                    'rent_amount'       => '₹' . number_format($calculatedRent, 2),
+                    'rent_amount_num'   => $calculatedRent,
+                    'total_payable'     => '₹' . number_format($calculatedRent, 2),
+                    'total_payable_num' => $calculatedRent,
                     'due_date'          => $curr->format('05 M Y'),
                     'is_overdue'        => $isOverdue,
                     'status'            => $isOverdue ? 'Overdue' : 'Due Soon',
@@ -871,11 +894,17 @@ class Inmates extends BaseController
         $isAllPaid = ($pendingCount === 0);
 
         if ($isAllPaid) {
+            $curMonthKey = date('Y-m-01');
+            $curMonthRent = $this->calculateMonthRentForInmate($db, $inmate, $curMonthKey, $currentMonthlyRent);
+            $effRoomId = $this->getEffectiveRoomId($db, $id, $curMonthKey);
+            $effRoom = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $effRoomId)->get()->getRow();
+            $curRoomLabel = ($effRoom ? 'Room ' . $effRoom->rooms_name : 'Hostel Bed') . ($effRoom && $effRoom->rooms_ac_type ? ' ' . $effRoom->rooms_ac_type : '') . ' Rent (Monthly)';
+
             $currentBill = [
                 'period'           => !empty($lastPaidPeriod) ? $lastPaidPeriod : date('F Y') . ' Rent',
-                'room_label'       => $roomLabelStr,
-                'rent_amount'      => '₹' . number_format($monthlyRent, 2),
-                'rent_amount_num'  => $monthlyRent,
+                'room_label'       => $curRoomLabel,
+                'rent_amount'      => '₹' . number_format($curMonthRent, 2),
+                'rent_amount_num'  => $curMonthRent,
                 'total_payable'    => '₹0.00',
                 'status'           => 'Paid',
                 'is_paid'          => true,
@@ -888,7 +917,7 @@ class Inmates extends BaseController
             $earliest = $pendingBills[0];
             $currentBill = [
                 'period'           => $earliest['period'],
-                'room_label'       => $roomLabelStr,
+                'room_label'       => $earliest['room_label'],
                 'rent_amount'      => $earliest['rent_amount'],
                 'rent_amount_num'  => $earliest['rent_amount_num'],
                 'total_payable'    => '₹' . number_format($totalPendingAmount, 2),
@@ -936,7 +965,7 @@ class Inmates extends BaseController
                 'check_out_date'   => !empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date !== '0000-00-00' ? date('d M Y', strtotime($inmate->inmates_check_out_date)) : '',
                 'duration_of_stay' => $inmate->inmates_duration_of_stay,
                 'status'           => $inmate->inmates_status,
-                'monthly_rent'     => $monthlyRent,
+                'monthly_rent'     => $currentMonthlyRent,
                 'caution_deposit'  => (float) $inmate->inmates_caution_deposit,
                 'admission_fee'    => (float) $inmate->inmates_admission_fee,
             ],
@@ -1002,18 +1031,19 @@ class Inmates extends BaseController
 
         $inmateId = (int) $inmate->inmates_id;
 
-        $tariff = $db->table('saiyoojyam_tariffs')->where('tariffs_id', (int) $inmate->inmates_tariffs)->get()->getRow();
-        $monthlyRent = $tariff && !empty($tariff->tariffs_price) ? (float) $tariff->tariffs_price : 200.00;
+        $currentTariff = $this->findTariffForRoom($db, $inmate->inmates_rooms, $inmate->inmates_building, $inmate->inmates_room_type);
+        $fallbackMonthlyRent = $currentTariff && !empty($currentTariff->tariffs_price) ? (float) $currentTariff->tariffs_price : 200.00;
 
         if ($payAll && !empty($input['months']) && is_array($input['months'])) {
             $paidCount = 0;
             foreach ($input['months'] as $m) {
                 $mKey = is_array($m) ? ($m['month_key'] ?? '') : (string) $m;
-                $mAmt = is_array($m) && isset($m['amount_num']) ? (float) $m['amount_num'] : $monthlyRent;
                 $mInvId = is_array($m) && isset($m['invoice_id']) ? (int) $m['invoice_id'] : 0;
+                $calcRent = $this->calculateMonthRentForInmate($db, $inmate, $mKey, $fallbackMonthlyRent);
+                $mAmt = is_array($m) && isset($m['amount_num']) ? (float) $m['amount_num'] : $calcRent;
 
                 if (!empty($mKey)) {
-                    $this->settleSingleMonth($db, $inmateId, $mKey, $mAmt, $mInvId, $monthlyRent);
+                    $this->settleSingleMonth($db, $inmateId, $mKey, $mAmt, $mInvId, $calcRent);
                     $paidCount++;
                 }
             }
@@ -1031,11 +1061,12 @@ class Inmates extends BaseController
             ]);
         }
 
+        $calculatedMonthRent = $this->calculateMonthRentForInmate($db, $inmate, $monthKey, $fallbackMonthlyRent);
         if ($amount <= 0) {
-            $amount = $monthlyRent;
+            $amount = $calculatedMonthRent;
         }
 
-        $invId = $this->settleSingleMonth($db, $inmateId, $monthKey, $amount, $invoiceId, $monthlyRent);
+        $invId = $this->settleSingleMonth($db, $inmateId, $monthKey, $amount, $invoiceId, $calculatedMonthRent);
         $monthName = date('F Y', strtotime($monthKey));
 
         return $this->response->setJSON([
@@ -1091,6 +1122,289 @@ class Inmates extends BaseController
             $db->table('saiyoojyam_invoice')->insert($invData);
             return (int) $db->insertID();
         }
+    }
+
+    private function calculateMonthRentForInmate($db, $inmate, $monthKey, $fallbackRent = 0.0)
+    {
+        $id = (int) $inmate->inmates_id;
+        $pm = date('Y-m-01', strtotime($monthKey));
+
+        // 1. If invoice already exists for this month, use its invoice_rent
+        $existing = $db->table('saiyoojyam_invoice')
+            ->where('invoice_inmates', (string) $id)
+            ->where('invoice_payment_month', $pm)
+            ->orderBy('invoice_id', 'DESC')
+            ->get()
+            ->getRow();
+        if ($existing && (float) $existing->invoice_rent > 0) {
+            return (float) $existing->invoice_rent;
+        }
+
+        // 2. Resolve effective room & tariff for this month
+        $effTariff = $this->getEffectiveTariff($db, $id, $pm);
+        $baseRent = $effTariff ? (float) $effTariff->tariffs_price : (float) $fallbackRent;
+        if ($effTariff) {
+            $baseRent = $this->getApplicableRent($db, (int)$effTariff->tariffs_id, $pm, $baseRent);
+        }
+
+        // 3. Split-month rent calculation (if room changed in this month)
+        $monthRent = $this->getSplitMonthRent($db, $id, $pm, $baseRent);
+
+        // 4. Vacating prorate (if checking out in this month on or before 10th)
+        $monthRent = $this->getVacatingRent($monthRent, $pm, $inmate->inmates_check_out_date ?? '');
+
+        // 5. First-month check-in prorate (if this is the inmate's check-in month)
+        $checkInDate = !empty($inmate->inmates_check_in_date) ? $inmate->inmates_check_in_date : '';
+        if ($checkInDate && date('Y-m', strtotime($checkInDate)) === date('Y-m', strtotime($pm))) {
+            $joinDay = (int) date('j', strtotime($checkInDate));
+            $daysInMonth = (int) date('t', strtotime($checkInDate));
+
+            if ($joinDay <= 5) {
+                // full month
+            } elseif ($joinDay <= 20) {
+                $stayDays = $daysInMonth - $joinDay + 1;
+                $perDay = $monthRent / $daysInMonth;
+                $monthRent = round($stayDays * $perDay, 2);
+            }
+        }
+
+        // Also check if this is the month after a late check-in (>= 21st) where join month days are added
+        if ($checkInDate) {
+            $joinDay = (int) date('j', strtotime($checkInDate));
+            $nextMonthDate = date('Y-m-01', strtotime('first day of next month', strtotime($checkInDate)));
+            if ($joinDay >= 21 && $pm === $nextMonthDate) {
+                $daysInJoinMonth = (int) date('t', strtotime($checkInDate));
+                $stayDays = $daysInJoinMonth - $joinDay + 1;
+
+                $joinEffTariff = $this->getEffectiveTariff($db, $id, $checkInDate);
+                $joinRent = $joinEffTariff ? (float) $joinEffTariff->tariffs_price : $baseRent;
+                $perDay = $joinRent / $daysInJoinMonth;
+                $monthRent = $monthRent + round($stayDays * $perDay, 2);
+            }
+        }
+
+        return round($monthRent, 2);
+    }
+
+    private function findTariffForRoom($db, $room_id, $building_id = null, $room_type_id = null)
+    {
+        if (!empty($room_id)) {
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where('tariffs_rooms', (string) $room_id)
+                ->get()
+                ->getRow();
+            if ($t) return $t;
+
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where("FIND_IN_SET(" . $db->escape((string)$room_id) . ", tariffs_rooms) > 0")
+                ->get()
+                ->getRow();
+            if ($t) return $t;
+        }
+
+        if (!empty($building_id) && !empty($room_type_id)) {
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where('tariffs_building', (int) $building_id)
+                ->where('tariffs_room_types', (int) $room_type_id)
+                ->get()
+                ->getRow();
+            if ($t) return $t;
+        }
+
+        if (!empty($building_id) && !empty($room_id)) {
+            $room = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $room_id)->get()->getRow();
+            if ($room && !empty($room->rooms_type)) {
+                $t = $db->table('saiyoojyam_tariffs')
+                    ->where('tariffs_building', (int) $building_id)
+                    ->where('tariffs_room_types', (int) $room->rooms_type)
+                    ->get()
+                    ->getRow();
+                if ($t) return $t;
+            }
+        }
+
+        return null;
+    }
+
+    private function getEffectiveRoomId($db, $inmate_id, $payment_month)
+    {
+        $room_history = $db->table('saiyoojyam_inmate_room_history')
+            ->where('room_history_inmates_id', (int) $inmate_id)
+            ->orderBy('room_history_effective_month', 'ASC')
+            ->get()
+            ->getResult();
+
+        $pm = date('Y-m', strtotime($payment_month));
+        $inmate = $db->table('saiyoojyam_inmates')->where('inmates_id', (int) $inmate_id)->get()->getRow();
+
+        if (empty($room_history)) {
+            return $inmate ? (int)$inmate->inmates_rooms : 0;
+        }
+
+        $effective_room = null;
+        foreach ($room_history as $h) {
+            if ($h->room_history_effective_month <= $pm) {
+                $effective_room = (int)$h->room_history_new_room;
+            }
+        }
+
+        if ($effective_room === null) {
+            $effective_room = (int)$room_history[0]->room_history_old_room;
+        }
+
+        return $effective_room;
+    }
+
+    private function getEffectiveTariff($db, $inmate_id, $payment_month)
+    {
+        $room_id = $this->getEffectiveRoomId($db, $inmate_id, $payment_month);
+        $room = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $room_id)->get()->getRow();
+        if (empty($room)) {
+            return null;
+        }
+
+        return $this->findTariffForRoom($db, $room->rooms_id, $room->rooms_building, $room->rooms_type ?? null);
+    }
+
+    private function getApplicableRent($db, $tariff_id, $payment_month, $current_price)
+    {
+        if (!$db->tableExists('saiyoojyam_tariff_history')) {
+            return (float) $current_price;
+        }
+
+        $history = $db->table('saiyoojyam_tariff_history')
+            ->where('tariff_history_tariff_id', (int) $tariff_id)
+            ->orderBy('tariff_history_effective_month', 'ASC')
+            ->get()
+            ->getResult();
+
+        $pm = date('Y-m', strtotime($payment_month));
+        if (empty($history)) {
+            return (float) $current_price;
+        }
+
+        $applicable = (float) $history[0]->tariff_history_old_price;
+        foreach ($history as $h) {
+            if ($h->tariff_history_effective_month <= $pm) {
+                $applicable = (float) $h->tariff_history_new_price;
+            }
+        }
+
+        return (float) $applicable;
+    }
+
+    private function getSplitMonthRent($db, $inmate_id, $payment_month, $default_monthly_rent)
+    {
+        $room_history = $db->table('saiyoojyam_inmate_room_history')
+            ->where('room_history_inmates_id', (int) $inmate_id)
+            ->orderBy('room_history_effective_date', 'ASC')
+            ->get()
+            ->getResult();
+
+        if (empty($room_history)) {
+            return (float) $default_monthly_rent;
+        }
+
+        $pm = date('Y-m', strtotime($payment_month));
+        $year = (int) date('Y', strtotime($pm));
+        $month = (int) date('n', strtotime($pm));
+        $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+
+        $changes_in_month = [];
+        $current_room = null;
+        $inmate = $db->table('saiyoojyam_inmates')->where('inmates_id', (int) $inmate_id)->get()->getRow();
+        $first_day = $pm . '-01';
+
+        foreach ($room_history as $h) {
+            $ed = $h->room_history_effective_date;
+            if (empty($ed) || $ed == '0000-00-00') {
+                continue;
+            }
+
+            if (date('Y-m', strtotime($ed)) == $pm) {
+                $changes_in_month[] = $h;
+            } elseif ($ed < $first_day) {
+                $current_room = $h->room_history_new_room;
+            }
+        }
+
+        if (empty($changes_in_month)) {
+            return (float) $default_monthly_rent;
+        }
+
+        if ($current_room === null) {
+            $current_room = !empty($changes_in_month[0]) ? $changes_in_month[0]->room_history_old_room : (!empty($inmate) ? $inmate->inmates_rooms : $room_history[0]->room_history_old_room);
+        }
+
+        $room_per_day = [];
+        for ($d = 1; $d <= $days_in_month; $d++) {
+            $room_per_day[$d] = $current_room;
+        }
+
+        foreach ($changes_in_month as $h) {
+            $change_day = (int) date('j', strtotime($h->room_history_effective_date));
+            for ($d = $change_day; $d <= $days_in_month; $d++) {
+                $room_per_day[$d] = $h->room_history_new_room;
+            }
+        }
+
+        $room_prices = [];
+        foreach ($room_per_day as $room_id) {
+            if (isset($room_prices[$room_id])) {
+                continue;
+            }
+
+            $room = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $room_id)->get()->getRow();
+            $tariff = !empty($room) ? $this->findTariffForRoom($db, $room->rooms_id, $room->rooms_building, $room->rooms_type ?? null) : null;
+
+            $stored_price = 0.0;
+            foreach ($room_history as $h) {
+                if ($h->room_history_old_room == $room_id) {
+                    $stored_price = (float) $h->room_history_old_tariff_price;
+                }
+                if ($h->room_history_new_room == $room_id) {
+                    $stored_price = (float) $h->room_history_new_tariff_price;
+                }
+            }
+
+            $room_prices[$room_id] = !empty($tariff) ? $this->getApplicableRent($db, (int)$tariff->tariffs_id, $pm, (float)$tariff->tariffs_price) : $stored_price;
+        }
+
+        $per_day = [];
+        foreach ($room_prices as $room_id => $monthly_price) {
+            $per_day[$room_id] = $monthly_price / $days_in_month;
+        }
+
+        $split_rent = 0.0;
+        foreach ($room_per_day as $room_id) {
+            $split_rent += $per_day[$room_id];
+        }
+
+        return round($split_rent, 2);
+    }
+
+    private function getVacatingRent($monthly_rent, $payment_month, $check_out_date)
+    {
+        if (empty($check_out_date) || $check_out_date == '0000-00-00') {
+            return (float) $monthly_rent;
+        }
+
+        $pm = date('Y-m', strtotime($payment_month));
+        $cm = date('Y-m', strtotime($check_out_date));
+        if ($pm != $cm) {
+            return (float) $monthly_rent;
+        }
+
+        $day = (int) date('j', strtotime($check_out_date));
+        if ($day <= 10) {
+            $year = (int) date('Y', strtotime($check_out_date));
+            $month = (int) date('n', strtotime($check_out_date));
+            $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+            $per_day = $monthly_rent / $days_in_month;
+            $monthly_rent = round($day * $per_day, 2);
+        }
+
+        return (float) $monthly_rent;
     }
 
     public function printReceipt($id)
@@ -1150,12 +1464,20 @@ class Inmates extends BaseController
                 $buildingContact = $bRow->building_whatsapp;
             }
         }
-        $rRow = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $inmate->inmates_rooms)->get()->getRow();
+        $paymentMonth = date('Y-m-01');
+        if ($invRow && !empty($invRow->invoice_payment_month)) {
+            $paymentMonth = date('Y-m-01', strtotime($invRow->invoice_payment_month));
+        }
+
+        $effectiveRoomId = $this->getEffectiveRoomId($db, (int)$inmate->inmates_id, $paymentMonth);
+        $rRow = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $effectiveRoomId)->get()->getRow();
+        if (!$rRow) {
+            $rRow = $db->table('saiyoojyam_rooms')->where('rooms_id', (int) $inmate->inmates_rooms)->get()->getRow();
+        }
         if ($rRow) {
             $room = 'Room ' . $rRow->rooms_name;
         }
 
-        $paymentMonth = date('Y-m-01');
         $invoiceTotal = 0.0;
         $paidAmount = 0.0;
         $balanceAmount = 0.0;
@@ -1175,8 +1497,8 @@ class Inmates extends BaseController
             $advanceAmount  = (float) $invRow->invoice_advance;
             $status         = (int) $invRow->invoice_status;
         } else {
-            $tRow = !empty($inmate->inmates_tariffs) ? $db->table('saiyoojyam_tariffs')->where('tariffs_id', (int) $inmate->inmates_tariffs)->get()->getRow() : null;
-            $rentRate = $tRow ? (float) $tRow->tariffs_price : 0.0;
+            $effTariff = $this->getEffectiveTariff($db, (int)$inmate->inmates_id, $paymentMonth);
+            $rentRate = $effTariff ? (float) $effTariff->tariffs_price : 0.0;
             $invoiceTotal = $rentRate + $cautionDeposit + $admissionFees;
             $paidAmount = $invoiceTotal;
             $balanceAmount = 0.0;

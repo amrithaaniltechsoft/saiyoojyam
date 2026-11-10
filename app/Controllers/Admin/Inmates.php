@@ -518,6 +518,8 @@ class Inmates extends BaseController
             $old_room = $data['inmate']->inmates_rooms;
 
             $new_room = $this->request->getPost('inmates_rooms');
+            $new_building = $this->request->getPost('inmates_building');
+            $new_room_type = $this->request->getPost('inmates_room_type');
 
             if($old_room != $new_room){
 
@@ -525,22 +527,31 @@ class Inmates extends BaseController
 
                 $new_room_row = $this->common_model->SingleRow('saiyoojyam_rooms',array('rooms_id' => $new_room));
 
-                $old_tariff = $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => !empty($old_room_row) ? $old_room_row->rooms_building : $data['inmate']->inmates_building),array('tariffs_rooms' => $old_room));
+                $old_tariff = $this->findTariffForRoom($old_room, !empty($old_room_row) ? $old_room_row->rooms_building : $data['inmate']->inmates_building, !empty($old_room_row) ? $old_room_row->rooms_type : $data['inmate']->inmates_room_type);
 
-                $new_tariff = $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => !empty($new_room_row) ? $new_room_row->rooms_building : $this->request->getPost('inmates_building')),array('tariffs_rooms' => $new_room));
+                $new_tariff = $this->findTariffForRoom($new_room, !empty($new_room_row) ? $new_room_row->rooms_building : $new_building, !empty($new_room_row) ? $new_room_row->rooms_type : $new_room_type);
 
                 $room_history_data = array(
                     'room_history_inmates_id'      => $id,
                     'room_history_old_room'        => $old_room,
                     'room_history_new_room'        => $new_room,
-                    'room_history_old_tariff_price'=> !empty($old_tariff) ? $old_tariff->tariffs_price : 0,
-                    'room_history_new_tariff_price'=> !empty($new_tariff) ? $new_tariff->tariffs_price : 0,
+                    'room_history_old_tariff_price'=> !empty($old_tariff) ? (float)$old_tariff->tariffs_price : 0,
+                    'room_history_new_tariff_price'=> !empty($new_tariff) ? (float)$new_tariff->tariffs_price : 0,
                     'room_history_effective_month' => date('Y-m'),
                     'room_history_effective_date'  => date('Y-m-d'),
                     'room_history_created_at'      => date('Y-m-d H:i:s'),
                 );
 
                 $this->common_model->InsertData('saiyoojyam_inmate_room_history',$room_history_data);
+
+                if(!empty($new_tariff)){
+                    $update_data['inmates_tariffs'] = (int) $new_tariff->tariffs_id;
+                }
+            } else {
+                $cur_tariff = $this->findTariffForRoom($new_room, $new_building, $new_room_type);
+                if(!empty($cur_tariff)){
+                    $update_data['inmates_tariffs'] = (int) $cur_tariff->tariffs_id;
+                }
             }
 
             $this->common_model->EditData($update_data,array('inmates_id' => $id),'saiyoojyam_inmates');
@@ -733,7 +744,10 @@ $joins = array(
        
         $data['inmates'] = $this->common_model->SingleRowJoin('saiyoojyam_inmates',array('inmates_id' => $id),$joins);
 
-        $data['tariffs'] = $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => $data['inmates']->inmates_building),array('tariffs_rooms' => $data['inmates']->inmates_rooms));
+        $data['tariffs'] = $this->findTariffForRoom($data['inmates']->inmates_rooms, $data['inmates']->inmates_building, $data['inmates']->inmates_room_type ?? null);
+        if (empty($data['tariffs']) && !empty($data['inmates']->inmates_tariffs)) {
+            $data['tariffs'] = $this->common_model->SingleRow('saiyoojyam_tariffs', array('tariffs_id' => $data['inmates']->inmates_tariffs));
+        }
         
         if(empty($data['tariffs'])){
 
@@ -1275,7 +1289,7 @@ $joins = array(
 
                         if(empty($effective_tariff)){
 
-                            $effective_tariff = $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => $inmates->inmates_building),array('tariffs_rooms' => $inmates->inmates_rooms));
+                            $effective_tariff = $this->findTariffForRoom($inmates->inmates_rooms, $inmates->inmates_building, $inmates->inmates_room_type ?? null);
                         }
     
                         $response['payment_month1'] = date('M-Y',strtotime($payment_month1));
@@ -2085,6 +2099,47 @@ $joins = array(
     }
 
 
+    private function findTariffForRoom($room_id, $building_id = null, $room_type_id = null){
+        $db = \Config\Database::connect('default');
+
+        if (!empty($room_id)) {
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where('tariffs_rooms', (string)$room_id)
+                ->get()
+                ->getRow();
+            if ($t) return $t;
+
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where("FIND_IN_SET(" . $db->escape((string)$room_id) . ", tariffs_rooms) > 0")
+                ->get()
+                ->getRow();
+            if ($t) return $t;
+        }
+
+        if (!empty($building_id) && !empty($room_type_id)) {
+            $t = $db->table('saiyoojyam_tariffs')
+                ->where('tariffs_building', (int)$building_id)
+                ->where('tariffs_room_types', (int)$room_type_id)
+                ->get()
+                ->getRow();
+            if ($t) return $t;
+        }
+
+        if (!empty($building_id) && !empty($room_id)) {
+            $room = $db->table('saiyoojyam_rooms')->where('rooms_id', (int)$room_id)->get()->getRow();
+            if ($room && !empty($room->rooms_type)) {
+                $t = $db->table('saiyoojyam_tariffs')
+                    ->where('tariffs_building', (int)$building_id)
+                    ->where('tariffs_room_types', (int)$room->rooms_type)
+                    ->get()
+                    ->getRow();
+                if ($t) return $t;
+            }
+        }
+
+        return null;
+    }
+
     private function getEffectiveTariff($inmate_id, $payment_month){
 
         $room_id = $this->getEffectiveRoomId($inmate_id, $payment_month);
@@ -2096,7 +2151,7 @@ $joins = array(
             return null;
         }
 
-        return $this->common_model->CheckTwiceCond('saiyoojyam_tariffs',array('tariffs_building' => $room->rooms_building),array('tariffs_rooms' => $room->rooms_id));
+        return $this->findTariffForRoom($room->rooms_id, $room->rooms_building, $room->rooms_type ?? null);
     }
 
     private function getSplitMonthRent($inmate_id, $payment_month, $default_monthly_rent){
@@ -2181,7 +2236,7 @@ $joins = array(
 
             $room = $this->common_model->SingleRow('saiyoojyam_rooms', array('rooms_id' => $room_id));
 
-            $tariff = !empty($room) ? $this->common_model->CheckTwiceCond('saiyoojyam_tariffs', array('tariffs_building' => $room->rooms_building), array('tariffs_rooms' => $room->rooms_id)) : null;
+            $tariff = !empty($room) ? $this->findTariffForRoom($room->rooms_id, $room->rooms_building, $room->rooms_type ?? null) : null;
 
             $stored_price = 0;
 

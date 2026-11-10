@@ -27,29 +27,24 @@
                     <div class="card-body">
                       <form method="POST" enctype="multipart/form-data">
                         <div class="row mb-6">
-                          <div class="col-sm-6">
+                          <div class="col-md-4">
                             <label class="form-label">Building</label>
                             <input type="text" class="form-control" value="<?php echo $tariff->building_name;?>" readonly/>
                             <input type="hidden" name="tariffs_building" value="<?php echo $tariff->tariffs_building;?>">
                           </div>
-                          <div class="col-sm-6">
+                          <div class="col-md-4">
                             <label class="form-label">Room Type</label>
                             <input type="text" class="form-control" value="<?php echo $tariff->room_type_name;?>" readonly/>
                             <input type="hidden" name="tariffs_room_types" value="<?php echo $tariff->tariffs_room_types;?>">
                           </div>
-                        </div>
-
-                        <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="basic-default-name">Monthly Rent (₹)</label>
-                          <div class="col-sm-10">
-                              <input type="number" class="form-control" name="tariffs_price" min="0" step="0.01" value="<?php echo $tariff->tariffs_price; ?>" id="basic-default-name" placeholder="e.g., 5000" required>
+                          <div class="col-md-4">
+                            <label class="form-label" for="basic-default-name">Monthly Rent (₹)</label>
+                            <input type="number" class="form-control" name="tariffs_price" min="0" step="0.01" value="<?php echo $tariff->tariffs_price; ?>" id="basic-default-name" placeholder="e.g., 5000" required>
                           </div>
                         </div>
 
-                        <div class="row justify-content-end">
-                          <div class="col-sm-10">
-                            <button type="submit" class="btn btn-primary">Update</button>
-                          </div>
+                        <div class="d-flex justify-content-end mt-4">
+                          <button type="submit" class="btn btn-primary">Update</button>
                         </div>
                       </form>
                     </div>

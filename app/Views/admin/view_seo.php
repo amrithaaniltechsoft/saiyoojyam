@@ -39,23 +39,25 @@
                     </thead>
                     <tbody class="table-border-bottom-0">
 
-                      <?php $i=1; foreach($pagedata as $page_data){?> 
+                      <?php $i=1; foreach($pagedata as $page_data){
+                        $title   = strip_tags($page_data->meta_title ?? '');
+                        $desc    = strip_tags($page_data->meta_desc ?? '');
+                        $keyword = strip_tags($page_data->meta_key_word ?? '');
+
+                        $title_short   = mb_strlen($title) > 35 ? mb_substr($title, 0, 35) . '...' : $title;
+                        $desc_short    = mb_strlen($desc) > 45 ? mb_substr($desc, 0, 45) . '...' : $desc;
+                        $keyword_short = mb_strlen($keyword) > 35 ? mb_substr($keyword, 0, 35) . '...' : $keyword;
+                      ?> 
                       <tr>
                         <td><?php echo $i; ?></td>
-                       
-                       
-
-                        <td><?php echo $page_data->page;?></td>
-                        <td><?php echo $page_data->meta_title;?></td>
-                        <td><?php echo $page_data->meta_desc;?></td>
-                        <td><?php echo $page_data->meta_key_word;?></td>
+                        <td><strong><?php echo esc($page_data->page); ?></strong></td>
+                        <td title="<?php echo esc($title); ?>"><?php echo esc($title_short); ?></td>
+                        <td title="<?php echo esc($desc); ?>"><?php echo esc($desc_short); ?></td>
+                        <td title="<?php echo esc($keyword); ?>"><?php echo esc($keyword_short); ?></td>
                         <td>
                           <a class="dropdown-item" href="<?php echo base_url();?>Admin/Seo/Edit/<?php echo $page_data->id;?>"><i class="icon-base bx bx-edit-alt me-2"></i> </a>
-                          
                         </td>
-                        
                       </tr>
-
                       <?php $i++; } ?>
                       
                      

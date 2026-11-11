@@ -28,6 +28,14 @@ class Seo extends BaseController
         if (!empty($page)) {
             $builder->like('page', $page);
             $item = $builder->get()->getRow();
+            if (empty($item) && in_array(strtolower($page), ['profile', 'dashboard'])) {
+                $item = $db->table('saiyoojyam_seo')
+                    ->where('page', 'Profile')
+                    ->orWhere('page', 'Dashboard')
+                    ->orLike('page', 'Profile')
+                    ->orLike('page', 'Dashboard')
+                    ->get()->getRow();
+            }
             if (empty($item)) {
                 $item = $db->table('saiyoojyam_seo')->where('id', 1)->get()->getRow();
             }
@@ -75,6 +83,15 @@ class Seo extends BaseController
 
         if (empty($item)) {
             $item = $db->table('saiyoojyam_seo')->like('page', $pageName)->get()->getRow();
+        }
+
+        if (empty($item) && in_array(strtolower($pageName), ['profile', 'dashboard'])) {
+            $item = $db->table('saiyoojyam_seo')
+                ->where('page', 'Profile')
+                ->orWhere('page', 'Dashboard')
+                ->orLike('page', 'Profile')
+                ->orLike('page', 'Dashboard')
+                ->get()->getRow();
         }
 
         if (empty($item) && strtolower($pageName) === 'home') {

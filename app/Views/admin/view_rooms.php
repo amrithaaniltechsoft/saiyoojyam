@@ -29,10 +29,11 @@
                     <?php 
                       $selected_building  = !empty($selected_building) ? $selected_building : (!empty($_GET['building']) ? $_GET['building'] : '');
                       $selected_room_type = !empty($selected_room_type) ? $selected_room_type : (!empty($_GET['room_type']) ? $_GET['room_type'] : '');
+                      $selected_room      = !empty($selected_room) ? $selected_room : (!empty($_GET['room']) ? $_GET['room'] : '');
                     ?>
 
                     <div class="row g-3 align-items-center justify-content-center mb-3">
-                      <div class="col-md-4 col-lg-3">
+                      <div class="col-md-3 col-lg-3">
                         <select id="building_filter" class="form-select build_clz" name="building">
                           <option value="">All Buildings</option>
                           <?php foreach($buildings as $build){ ?>
@@ -41,11 +42,20 @@
                         </select>
                       </div>
 
-                      <div class="col-md-4 col-lg-3">
+                      <div class="col-md-3 col-lg-3">
                         <select id="room_type_filter" class="form-select room_clz" name="room_type">
                           <option value="">All Room Types</option>
                           <?php if(!empty($dropdown_room_types)){ foreach($dropdown_room_types as $rt){ ?> 
                             <option value="<?php echo $rt->room_type_id; ?>" <?php if($selected_room_type == $rt->room_type_id){echo "selected";}?>><?php echo $rt->room_type_name;?></option>
+                          <?php } } ?> 
+                        </select>
+                      </div>
+
+                      <div class="col-md-3 col-lg-3">
+                        <select id="room_filter" class="form-select room_item_clz" name="room">
+                          <option value="">All Rooms</option>
+                          <?php if(!empty($dropdown_rooms)){ foreach($dropdown_rooms as $r){ ?> 
+                            <option value="<?php echo $r->rooms_id; ?>" <?php if($selected_room == $r->rooms_id){echo "selected";}?>><?php echo $r->rooms_name;?></option>
                           <?php } } ?> 
                         </select>
                       </div>
@@ -141,31 +151,21 @@
 
             <script>
               $(document).ready(function() {
-                // When building changes: fetch room types of that building via AJAX and submit
+                // When building changes: clear room type and room, then submit
                 $('#filter_form .build_clz').on('change', function() {
-                  var buildId = $(this).val();
-
-                  $.ajax({
-                    url: "<?php echo base_url(); ?>Admin/Ajax/tariffRoomTypes",
-                    type: "POST",
-                    data: { ID: buildId, filter_mode: 1 },
-                    success: function(data) {
-                      try {
-                        var res = JSON.parse(data);
-                        $('#filter_form .room_clz').html(res.rooms);
-                      } catch (e) {}
-                      $('#filter_form .room_clz').val('');
-                      $('#filter_form').submit();
-                    },
-                    error: function() {
-                      $('#filter_form .room_clz').val('');
-                      $('#filter_form').submit();
-                    }
-                  });
+                  $('#filter_form .room_clz').val('');
+                  $('#filter_form .room_item_clz').val('');
+                  $('#filter_form').submit();
                 });
 
-                // Auto-submit on room type change
+                // When room type changes: clear room, then submit
                 $('#filter_form .room_clz').on('change', function() {
+                  $('#filter_form .room_item_clz').val('');
+                  $('#filter_form').submit();
+                });
+
+                // When room changes: submit
+                $('#filter_form .room_item_clz').on('change', function() {
                   $('#filter_form').submit();
                 });
               });

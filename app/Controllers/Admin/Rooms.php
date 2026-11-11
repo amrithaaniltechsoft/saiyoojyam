@@ -10,8 +10,9 @@ class Rooms extends BaseController
 {
     public function index(){
 
-        $building = $this->request->getGet('building') ?? '';
+        $building  = $this->request->getGet('building') ?? '';
         $room_type = $this->request->getGet('room_type') ?? '';
+        $room      = $this->request->getGet('room') ?? '';
 
         $db = \Config\Database::connect();
         $builder = $db->table('saiyoojyam_rooms');
@@ -22,6 +23,10 @@ class Rooms extends BaseController
 
         if (!empty($room_type)) {
             $builder->where('rooms_type', $room_type);
+        }
+
+        if (!empty($room)) {
+            $builder->where('rooms_id', $room);
         }
 
         $builder->orderBy('rooms_id', 'DESC');
@@ -38,8 +43,23 @@ class Rooms extends BaseController
             $data['dropdown_room_types'] = $this->common_model->FetchAllOrder('saiyoojyam_room_type', 'room_type_name', 'ASC');
         }
 
+        $room_cond = array();
+        if (!empty($building)) {
+            $room_cond['rooms_building'] = $building;
+        }
+        if (!empty($room_type)) {
+            $room_cond['rooms_type'] = $room_type;
+        }
+
+        if (!empty($room_cond)) {
+            $data['dropdown_rooms'] = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms', $room_cond, 'rooms_name', 'ASC');
+        } else {
+            $data['dropdown_rooms'] = $this->common_model->FetchAllOrder('saiyoojyam_rooms', 'rooms_name', 'ASC');
+        }
+
         $data['selected_building']  = $building;
         $data['selected_room_type'] = $room_type;
+        $data['selected_room']      = $room;
 
         return view('admin/view_rooms', $data);
     }

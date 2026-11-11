@@ -65,6 +65,7 @@ class Ajax extends BaseController
 
             $building_id  = $this->request->getPost('building_id');
             $room_type_id = $this->request->getPost('room_type_id');
+            $filterMode   = (bool) $this->request->getPost('filter_mode');
 
             $cond = array();
             if(!empty($building_id)){
@@ -74,9 +75,17 @@ class Ajax extends BaseController
                 $cond['rooms_type'] = $room_type_id;
             }
 
-            $rooms = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms', $cond, 'rooms_name', 'ASC');
+            if(!empty($cond)){
+                $rooms = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms', $cond, 'rooms_name', 'ASC');
+            } else {
+                $rooms = $this->common_model->FetchAllOrder('saiyoojyam_rooms', 'rooms_name', 'ASC');
+            }
 
-            $options = "<option value='' selected disabled>Select Rooms</option>";
+            if ($filterMode) {
+                $options = "<option value=''>All Rooms</option>";
+            } else {
+                $options = "<option value='' selected disabled>Select Rooms</option>";
+            }
 
             if(!empty($rooms)){
                 foreach($rooms as $room){

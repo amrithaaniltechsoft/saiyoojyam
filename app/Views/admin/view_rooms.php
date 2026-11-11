@@ -24,6 +24,40 @@
               <!-- Basic Bootstrap Table -->
               <div class="card">
                 <h5 class="card-header">View Room</h5>
+                <div class="card-body pb-2">
+                  <form id="filter_form" method="GET" action="<?php echo base_url(); ?>Admin/Rooms">
+                    <?php 
+                      $selected_building  = !empty($selected_building) ? $selected_building : (!empty($_GET['building']) ? $_GET['building'] : '');
+                      $selected_room_type = !empty($selected_room_type) ? $selected_room_type : (!empty($_GET['room_type']) ? $_GET['room_type'] : '');
+                    ?>
+
+                    <div class="row g-3 align-items-center justify-content-center mb-3">
+                      <div class="col-md-4 col-lg-3">
+                        <select id="building_filter" class="form-select build_clz" name="building">
+                          <option value="">All Buildings</option>
+                          <?php foreach($buildings as $build){ ?>
+                            <option value="<?php echo $build->building_id; ?>" <?php if($selected_building == $build->building_id){echo "selected"; }?>><?php echo $build->building_name;?></option>
+                          <?php } ?>
+                        </select>
+                      </div>
+
+                      <div class="col-md-4 col-lg-3">
+                        <select id="room_type_filter" class="form-select room_clz" name="room_type">
+                          <option value="">All Room Types</option>
+                          <?php if(!empty($dropdown_room_types)){ foreach($dropdown_room_types as $rt){ ?> 
+                            <option value="<?php echo $rt->room_type_id; ?>" <?php if($selected_room_type == $rt->room_type_id){echo "selected";}?>><?php echo $rt->room_type_name;?></option>
+                          <?php } } ?> 
+                        </select>
+                      </div>
+
+                      <div class="col-auto">
+                        <a href="<?php echo base_url(); ?>Admin/Rooms" class="btn btn-outline-secondary" title="Reset filter">
+                          <i class="bx bx-reset me-1"></i> Reset
+                        </a>
+                      </div>
+                    </div>
+                  </form>
+                </div>
                 <div class="table-responsive text-nowrap">
                   <table class="table display" id="myTable">
                     <thead>
@@ -104,6 +138,38 @@
             <?= $this->include('admin/includes/footer') ?>
 
             <!--Footer section end-->
+
+            <script>
+              $(document).ready(function() {
+                // When building changes: fetch room types of that building via AJAX and submit
+                $('#filter_form .build_clz').on('change', function() {
+                  var buildId = $(this).val();
+
+                  $.ajax({
+                    url: "<?php echo base_url(); ?>Admin/Ajax/tariffRoomTypes",
+                    type: "POST",
+                    data: { ID: buildId, filter_mode: 1 },
+                    success: function(data) {
+                      try {
+                        var res = JSON.parse(data);
+                        $('#filter_form .room_clz').html(res.rooms);
+                      } catch (e) {}
+                      $('#filter_form .room_clz').val('');
+                      $('#filter_form').submit();
+                    },
+                    error: function() {
+                      $('#filter_form .room_clz').val('');
+                      $('#filter_form').submit();
+                    }
+                  });
+                });
+
+                // Auto-submit on room type change
+                $('#filter_form .room_clz').on('change', function() {
+                  $('#filter_form').submit();
+                });
+              });
+            </script>
    
   </body>
 </html>

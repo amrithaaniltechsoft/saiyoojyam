@@ -10,13 +10,38 @@ class Rooms extends BaseController
 {
     public function index(){
 
-        $data['pagedata'] = $this->common_model->FetchAllOrder('saiyoojyam_rooms','rooms_id','DESC');
+        $building = $this->request->getGet('building') ?? '';
+        $room_type = $this->request->getGet('room_type') ?? '';
 
-        $data['buildings'] = $this->common_model->FetchAll('saiyoojyam_building');
+        $db = \Config\Database::connect();
+        $builder = $db->table('saiyoojyam_rooms');
 
+        if (!empty($building)) {
+            $builder->where('rooms_building', $building);
+        }
+
+        if (!empty($room_type)) {
+            $builder->where('rooms_type', $room_type);
+        }
+
+        $builder->orderBy('rooms_id', 'DESC');
+        $data['pagedata'] = $builder->get()->getResult();
+
+        $data['buildings'] = $this->common_model->FetchAllOrder('saiyoojyam_building', 'building_name', 'ASC');
+
+        // All room types for building lookup in table, and filtered room types for the dropdown
         $data['room_types'] = $this->common_model->FetchAll('saiyoojyam_room_type');
 
-        return view('admin/view_rooms',$data);
+        if (!empty($building)) {
+            $data['dropdown_room_types'] = $this->common_model->FetchWhereOrderby('saiyoojyam_room_type', array('room_type_building_id' => $building), 'room_type_name', 'ASC');
+        } else {
+            $data['dropdown_room_types'] = $this->common_model->FetchAllOrder('saiyoojyam_room_type', 'room_type_name', 'ASC');
+        }
+
+        $data['selected_building']  = $building;
+        $data['selected_room_type'] = $room_type;
+
+        return view('admin/view_rooms', $data);
     }
 
 

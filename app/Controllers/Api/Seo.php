@@ -26,16 +26,38 @@ class Seo extends BaseController
         }
 
         if (!empty($page)) {
-            $builder->like('page', $page);
-            $item = $builder->get()->getRow();
-            if (empty($item) && in_array(strtolower($page), ['profile', 'dashboard'])) {
-                $item = $db->table('saiyoojyam_seo')
-                    ->where('page', 'Profile')
-                    ->orWhere('page', 'Dashboard')
-                    ->orLike('page', 'Profile')
-                    ->orLike('page', 'Dashboard')
-                    ->get()->getRow();
+            $normalized = strtolower(trim(str_replace(['-', '_'], ' ', $page)));
+
+            $item = $builder->where('LOWER(page)', strtolower($page))->get()->getRow();
+
+            if (empty($item)) {
+                $item = $db->table('saiyoojyam_seo')->where('LOWER(page)', $normalized)->get()->getRow();
             }
+
+            if (empty($item)) {
+                if ($normalized === 'dashboard') {
+                    $item = $db->table('saiyoojyam_seo')->where('page', 'Dashboard')->get()->getRow();
+                    if (empty($item)) {
+                        $item = $db->table('saiyoojyam_seo')->where('page', 'Profile')->get()->getRow();
+                    }
+                } elseif ($normalized === 'profile') {
+                    $item = $db->table('saiyoojyam_seo')->where('page', 'Profile')->get()->getRow();
+                } elseif (in_array($normalized, ['monthly payment', 'monthly-payment', 'rent', 'rent payment'])) {
+                    $item = $db->table('saiyoojyam_seo')->where('page', 'Monthly Payment')->get()->getRow();
+                } elseif (in_array($normalized, ['payment history', 'payment-history', 'receipts', 'receipt'])) {
+                    $item = $db->table('saiyoojyam_seo')->where('page', 'Payment History')->get()->getRow();
+                } elseif (in_array($normalized, ['terms', 'profile terms', 'terms & conditions', 'rules'])) {
+                    $item = $db->table('saiyoojyam_seo')->where('page', 'Profile Terms')->get()->getRow();
+                    if (empty($item)) {
+                        $item = $db->table('saiyoojyam_seo')->where('page', 'Terms and condition')->get()->getRow();
+                    }
+                }
+            }
+
+            if (empty($item)) {
+                $item = $db->table('saiyoojyam_seo')->like('LOWER(page)', $normalized)->get()->getRow();
+            }
+
             if (empty($item)) {
                 $item = $db->table('saiyoojyam_seo')->where('id', 1)->get()->getRow();
             }
@@ -79,19 +101,36 @@ class Seo extends BaseController
             }
         }
 
-        $item = $db->table('saiyoojyam_seo')->where('page', $pageName)->get()->getRow();
+        $normalized = strtolower(trim(str_replace(['-', '_'], ' ', $pageName)));
+
+        $item = $db->table('saiyoojyam_seo')->where('LOWER(page)', strtolower($pageName))->get()->getRow();
 
         if (empty($item)) {
-            $item = $db->table('saiyoojyam_seo')->like('page', $pageName)->get()->getRow();
+            $item = $db->table('saiyoojyam_seo')->where('LOWER(page)', $normalized)->get()->getRow();
         }
 
-        if (empty($item) && in_array(strtolower($pageName), ['profile', 'dashboard'])) {
-            $item = $db->table('saiyoojyam_seo')
-                ->where('page', 'Profile')
-                ->orWhere('page', 'Dashboard')
-                ->orLike('page', 'Profile')
-                ->orLike('page', 'Dashboard')
-                ->get()->getRow();
+        if (empty($item)) {
+            if ($normalized === 'dashboard') {
+                $item = $db->table('saiyoojyam_seo')->where('page', 'Dashboard')->get()->getRow();
+                if (empty($item)) {
+                    $item = $db->table('saiyoojyam_seo')->where('page', 'Profile')->get()->getRow();
+                }
+            } elseif ($normalized === 'profile') {
+                $item = $db->table('saiyoojyam_seo')->where('page', 'Profile')->get()->getRow();
+            } elseif (in_array($normalized, ['monthly payment', 'monthly-payment', 'rent', 'rent payment'])) {
+                $item = $db->table('saiyoojyam_seo')->where('page', 'Monthly Payment')->get()->getRow();
+            } elseif (in_array($normalized, ['payment history', 'payment-history', 'receipts', 'receipt'])) {
+                $item = $db->table('saiyoojyam_seo')->where('page', 'Payment History')->get()->getRow();
+            } elseif (in_array($normalized, ['terms', 'profile terms', 'terms & conditions', 'rules'])) {
+                $item = $db->table('saiyoojyam_seo')->where('page', 'Profile Terms')->get()->getRow();
+                if (empty($item)) {
+                    $item = $db->table('saiyoojyam_seo')->where('page', 'Terms and condition')->get()->getRow();
+                }
+            }
+        }
+
+        if (empty($item)) {
+            $item = $db->table('saiyoojyam_seo')->like('LOWER(page)', $normalized)->get()->getRow();
         }
 
         if (empty($item) && strtolower($pageName) === 'home') {

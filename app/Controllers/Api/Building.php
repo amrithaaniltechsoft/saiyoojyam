@@ -56,14 +56,27 @@ class Building extends BaseController
             ->get()
             ->getRow();
 
-        // 2. Try prefixed or name-matched or numeric ID
+        // 2. Try prefixed or name-matched or numeric ID or building alias
         if (empty($building)) {
             $builder = $db->table('saiyoojyam_building');
             if (is_numeric($slugClean)) {
                 $builder->where('building_id', (int) $slugClean);
             } else {
-                $builder->where('building_slug', 'saiyoojyam-' . $slugClean)
-                        ->orLike('LOWER(building_name)', $slugClean);
+                $builder->groupStart()
+                    ->where('building_slug', 'saiyoojyam-' . $slugClean)
+                    ->orLike('LOWER(building_name)', $slugClean);
+
+                if (strpos($slugClean, 'tower') !== false) {
+                    $builder->orLike('LOWER(building_slug)', 'tower')
+                            ->orLike('LOWER(building_name)', 'tower');
+                } elseif (strpos($slugClean, 'annex') !== false) {
+                    $builder->orLike('LOWER(building_slug)', 'annex')
+                            ->orLike('LOWER(building_name)', 'annex');
+                } elseif (strpos($slugClean, 'premier') !== false) {
+                    $builder->orLike('LOWER(building_slug)', 'premier')
+                            ->orLike('LOWER(building_name)', 'premier');
+                }
+                $builder->groupEnd();
             }
             $building = $builder->get()->getRow();
         }

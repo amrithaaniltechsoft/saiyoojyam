@@ -906,32 +906,42 @@ class Rooms extends BaseController
 
         // Support optional location/building_id filtering from query string
         $locationParam = trim((string) ($this->request->getGet('location') ?? $this->request->getGet('building_id') ?? ''));
-        $filterBuildingId = null;
+        $matchingBIds = [];
         if ($locationParam !== '' && strtolower($locationParam) !== 'all') {
             $locLower = strtolower($locationParam);
             $cleanLoc = preg_replace('/^saiyoojyam[-_]/i', '', $locLower);
+
+            $isTowerQuery = (strpos($locLower, 'tower') !== false);
+            $isAnnexQuery = (strpos($locLower, 'annex') !== false);
+            $isPremierQuery = (strpos($locLower, 'premier') !== false);
+
             foreach ($buildingMap as $bId => $bInfo) {
+                $bSlugLower = strtolower($bInfo['slug'] ?? '');
+                $bNameLower = strtolower($bInfo['name'] ?? '');
+
                 if (
                     (string) $bId === $locLower ||
-                    strtolower($bInfo['slug']) === $cleanLoc ||
-                    strtolower($bInfo['full_slug']) === $locLower ||
-                    strtolower($bInfo['name']) === $locLower ||
-                    stripos($bInfo['name'], $locLower) !== false
+                    $bSlugLower === $cleanLoc ||
+                    strtolower($bInfo['full_slug'] ?? '') === $locLower ||
+                    $bNameLower === $locLower ||
+                    stripos($bInfo['name'], $locLower) !== false ||
+                    ($isTowerQuery && (strpos($bSlugLower, 'tower') !== false || strpos($bNameLower, 'tower') !== false)) ||
+                    ($isAnnexQuery && (strpos($bSlugLower, 'annex') !== false || strpos($bNameLower, 'annex') !== false)) ||
+                    ($isPremierQuery && (strpos($bSlugLower, 'premier') !== false || strpos($bNameLower, 'premier') !== false))
                 ) {
-                    $filterBuildingId = $bId;
-                    break;
+                    $matchingBIds[] = $bId;
                 }
             }
-            if ($filterBuildingId === null && is_numeric($locationParam)) {
-                $filterBuildingId = (int) $locationParam;
+            if (empty($matchingBIds) && is_numeric($locationParam)) {
+                $matchingBIds[] = (int) $locationParam;
             }
         }
 
         $roomTypes = [];
         if ($db->tableExists('saiyoojyam_room_type')) {
             $builder = $db->table('saiyoojyam_room_type');
-            if ($filterBuildingId !== null) {
-                $builder->where('room_type_building_id', $filterBuildingId);
+            if (!empty($matchingBIds)) {
+                $builder->whereIn('room_type_building_id', $matchingBIds);
             }
             $builder->orderBy('room_type_name', 'ASC');
             $roomTypes = $builder->get()->getResult();

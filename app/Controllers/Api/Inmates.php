@@ -243,9 +243,12 @@ class Inmates extends BaseController
                     ->get()
                     ->getResult();
 
-                if (!empty($roomObj->rooms_building) && !empty($roomObj->rooms_type)) {
+                $targetBuildingId = $roomRow ? (int)$roomRow->rooms_building : $buildingId;
+                $targetRoomTypeId = $roomRow ? (int)$roomRow->rooms_type : $roomTypeId;
+
+                if ($targetBuildingId > 0 && $targetRoomTypeId > 0) {
                     foreach ($tariffs as $tf) {
-                        if ((int)$tf->tariffs_building === (int)$roomObj->rooms_building && (int)$tf->tariffs_room_types === (int)$roomObj->rooms_type) {
+                        if ((int)$tf->tariffs_building === $targetBuildingId && (int)$tf->tariffs_room_types === $targetRoomTypeId) {
                             $tariffId = (int) $tf->tariffs_id;
                             $cautionDeposit = (float) ($tf->tariffs_caution_deposit ?? 0);
                             $admissionFee = (float) ($tf->tariffs_admission_fees ?? 0);
@@ -288,6 +291,9 @@ class Inmates extends BaseController
                 if ($bRow && !empty($bRow->building_admission_fees)) {
                     $admissionFee = (float) $bRow->building_admission_fees;
                 }
+            }
+            if ($monthlyBaseRent <= 0 && isset($input['baseMonthlyRent']) && (float)$input['baseMonthlyRent'] > 0) {
+                $monthlyBaseRent = (float) $input['baseMonthlyRent'];
             }
             if ($monthlyBaseRent <= 0 && isset($input['monthlyRent'])) {
                 $monthlyBaseRent = (float) $input['monthlyRent'];
@@ -533,6 +539,7 @@ class Inmates extends BaseController
             $join_m = (int) date('m', strtotime($checkInDate));
             $join_day = (int) date('j', strtotime($checkInDate));
             $join_month_days = cal_days_in_month(CAL_GREGORIAN, $join_m, $join_y);
+            $frontendCalculatedRent = isset($input['calculatedRent']) ? (float)$input['calculatedRent'] : 0.0;
 
             // Check if Short Term stay with specified checkout date
             if ($durationId === 1 && !empty($checkOutDate) && $checkOutDate !== '0000-00-00') {
@@ -561,6 +568,10 @@ class Inmates extends BaseController
                 $stayDays = $join_month_days - $join_day + 1;
                 $perDay = $monthlyBaseRent > 0 ? ($monthlyBaseRent / $join_month_days) : 0;
                 $calculatedRent = $monthlyBaseRent + round($stayDays * $perDay, 2);
+            }
+
+            if ($calculatedRent <= 0 && $frontendCalculatedRent > 0) {
+                $calculatedRent = $frontendCalculatedRent;
             }
 
             $totalAmount = $calculatedRent + $cautionDeposit + $admissionFee;

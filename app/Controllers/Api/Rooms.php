@@ -172,8 +172,10 @@ class Rooms extends BaseController
         // 3. Fetch Tariffs
         $tariffsByRoom = [];
         $tariffsByType = [];
+        $tariffsByBuilding = [];
         $tariffsMetaByRoom = [];
         $tariffsMetaByType = [];
+        $tariffsMetaByBuilding = [];
         if ($db->tableExists('saiyoojyam_tariffs')) {
             $tariffs = $db->table('saiyoojyam_tariffs')->orderBy('tariffs_id', 'DESC')->get()->getResult();
             foreach ($tariffs as $tf) {
@@ -188,6 +190,28 @@ class Rooms extends BaseController
                 $cleanCd = 0;
                 if (isset($tf->tariffs_caution_deposit) && $tf->tariffs_caution_deposit !== '') {
                     $cleanCd = (float) preg_replace('/[^\d.]/', '', (string) $tf->tariffs_caution_deposit);
+                }
+
+                $tfBId = 0;
+                if (is_numeric($tf->tariffs_building) && (int) $tf->tariffs_building > 0) {
+                    $tfBId = (int) $tf->tariffs_building;
+                } else {
+                    $rawBName = strtolower(trim((string) $tf->tariffs_building));
+                    foreach ($buildingMap as $bmId => $bm) {
+                        if ($bm['slug'] === $rawBName || strtolower($bm['name']) === $rawBName || stripos($bm['name'], $rawBName) !== false) {
+                            $tfBId = (int) $bmId;
+                            break;
+                        }
+                    }
+                }
+
+                if ($tfBId > 0 && !isset($tariffsByBuilding[$tfBId])) {
+                    $tariffsByBuilding[$tfBId] = $price;
+                    $tariffsMetaByBuilding[$tfBId] = [
+                        'price'           => $price,
+                        'admission_fees'  => $cleanAf,
+                        'caution_deposit' => $cleanCd,
+                    ];
                 }
 
                 if (!empty($tf->tariffs_rooms)) {
@@ -213,6 +237,17 @@ class Rooms extends BaseController
                             'admission_fees'  => $cleanAf,
                             'caution_deposit' => $cleanCd,
                         ];
+                    }
+                    if ($tfBId > 0) {
+                        $numKey = $tfBId . '_' . (int) $tf->tariffs_room_types;
+                        if (!isset($tariffsByType[$numKey])) {
+                            $tariffsByType[$numKey] = $price;
+                            $tariffsMetaByType[$numKey] = [
+                                'price'           => $price,
+                                'admission_fees'  => $cleanAf,
+                                'caution_deposit' => $cleanCd,
+                            ];
+                        }
                     }
                 }
             }
@@ -363,6 +398,11 @@ class Rooms extends BaseController
                     $hasTariff = true;
                     $af = (float) ($tariffsMetaByRoom[$roomId]['admission_fees'] ?? 0);
                     $cd = (float) ($tariffsMetaByRoom[$roomId]['caution_deposit'] ?? 0);
+                } elseif (isset($tariffsByBuilding[$bId]) && $tariffsByBuilding[$bId] > 0) {
+                    $rentPrice = $tariffsByBuilding[$bId];
+                    $hasTariff = true;
+                    $af = (float) ($tariffsMetaByBuilding[$bId]['admission_fees'] ?? 0);
+                    $cd = (float) ($tariffsMetaByBuilding[$bId]['caution_deposit'] ?? 0);
                 }
 
                 if ($af <= 0 && !empty($buildingMap[$bId]['admission_fees'])) {
@@ -372,9 +412,12 @@ class Rooms extends BaseController
                     $cd = (float) $buildingMap[$bId]['caution_deposit'];
                 }
 
-                // If this room has NO tariff added in saiyoojyam_tariffs, skip it completely
+                // If room has no explicit tariff added in saiyoojyam_tariffs:
                 if (!$hasTariff || $rentPrice <= 0) {
-                    continue;
+                    // For property showcase / room dropdowns or any building with rooms in database:
+                    // Fall back to building tariff or standard room rate so the room displays properly
+                    $rentPrice = !empty($tariffsByBuilding[$bId]) ? $tariffsByBuilding[$bId] : 6000;
+                    $hasTariff = true;
                 }
 
                 // Client Search Availability Rules:
@@ -693,9 +736,10 @@ class Rooms extends BaseController
                     stripos($bKey, $locationParam) !== false ||
                     stripos($locationParam, $bKey) !== false ||
                     stripos($bName, $locationParam) !== false ||
-                    ($locationParam === 'annex' && stripos($bKey, 'annex') !== false) ||
-                    ($locationParam === 'towers' && stripos($bKey, 'tower') !== false) ||
-                    ($locationParam === 'premier' && stripos($bKey, 'premier') !== false)
+                    stripos($locationParam, $bName) !== false ||
+                    ($locationParam === 'annex' && (stripos($bKey, 'annex') !== false || stripos($bName, 'annex') !== false)) ||
+                    (($locationParam === 'towers' || $locationParam === 'towers-1-2' || $locationParam === 'tower') && (stripos($bKey, 'tower') !== false || stripos($bName, 'tower') !== false)) ||
+                    ($locationParam === 'premier' && (stripos($bKey, 'premier') !== false || stripos($bName, 'premier') !== false))
                 );
 
                 if (!$matchesLocation) {

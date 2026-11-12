@@ -963,6 +963,13 @@ $(document).ready(function () {
         $('#rentalSearchInput').focus();
     });
 
+    $('#rentalSearchInput').on('keydown', function(e) {
+        if (e.key === 'Escape') {
+            $(this).val('');
+            applySearchFilter();
+        }
+    });
+
     function fetchBuildingInmates() {
         var build  = $(".build_clz").val() || 'all';
         var month  = $(".month_clz").val();
@@ -983,8 +990,9 @@ $(document).ready(function () {
             url: "<?php echo base_url(); ?>Admin/Ajax/inmatesDetails",
             type: "POST",
             data: { Build: build, Month: month, Year: year, Status: status },
+            dataType: "json",
             success: function(data) {
-                var res = JSON.parse(data);
+                var res = (typeof data === 'object') ? data : JSON.parse(data);
                 $('.inmates_details').html(res.inmates_details);
 
                 if (res.summary) {
@@ -997,7 +1005,8 @@ $(document).ready(function () {
 
                 applySearchFilter();
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error("Rental AJAX Error:", status, error);
                 $('.inmates_details').html('<tr><td colspan="9" class="text-center py-4 text-danger"><i class="fa fa-exclamation-triangle me-2"></i>Failed to load rental details. Please try again.</td></tr>');
             }
         });
@@ -1013,10 +1022,15 @@ $(document).ready(function () {
                 url: "<?php echo base_url(); ?>Admin/Ajax/checkYear",
                 type: "POST",
                 data: { currentYear: year },
+                dataType: "json",
                 success: function(data) {
-                    var res = JSON.parse(data);
+                    var res = (typeof data === 'object') ? data : JSON.parse(data);
                     $('.tbody_data').html(res.year_html);
                     applySearchFilter();
+                },
+                error: function(xhr, status, error) {
+                    console.error("Year check AJAX Error:", status, error);
+                    $('.tbody_data').html('<tr><td colspan="13" class="text-center py-4 text-danger"><i class="fa fa-exclamation-triangle me-2"></i>Failed to load calendar. Please try again.</td></tr>');
                 }
             });
             $('.status_clz').hide();

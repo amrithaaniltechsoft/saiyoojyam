@@ -263,7 +263,37 @@
                 <?php } ?>
                 <!-- Basic with Icons -->
 
-
+                <?php if (!empty($last_paid_invoice) && (float)$last_paid_invoice->invoice_balance > 0) { ?>
+                <div class="col-12 mb-3">
+                  <div class="card" style="border-left: 5px solid #ffab00; background: #fffcf5;">
+                    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                      <div>
+                        <h6 class="mb-1 text-warning font-weight-bold" style="font-size: 15px;">
+                          <i class="bx bx-error-circle me-1"></i> Pending Balance from Check-out Extension
+                        </h6>
+                        <p class="mb-0 text-muted" style="font-size: 13.5px;">
+                          Check-out date for <strong><?= esc($inmates->inmates_name) ?></strong> (<?= esc($inmates->inmates_uid) ?>) is scheduled for <strong><?= !empty($inmates->inmates_check_out_date) && $inmates->inmates_check_out_date != '0000-00-00' ? date('d-M-Y', strtotime($inmates->inmates_check_out_date)) : '-' ?></strong>.
+                          Additional rent has been calculated and updated on invoice <strong>#<?= $last_paid_invoice->invoice_id ?></strong>.
+                        </p>
+                        <div class="mt-2" style="font-size: 13px;">
+                          <span class="badge bg-label-secondary me-2">Updated Rent: ₹<?= number_format((float)$last_paid_invoice->invoice_rent, 2) ?></span>
+                          <span class="badge bg-label-secondary me-2">Total Amount: ₹<?= number_format((float)$last_paid_invoice->invoice_total, 2) ?></span>
+                          <span class="badge bg-label-success me-2">Paid: ₹<?= number_format((float)$last_paid_invoice->invoice_paid_amount, 2) ?></span>
+                          <span class="badge bg-label-warning text-dark font-weight-bold">Pending Balance: ₹<?= number_format((float)$last_paid_invoice->invoice_balance, 2) ?></span>
+                        </div>
+                      </div>
+                      <div>
+                        <button type="button" class="btn btn-warning partiall_paid_clz"
+                          data-id="<?= $last_paid_invoice->invoice_id ?>"
+                          data-total="<?= $last_paid_invoice->invoice_total ?>"
+                          data-paid="<?= $last_paid_invoice->invoice_paid_amount ?>">
+                          <i class="bx bx-credit-card me-1"></i> Pay Balance (₹<?= number_format((float)$last_paid_invoice->invoice_balance, 2) ?>)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <?php } ?>
 
                  <!-- Basic Bootstrap Table -->
                  <div class="card">

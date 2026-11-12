@@ -557,7 +557,14 @@ class Inmates extends BaseController
                 }
             }
 
+            $oldCheckout = $data['inmate']->inmates_check_out_date ?? null;
+            $newCheckout = $update_data['inmates_check_out_date'] ?? null;
+
             $this->common_model->EditData($update_data,array('inmates_id' => $id),'saiyoojyam_inmates');
+
+            if (!empty($newCheckout) && $newCheckout !== $oldCheckout) {
+                $this->syncCheckoutExtensionRent($id, $oldCheckout, $newCheckout);
+            }
 
             // Sync updated email & name to resident login credentials (auth_identities & saiyoojyam_users)
             $userId = (int) ($data['inmate']->inmates_user_id ?? 0);
@@ -773,6 +780,9 @@ $joins = array(
 
 
         }
+
+        // Synchronize invoice rent & balance with inmate's checkout date
+        $this->syncInmateCurrentInvoiceWithCheckout($id);
 
         $data['invoices'] = $this->common_model->FetchWhereOrderby('saiyoojyam_invoice',['invoice_inmates' => $id],'invoice_payment_month','DESC');
 
@@ -2057,6 +2067,9 @@ $joins = array(
             'inmates_status'         => $status,
         ), array('inmates_id' => $inmateId), 'saiyoojyam_inmates');
 
+        // Recalculate rent and synchronize invoice balance if checkout date changed
+        $this->syncCheckoutExtensionRent($inmateId, $existingCheckout, $checkout_date);
+
         $formatted_date = date('d-M-Y', strtotime($checkout_date));
         $msg = ($status === 'checked_out')
             ? "Inmate checked out successfully today ($formatted_date)."
@@ -2073,6 +2086,119 @@ $joins = array(
 
         $this->session->setFlashdata('alert', ['type' => 'success', 'msg' => $msg]);
         return redirect()->to(site_url().'Admin/Inmates');
+    }
+
+    /**
+     * Synchronize invoice rent and balance when an inmate's checkout date is updated/extended.
+     */
+    public function syncCheckoutExtensionRent($inmateId, $oldCheckout = null, $newCheckout = null)
+    {
+        $inmate = $this->common_model->SingleRow('saiyoojyam_inmates', ['inmates_id' => $inmateId]);
+        if (!$inmate) {
+            return;
+        }
+
+        $checkIn = $inmate->inmates_check_in_date;
+        $checkOut = !empty($newCheckout) ? $newCheckout : $inmate->inmates_check_out_date;
+
+        if (empty($checkIn) || $checkIn === '0000-00-00' || empty($checkOut) || $checkOut === '0000-00-00') {
+            return;
+        }
+
+        $checkoutMonth = date('Y-m-01', strtotime($checkOut));
+        $checkinMonth = date('Y-m-01', strtotime($checkIn));
+
+        // Find existing invoice for checkout month, or check-in month
+        $invoice = $this->common_model->SingleRow('saiyoojyam_invoice', [
+            'invoice_inmates'       => $inmateId,
+            'invoice_payment_month' => $checkoutMonth,
+        ]);
+
+        if (!$invoice) {
+            $invoice = $this->common_model->SingleRow('saiyoojyam_invoice', [
+                'invoice_inmates'       => $inmateId,
+                'invoice_payment_month' => $checkinMonth,
+            ]);
+        }
+
+        if (!$invoice) {
+            return;
+        }
+
+        $isShortTerm = ((int)$inmate->inmates_duration_of_stay === 1);
+
+        $effective_tariff = $this->getEffectiveTariff($inmateId, $invoice->invoice_payment_month);
+        $monthlyBaseRent = !empty($effective_tariff) ? (float)$this->getApplicableRent($effective_tariff->tariffs_id, $invoice->invoice_payment_month, $effective_tariff->tariffs_price) : 0;
+        if ($monthlyBaseRent <= 0 && !empty($inmate->inmates_tariffs)) {
+            $tariff = $this->common_model->SingleRow('saiyoojyam_tariffs', ['tariffs_id' => $inmate->inmates_tariffs]);
+            $monthlyBaseRent = !empty($tariff) ? (float)$tariff->tariffs_price : 0;
+        }
+
+        if ($monthlyBaseRent <= 0) {
+            return;
+        }
+
+        $invMonth = $invoice->invoice_payment_month;
+        $invYear = (int)date('Y', strtotime($invMonth));
+        $invMonthNum = (int)date('m', strtotime($invMonth));
+        $daysInInvMonth = cal_days_in_month(CAL_GREGORIAN, $invMonthNum, $invYear);
+        $perDayRate = $monthlyBaseRent / $daysInInvMonth;
+
+        if ($isShortTerm) {
+            $dIn = new \DateTime($checkIn);
+            $dOut = new \DateTime($checkOut);
+
+            if (date('Y-m', strtotime($checkOut)) === date('Y-m', strtotime($invMonth))) {
+                if (date('Y-m', strtotime($checkIn)) === date('Y-m', strtotime($invMonth))) {
+                    $diff = $dIn->diff($dOut);
+                    $stayDays = max(1, (int)$diff->days);
+                } else {
+                    $stayDays = max(1, (int)date('j', strtotime($checkOut)));
+                }
+            } else {
+                $inDay = (int)date('j', strtotime($checkIn));
+                $stayDays = max(1, $daysInInvMonth - $inDay + 1);
+            }
+
+            $expectedRent = round($stayDays * $perDayRate, 2);
+        } else {
+            $expectedRent = $this->getVacatingRent($monthlyBaseRent, $invMonth, $checkOut, $checkIn);
+        }
+
+        $currentRent = (float)$invoice->invoice_rent;
+        if (abs($expectedRent - $currentRent) > 0.01) {
+            $rentDiff = $expectedRent - $currentRent;
+            $newTotal = round((float)$invoice->invoice_total + $rentDiff, 2);
+            $paidAmount = (float)$invoice->invoice_paid_amount;
+            $newBalance = max(0, round($newTotal - $paidAmount, 2));
+            $newAdvance = max(0, round($paidAmount - $newTotal, 2));
+
+            $newStatus = 1; // Fully paid
+            if ($newBalance > 0.01) {
+                $newStatus = 2; // Partially paid
+            } elseif ($newAdvance > 0.01) {
+                $newStatus = 3; // Advance paid
+            }
+
+            $this->common_model->EditData([
+                'invoice_rent'    => $expectedRent,
+                'invoice_total'   => $newTotal,
+                'invoice_balance' => $newBalance,
+                'invoice_advance' => $newAdvance,
+                'invoice_status'  => $newStatus,
+            ], ['invoice_id' => $invoice->invoice_id], 'saiyoojyam_invoice');
+        }
+    }
+
+    /**
+     * Helper to synchronize current invoice of an inmate with their current check out date.
+     */
+    public function syncInmateCurrentInvoiceWithCheckout($inmateId)
+    {
+        $inmate = $this->common_model->SingleRow('saiyoojyam_inmates', ['inmates_id' => $inmateId]);
+        if ($inmate && !empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date !== '0000-00-00') {
+            $this->syncCheckoutExtensionRent($inmateId, null, $inmate->inmates_check_out_date);
+        }
     }
 
 

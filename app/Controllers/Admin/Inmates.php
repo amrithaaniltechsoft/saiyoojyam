@@ -2008,6 +2008,19 @@ $joins = array(
             $checkout_date = $today;
         }
 
+        // If resident already has a scheduled upcoming check-out date in the future,
+        // rescheduled check-out date cannot be earlier than the currently scheduled date.
+        $existingCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date !== '0000-00-00') ? $inmate->inmates_check_out_date : null;
+        if ($existingCheckout && $existingCheckout > $today && $checkout_date < $existingCheckout) {
+            $existing_fmt = date('d-M-Y', strtotime($existingCheckout));
+            $msg = 'Check out date cannot be earlier than currently scheduled date (' . $existing_fmt . ').';
+            if ($isAjax) {
+                return $this->response->setStatusCode(400)->setJSON(['status' => false, 'message' => $msg]);
+            }
+            $this->session->setFlashdata('alert', ['type' => 'error', 'msg' => $msg]);
+            return redirect()->to(site_url().'Admin/Inmates');
+        }
+
         // Validate 1-month minimum stay rule: Inmates can check out only after 1 month from check in date
         // Note: Policy applies ONLY to Long Term stay. Short Term stays (duration_of_stay == 1) do NOT require a 1-month minimum stay!
         $isShortTerm = ((int)($inmate->inmates_duration_of_stay ?? 0) === 1);

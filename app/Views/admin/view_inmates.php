@@ -832,18 +832,27 @@
                   $('#checkoutForm').data('one-month-fmt', oneMonthFmt);
                   $('#checkoutForm').data('checkin-fmt', checkin);
                   $('#checkoutForm').data('checkin-raw', checkinRaw);
-                  $('#checkoutForm').data('is-short-term', isShortTerm ? '1' : '0');
+                  $('#checkoutForm').data('current-checkout', currentCheckout);
 
                   var tomorrowD = new Date();
                   tomorrowD.setDate(tomorrowD.getDate() + 1);
                   var tomorrowStr = formatDateYMD(tomorrowD);
+                  var hasFutureCheckout = (currentCheckout && currentCheckout > globalToday);
                   var effectiveMinDate;
                   if (isShortTerm) {
-                    effectiveMinDate = (checkinRaw && checkinRaw > tomorrowStr) ? checkinRaw : tomorrowStr;
+                    if (hasFutureCheckout) {
+                      effectiveMinDate = currentCheckout;
+                    } else {
+                      effectiveMinDate = (checkinRaw && checkinRaw > tomorrowStr) ? checkinRaw : tomorrowStr;
+                    }
                   } else {
-                    effectiveMinDate = canToday ? tomorrowStr : oneMonth;
+                    if (hasFutureCheckout) {
+                      effectiveMinDate = (oneMonth && oneMonth > currentCheckout) ? oneMonth : currentCheckout;
+                    } else {
+                      effectiveMinDate = canToday ? tomorrowStr : oneMonth;
+                    }
                   }
-                  var initialSelectedDate = (currentCheckout && currentCheckout >= (isShortTerm ? (checkinRaw || tomorrowStr) : effectiveMinDate)) ? currentCheckout : (isShortTerm ? (currentCheckout || tomorrowStr) : effectiveMinDate);
+                  var initialSelectedDate = hasFutureCheckout ? currentCheckout : (canToday ? tomorrowStr : effectiveMinDate);
 
                   // Initialize Fancy Flatpickr on the input field
                   if (checkoutPicker) {
@@ -855,7 +864,7 @@
                     altInput: true,
                     altFormat: 'd-M-Y (l)',
                     altInputClass: 'form-control border-start-0 border-end-0 fw-bold text-dark fancy-datepicker-input',
-                    minDate: isShortTerm ? (checkinRaw || tomorrowStr) : effectiveMinDate,
+                    minDate: effectiveMinDate,
                     defaultDate: initialSelectedDate,
                     static: true,
                     monthSelectorType: 'static',
@@ -868,7 +877,27 @@
 
                   updateHelperInfo(initialSelectedDate, checkinRaw);
 
-                  if (!canToday) {
+                  if (hasFutureCheckout) {
+                    // INMATE ALREADY HAS SCHEDULED UPCOMING DEPARTURE
+                    var curParts = currentCheckout.split('-');
+                    var curD = new Date(parseInt(curParts[0], 10), parseInt(curParts[1], 10) - 1, parseInt(curParts[2], 10));
+                    var currentCheckoutFmt = String(curD.getDate()).padStart(2, '0') + '-' + curD.toLocaleString('en-US', {month: 'short'}) + '-' + curD.getFullYear();
+
+                    $('#co_policy_warning').removeClass('d-none');
+                    $('#co_policy_warning_text').html('Scheduled departure date is <strong>' + currentCheckoutFmt + '</strong>. Dates before ' + currentCheckoutFmt + ' are disabled.');
+
+                    // Disable "Check Out Today" option
+                    $('#radio_co_today').prop('disabled', true).prop('checked', false);
+                    $('#card_co_today').addClass('disabled').removeClass('active');
+                    $('#co_today_badge').removeClass('bg-danger').addClass('bg-secondary').html('<i class="fa fa-lock me-1"></i>Scheduled: ' + currentCheckoutFmt);
+                    $('#co_today_desc').html('<span class="text-danger fw-semibold">Departure already scheduled for ' + currentCheckoutFmt + '. Check out today is disabled.</span>');
+
+                    // Auto-select "Select Upcoming Date"
+                    $('#radio_co_upcoming').prop('disabled', false).prop('checked', true).trigger('change');
+                    $('#card_co_upcoming').addClass('active');
+
+                    $('#co_badge_quick_indicator').html('<i class="fa fa-calendar-check-o me-1"></i>Scheduled: ' + currentCheckoutFmt).removeClass('bg-success bg-danger text-white').addClass('bg-info text-white');
+                  } else if (!canToday) {
                     // INMATE CANNOT CHECK OUT TODAY
                     $('#co_policy_warning').removeClass('d-none');
                     if (isShortTerm) {
@@ -904,15 +933,9 @@
                       $('#co_badge_quick_indicator').html('<i class="fa fa-check-circle me-1"></i>1-Mo Policy Satisfied').removeClass('bg-danger bg-info text-white').addClass('bg-success text-white');
                     }
 
-                    if (currentCheckout && currentCheckout > globalToday) {
-                      $('#radio_co_upcoming').prop('checked', true).trigger('change');
-                      $('#card_co_upcoming').addClass('active');
-                      $('#card_co_today').removeClass('active');
-                    } else {
-                      $('#radio_co_today').prop('checked', true).trigger('change');
-                      $('#card_co_today').addClass('active');
-                      $('#card_co_upcoming').removeClass('active');
-                    }
+                    $('#radio_co_today').prop('checked', true).trigger('change');
+                    $('#card_co_today').addClass('active');
+                    $('#card_co_upcoming').removeClass('active');
                   }
 
                   // Move modal to body if needed to avoid z-index or stacking clipping
@@ -973,11 +996,19 @@
                   var oneMonthFmt = $form.data('one-month-fmt');
                   var checkinFmt = $form.data('checkin-fmt');
                   var checkinRaw = $form.data('checkin-raw');
+                  var currentCheckout = $form.data('current-checkout');
 
                   var type = $('input[name="checkout_type"]:checked').val();
                   var upcomingDate = $('#co_upcoming_date').val();
 
                   if (type === 'today') {
+                    if (currentCheckout && currentCheckout > globalToday) {
+                      var curParts = currentCheckout.split('-');
+                      var curD = new Date(parseInt(curParts[0], 10), parseInt(curParts[1], 10) - 1, parseInt(curParts[2], 10));
+                      var curFmt = String(curD.getDate()).padStart(2, '0') + '-' + curD.toLocaleString('en-US', {month: 'short'}) + '-' + curD.getFullYear();
+                      $('#co_error_alert').removeClass('d-none').text('Departure is already scheduled for ' + curFmt + '. Check out today is not allowed.');
+                      return false;
+                    }
                     if (!canToday) {
                       if (isShortTerm) {
                         $('#co_error_alert').removeClass('d-none').text('Check out is allowed on or after the check in date (' + checkinFmt + ').');
@@ -989,6 +1020,13 @@
                   } else if (type === 'upcoming') {
                     if (!upcomingDate) {
                       $('#co_error_alert').removeClass('d-none').text('Please select an upcoming check out date.');
+                      return false;
+                    }
+                    if (currentCheckout && currentCheckout > globalToday && upcomingDate < currentCheckout) {
+                      var curParts = currentCheckout.split('-');
+                      var curD = new Date(parseInt(curParts[0], 10), parseInt(curParts[1], 10) - 1, parseInt(curParts[2], 10));
+                      var curFmt = String(curD.getDate()).padStart(2, '0') + '-' + curD.toLocaleString('en-US', {month: 'short'}) + '-' + curD.getFullYear();
+                      $('#co_error_alert').removeClass('d-none').text('Check out date cannot be earlier than currently scheduled date (' + curFmt + ').');
                       return false;
                     }
                     if (isShortTerm) {

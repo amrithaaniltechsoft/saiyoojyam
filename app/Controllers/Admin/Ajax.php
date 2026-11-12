@@ -727,7 +727,12 @@ class Ajax extends BaseController
             $year         = $this->request->getPost('Year');
             $statusFilter = $this->request->getPost('Status') ?? 'all';
 
-            $inmates = $this->common_model->inmatesBuilding($month, $year, array('inmates_building' => $building), $statusFilter);
+            $cond = [];
+            if (!empty($building) && $building !== 'all') {
+                $cond['saiyoojyam_inmates.inmates_building'] = $building;
+            }
+
+            $inmates = $this->common_model->inmatesBuilding($month, $year, $cond, $statusFilter);
 
             $response['inmates_details'] = "";
             
@@ -759,20 +764,73 @@ class Ajax extends BaseController
                         $statusBadge = '<span class="badge" style="background:#fdecea; color:#c0392b; padding:5px 10px; border-radius:4px; font-weight:600; border:1px solid #c0392b;">Unpaid</span>';
                     }
 
-                    $roomName     = !empty($inmate->rooms_name) ? $inmate->rooms_name : '-';
+                    $roomName     = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : '-');
                     $roomType     = !empty($inmate->room_type_name) ? $inmate->room_type_name : '-';
                     $rent         = number_format((float)$inmate->rent_amount, 2);
                     $paidAmt      = number_format((float)$inmate->paid_amount, 2);
                     $balanceAmt   = number_format((float)$inmate->balance_amount, 2);
                     $phone        = !empty($inmate->inmates_phone_no) ? $inmate->inmates_phone_no : '-';
                     $uid          = !empty($inmate->inmates_uid) ? "<br/><small class='text-muted'>UID: ".$inmate->inmates_uid."</small>" : "";
+                    $bldLabel     = !empty($inmate->building_name) ? "<br/><small class='text-muted'><i class='fa fa-building-o'></i> " . htmlspecialchars($inmate->building_name) . "</small>" : "";
 
-                    $actionBtn = '<a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'" class="btn btn-sm btn-primary" style="padding:4px 10px; font-size:12px; text-decoration:none;">Receipt / Collect</a>';
+                    $todayDate = date('Y-m-d');
+                    $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
+                    $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
+                    $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
+                    $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
+                    $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
+                    $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
+
+                    $checkoutBtn = '';
+                    if ($isCheckedOut) {
+                        $checkoutBtn = '<span style="font-size:11px;color:#dc2626;font-weight:600;display:block;margin-top:3px;"><i class="fa fa-sign-out"></i> Out: ' . date('d-M-Y', strtotime($inmate->inmates_check_out_date)) . '</span>';
+                    } elseif ($isFutureCheckout) {
+                        $checkoutBtn = '<div style="display:inline-flex;align-items:center;gap:3px;margin-top:3px;">
+                            <span style="font-size:10.5px;background:#e0f2fe;color:#0369a1;padding:2px 5px;border-radius:4px;font-weight:600;" title="Scheduled Upcoming Check Out">
+                                <i class="fa fa-calendar-check-o"></i> ' . date('d-M-Y', strtotime($inmate->inmates_check_out_date)) . '
+                            </span>
+                            <button type="button" class="btn-checkout-trigger"
+                                data-inmate-id="' . $inmate->inmates_id . '"
+                                data-inmate-name="' . htmlspecialchars($inmate->inmates_name, ENT_QUOTES, 'UTF-8') . '"
+                                data-inmate-uid="' . htmlspecialchars($inmate->inmates_uid, ENT_QUOTES, 'UTF-8') . '"
+                                data-inmate-room="' . htmlspecialchars($roomName, ENT_QUOTES, 'UTF-8') . '"
+                                data-checkin-date="' . (!empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-') . '"
+                                data-checkin-raw="' . ($inmate->inmates_check_in_date ?? '') . '"
+                                data-one-month="' . ($oneMonthDate ?: '') . '"
+                                data-one-month-fmt="' . ($oneMonthDate ? date('d-M-Y', strtotime($oneMonthDate)) : '') . '"
+                                data-can-today="' . ($canCheckoutToday ? '1' : '0') . '"
+                                data-current-checkout="' . $inmate->inmates_check_out_date . '"
+                                title="Reschedule departure date"
+                                style="border:1px solid #0284c7;background:#fff;color:#0284c7;border-radius:4px;padding:1px 5px;font-size:10px;cursor:pointer;">
+                                <i class="fa fa-pencil"></i>
+                            </button>
+                        </div>';
+                    } else {
+                        $checkoutBtn = '<button type="button" class="btn btn-sm btn-danger btn-checkout-trigger"
+                            data-inmate-id="' . $inmate->inmates_id . '"
+                            data-inmate-name="' . htmlspecialchars($inmate->inmates_name, ENT_QUOTES, 'UTF-8') . '"
+                            data-inmate-uid="' . htmlspecialchars($inmate->inmates_uid, ENT_QUOTES, 'UTF-8') . '"
+                            data-inmate-room="' . htmlspecialchars($roomName, ENT_QUOTES, 'UTF-8') . '"
+                            data-checkin-date="' . (!empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-') . '"
+                            data-checkin-raw="' . ($inmate->inmates_check_in_date ?? '') . '"
+                            data-one-month="' . ($oneMonthDate ?: '') . '"
+                            data-one-month-fmt="' . ($oneMonthDate ? date('d-M-Y', strtotime($oneMonthDate)) : '') . '"
+                            data-can-today="' . ($canCheckoutToday ? '1' : '0') . '"
+                            data-current-checkout=""
+                            style="padding:3px 8px; font-size:11.5px; margin-top:3px; display:inline-block;">
+                            <i class="fa fa-sign-out"></i> Check Out
+                        </button>';
+                    }
+
+                    $actionBtn = '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+                        <a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'" class="btn btn-sm btn-primary" style="padding:3px 10px; font-size:12px; text-decoration:none;">Receipt / Collect</a>
+                        ' . $checkoutBtn . '
+                    </div>';
 
                     $response['inmates_details'] .= "<tr>
                         <td class='text-center'>".$sl++."</td>
                         <td><strong>".htmlspecialchars($inmate->inmates_name)."</strong>".$uid."</td>
-                        <td>".htmlspecialchars($roomName)." <small class='text-muted'>(".htmlspecialchars($roomType).")</small></td>
+                        <td>".htmlspecialchars($roomName)." <small class='text-muted'>(".htmlspecialchars($roomType).")</small>".$bldLabel."</td>
                         <td>".htmlspecialchars($phone)."</td>
                         <td class='text-end'>₹".$rent."</td>
                         <td class='text-end text-success'>₹".$paidAmt."</td>

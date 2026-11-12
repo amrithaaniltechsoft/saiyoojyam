@@ -282,32 +282,40 @@
 
 <div style="text-align: center; margin-bottom: 20px;">
 
+  <div style="position:relative; display:inline-block; vertical-align:middle; margin: 0 4px 15px 4px;">
+    <i class="fa fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:14px; pointer-events:none;"></i>
+    <input type="text" id="rentalSearchInput" class="form-control" placeholder="Search inmate, UID, room, phone..." style="width:280px; padding:6px 32px 6px 34px; font-size:14px; border-radius:6px; border:1px solid #ccc; background:#fff;">
+    <button type="button" id="clearSearchBtn" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:#94a3b8; font-size:14px; display:none; cursor:pointer; padding:2px 4px;">
+      <i class="fa fa-times-circle"></i>
+    </button>
+  </div>
+
   <select id="yearSelect" class="form-control year_clz"></select>
 
   <select class="form-control month_clz">
-    <option value="" selected disabled>Select Month</option>
+    <option value="" selected>Yearly Calendar (All Months)</option>
     <?php foreach($month as $mon){ ?> 
       <option value="<?php echo $mon->month_id;?>"><?php echo $mon->month_short;?></option>
     <?php } ?>
   </select>
 
   <select class="form-control build_clz">
-    <option value="" selected disabled>Select Building</option>
+    <option value="all" selected>All Buildings</option>
     <?php foreach($building as $build){ ?>
         <option value="<?php echo $build->building_id;?>"><?php echo $build->building_name;?></option>
     <?php } ?>
   </select>
 
   <select class="form-control status_clz" style="display: none;">
-    <option value="all">All Payment Statuses</option>
-    <option value="unpaid" selected>Unpaid & Partial Only</option>
+    <option value="all" selected>All Payment Statuses</option>
+    <option value="unpaid">Unpaid & Partial Only</option>
     <option value="unpaid_only">Strictly Unpaid Only</option>
     <option value="paid">Paid Only</option>
     <option value="partial">Partial Only</option>
     <option value="advance">Advance Only</option>
   </select>
 
-  <div class="yearly_report"><button><a href="<?php echo base_url();?>Admin/Inmates/RentalDetails">Yearly Report</a></button></div>
+  <div class="yearly_report"><button type="button" id="btnYearlyReport"><a href="<?php echo base_url();?>Admin/Inmates/RentalDetails"><i class="fa fa-calendar me-1"></i> Yearly Report</a></button></div>
 
 </div>
 
@@ -882,15 +890,84 @@ $(document).ready(function () {
     }
     $('#yearSelect').val(currentYear);
 
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function applySearchFilter() {
+        var query = $('#rentalSearchInput').val().toLowerCase().trim();
+
+        if (query.length > 0) {
+            $('#clearSearchBtn').show();
+        } else {
+            $('#clearSearchBtn').hide();
+        }
+
+        // 1. Filter Calendar Table (when visible)
+        if ($('#calendarTable').is(':visible')) {
+            var calMatches = 0;
+            var calTotal = 0;
+            $('#calendarTable tbody tr:not(.no-search-row)').each(function() {
+                calTotal++;
+                var text = $(this).find('td:first-child').text().toLowerCase();
+                if (query === '' || text.indexOf(query) !== -1) {
+                    $(this).show();
+                    calMatches++;
+                } else {
+                    $(this).hide();
+                }
+            });
+            $('#calendarTable tbody .no-search-row').remove();
+            if (calTotal > 0 && calMatches === 0 && query !== '') {
+                $('#calendarTable tbody').append('<tr class="no-search-row"><td colspan="13" class="text-center text-muted py-4"><i class="fa fa-search me-2"></i>No inmates matching "<strong>' + escapeHtml(query) + '</strong>" found in the ' + $('.year_clz').val() + ' calendar.</td></tr>');
+            }
+        }
+
+        // 2. Filter Building Table (when visible)
+        if ($('#buildingTable').is(':visible')) {
+            var bldMatches = 0;
+            var bldTotal = 0;
+            $('#buildingTable tbody tr:not(.no-search-row)').each(function() {
+                if ($(this).find('td').length === 1 && $(this).text().indexOf('No inmates found') !== -1) {
+                    return;
+                }
+                bldTotal++;
+                var text = $(this).text().toLowerCase();
+                if (query === '' || text.indexOf(query) !== -1) {
+                    $(this).show();
+                    bldMatches++;
+                } else {
+                    $(this).hide();
+                }
+            });
+            $('#buildingTable tbody .no-search-row').remove();
+            if (bldTotal > 0 && bldMatches === 0 && query !== '') {
+                $('#buildingTable tbody').append('<tr class="no-search-row"><td colspan="9" class="text-center text-muted py-4"><i class="fa fa-search me-2"></i>No inmates matching "<strong>' + escapeHtml(query) + '</strong>" found.</td></tr>');
+            }
+        }
+    }
+
+    $('#rentalSearchInput').on('keyup input', function() {
+        applySearchFilter();
+    });
+
+    $('#clearSearchBtn').on('click', function() {
+        $('#rentalSearchInput').val('');
+        applySearchFilter();
+        $('#rentalSearchInput').focus();
+    });
+
     function fetchBuildingInmates() {
-        var build  = $(".build_clz").val();
+        var build  = $(".build_clz").val() || 'all';
         var month  = $(".month_clz").val();
         var year   = $(".year_clz").val();
         var status = $(".status_clz").val() || 'all';
-
-        if (!build) {
-            return;
-        }
 
         if (!month) {
             $(".month_clz").val(currentMonth);
@@ -898,6 +975,9 @@ $(document).ready(function () {
         }
 
         $('.status_clz').show();
+        $('.inmates_details').html('<tr><td colspan="9" class="text-center py-4 text-muted"><i class="fa fa-spinner fa-spin me-2"></i>Loading rental details...</td></tr>');
+        $('#calendarTable').hide();
+        $('#buildingTable').show();
 
         $.ajax({
             url: "<?php echo base_url(); ?>Admin/Ajax/inmatesDetails",
@@ -915,17 +995,20 @@ $(document).ready(function () {
                     $('#summaryBanner').show();
                 }
 
-                $('#calendarTable').hide();
-                $('#buildingTable').show();
+                applySearchFilter();
+            },
+            error: function() {
+                $('.inmates_details').html('<tr><td colspan="9" class="text-center py-4 text-danger"><i class="fa fa-exclamation-triangle me-2"></i>Failed to load rental details. Please try again.</td></tr>');
             }
         });
     }
 
     $('.year_clz').on('change', function() {
-        if ($(".build_clz").val()) {
+        if ($(".month_clz").val()) {
             fetchBuildingInmates();
         } else {
             var year = $(this).val();
+            $('.tbody_data').html('<tr><td colspan="13" class="text-center py-4 text-muted"><i class="fa fa-spinner fa-spin me-2"></i>Loading calendar for ' + year + '...</td></tr>');
             $.ajax({
                 url: "<?php echo base_url(); ?>Admin/Ajax/checkYear",
                 type: "POST",
@@ -933,6 +1016,7 @@ $(document).ready(function () {
                 success: function(data) {
                     var res = JSON.parse(data);
                     $('.tbody_data').html(res.year_html);
+                    applySearchFilter();
                 }
             });
             $('.status_clz').hide();
@@ -942,7 +1026,20 @@ $(document).ready(function () {
         }
     });
 
-    $('.month_clz, .build_clz, .status_clz').on('change', function() {
+    $('.month_clz').on('change', function() {
+        var mVal = $(this).val();
+        if (!mVal) {
+            $('.status_clz').hide();
+            $('#summaryBanner').hide();
+            $('#buildingTable').hide();
+            $('#calendarTable').show();
+            applySearchFilter();
+        } else {
+            fetchBuildingInmates();
+        }
+    });
+
+    $('.build_clz, .status_clz').on('change', function() {
         fetchBuildingInmates();
     });
 });

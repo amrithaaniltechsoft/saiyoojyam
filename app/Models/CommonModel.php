@@ -1240,15 +1240,17 @@ public function FetchLastInvoice($table,$cond){
 
 }
 
-public function inmatesBuilding($month, $year, $cond, $statusFilter = 'all'){
+public function inmatesBuilding($month, $year, $cond = [], $statusFilter = 'all'){
 
     $month_num = sprintf('%02d', (int)$month);
     $target_month_date = "$year-$month_num-01"; 
     $target_month_end  = date('Y-m-t', strtotime($target_month_date));
 
-    $builder = $this->db->table('saiyoojyam_inmates')
-        ->where($cond)
-        ->whereNotIn('saiyoojyam_inmates.inmates_status', array('pending', 'rejected', 'cancelled'))
+    $builder = $this->db->table('saiyoojyam_inmates');
+    if (!empty($cond)) {
+        $builder->where($cond);
+    }
+    $builder->whereNotIn('saiyoojyam_inmates.inmates_status', array('pending', 'rejected', 'cancelled'))
         ->where('inmates_check_in_date <=', $target_month_end)
         ->groupStart()
             ->where('inmates_status !=', 'checked_out')

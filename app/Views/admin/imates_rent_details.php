@@ -196,6 +196,27 @@
     box-shadow: 0 6px 16px rgba(255, 86, 28, 0.35);
     color: #ffffff !important;
   }
+  .btn-theme-reset {
+    background: #f1f5f9;
+    color: #475569 !important;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none !important;
+  }
+  .btn-theme-reset:hover {
+    background: #e2e8f0;
+    color: #1e293b !important;
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  }
 
   /* Metric Stat Cards for Monthly View */
   .stat-card {
@@ -585,8 +606,13 @@
           <option value="advance">Advance Only</option>
         </select>
 
-        <!-- Yearly Report Reset Button -->
-        <a href="<?php echo base_url();?>Admin/Inmates/RentalDetails" id="btnYearlyReport" class="btn-theme-primary">
+        <!-- Reset Button -->
+        <a href="<?php echo base_url();?>Admin/Inmates/RentalDetails" id="btnResetFilters" class="btn-theme-reset" title="Reset all filters and view to default">
+          <i class="fa fa-refresh me-1.5"></i> Reset
+        </a>
+
+        <!-- Yearly Report Button -->
+        <a href="<?php echo base_url();?>Admin/Inmates/RentalDetails" id="btnYearlyReport" class="btn-theme-primary" title="View full 12-month calendar">
           <i class="fa fa-calendar me-1.5"></i> Yearly Report
         </a>
       </div>
@@ -1362,6 +1388,39 @@ $(document).ready(function () {
 
     $('.build_clz, .status_clz').on('change', function() {
         fetchBuildingInmates();
+    });
+
+    // Reset Filters Handler
+    $('#btnResetFilters').on('click', function(e) {
+        var currYear = new Date().getFullYear();
+        var currentSelectedYear = $('.year_clz').val();
+
+        // If year was changed from current year, navigate to base URL to cleanly reload current year data
+        if (currentSelectedYear && currentSelectedYear != currYear) {
+            return true;
+        }
+
+        e.preventDefault();
+
+        // 1. Clear search input and hide clear button
+        $('#rentalSearchInput').val('');
+
+        // 2. Reset dropdown selects
+        $('.month_clz').val('');
+        $('.build_clz').val('all');
+        $('.status_clz').val('all').hide();
+
+        // 3. Reset view cards
+        $('#summaryBanner').hide();
+        $('#buildingCard').hide();
+        $('#calendarCard').show();
+
+        // 4. Reset table filter rows (shows all rows and hides clearSearchBtn)
+        applySearchFilter();
+
+        if (typeof alertify !== 'undefined') {
+            alertify.success('Filters reset to default');
+        }
     });
 
     // Full Screen Toggle Handler

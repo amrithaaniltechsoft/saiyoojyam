@@ -257,6 +257,16 @@
     font-size: 13px;
     margin: 0;
   }
+  #calendarTable th:first-child,
+  #calendarTable td:first-child {
+    width: 18.4%;
+    min-width: 220px;
+  }
+  #calendarTable th:not(:first-child),
+  #calendarTable td:not(:first-child) {
+    width: 6.8%;
+    min-width: 72px;
+  }
   th {
     background: #1e293b;
     color: #ffffff;
@@ -487,7 +497,7 @@
 </head>
 <body>
 
-<div class="container-xxl py-4">
+<div class="container-fluid px-3 px-xl-4 py-3">
 
   <!-- 1. Header Card (Matches Saiyoojyam Dashboard Theme) -->
   <div class="page-header-card mb-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
@@ -502,6 +512,9 @@
     </div>
 
     <div class="d-flex align-items-center gap-2 flex-wrap">
+      <button type="button" id="toggleFullscreenBtn" class="btn-dashboard-nav" title="Toggle Full Screen View (F11)">
+        <i class="fa fa-arrows-alt me-1.5" id="fullscreenIcon"></i> <span id="fullscreenText">Full Screen</span>
+      </button>
       <a href="<?php echo base_url(); ?>Admin/Home" class="btn-dashboard-nav">
         <i class="fa fa-th-large me-1.5"></i> Dashboard
       </a>
@@ -806,15 +819,15 @@
       <table id="buildingTable">
         <thead>
           <tr>
-            <th style="width: 5%; text-align: center;">#</th>
-            <th style="width: 22%;">Inmate Name</th>
-            <th style="width: 18%;">Room & Type</th>
-            <th style="width: 14%;">Phone Number</th>
+            <th style="width: 4%; text-align: center;">#</th>
+            <th style="width: 20%;">Inmate Name</th>
+            <th style="width: 17%;">Room & Type</th>
+            <th style="width: 13%;">Phone Number</th>
             <th style="width: 10%; text-align: right;">Rent (₹)</th>
             <th style="width: 10%; text-align: right;">Paid (₹)</th>
             <th style="width: 10%; text-align: right;">Balance (₹)</th>
-            <th style="width: 11%; text-align: center;">Status</th>
-            <th style="width: 10%; text-align: center;">Action</th>
+            <th style="width: 9%; text-align: center;">Status</th>
+            <th style="width: 7%; text-align: center;">Action</th>
           </tr>
         </thead>
         <tbody class="inmates_details">
@@ -1350,6 +1363,58 @@ $(document).ready(function () {
     $('.build_clz, .status_clz').on('change', function() {
         fetchBuildingInmates();
     });
+
+    // Full Screen Toggle Handler
+    function isFullScreen() {
+        return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+    }
+
+    function toggleFullScreen() {
+        if (!isFullScreen()) {
+            var elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.mozRequestFullScreen) {
+                elem.mozRequestFullScreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+    }
+
+    $('#toggleFullscreenBtn').on('click', function(e) {
+        e.preventDefault();
+        toggleFullScreen();
+    });
+
+    function updateFsBtn() {
+        if (isFullScreen()) {
+            $('#fullscreenIcon').removeClass('fa-arrows-alt').addClass('fa-compress');
+            $('#fullscreenText').text('Exit Full Screen');
+            $('#toggleFullscreenBtn').attr('title', 'Exit Full Screen View');
+        } else {
+            $('#fullscreenIcon').removeClass('fa-compress').addClass('fa-arrows-alt');
+            $('#fullscreenText').text('Full Screen');
+            $('#toggleFullscreenBtn').attr('title', 'Toggle Full Screen View (F11)');
+        }
+    }
+
+    document.addEventListener('fullscreenchange', updateFsBtn);
+    document.addEventListener('webkitfullscreenchange', updateFsBtn);
+    document.addEventListener('mozfullscreenchange', updateFsBtn);
+    document.addEventListener('MSFullscreenChange', updateFsBtn);
 });
 </script>
 

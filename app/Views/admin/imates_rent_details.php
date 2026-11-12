@@ -2,14 +2,383 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Hostel Monthly Rental Calendar</title>
+  <title>Hostel Monthly Rental Calendar - Saiyoojyam</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="<?php echo base_url();?>public/assets/admin/img/favicon/favicon.png" />
+
+  <!-- Google Fonts: Public Sans (Dashboard Typography) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Core Dashboard CSS -->
+  <link rel="stylesheet" href="<?php echo base_url();?>public/assets/admin/vendor/css/core.css" />
+  <link rel="stylesheet" href="<?php echo base_url();?>public/assets/admin/css/demo.css" />
+  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+
+  <!-- jQuery & Vendors -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/css/alertify.min.css"/>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
   <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css" rel="stylesheet"/>
-   <style>
+
+  <style>
+  :root {
+    --theme-primary: #ff561c;
+    --theme-primary-hover: #e0440d;
+    --theme-primary-light: #fff2ed;
+    --theme-primary-border: #ffd8cb;
+    --theme-primary-shadow: rgba(255, 86, 28, 0.35);
+    --theme-dark: #1e293b;
+    --theme-slate: #334155;
+    --theme-bg: #f8fafc;
+  }
+
+  body {
+    font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f8fafc;
+    color: #334155;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Dashboard Header Banner */
+  .page-header-card {
+    background: linear-gradient(135deg, #ff561c 0%, #ff7033 50%, #e0440d 100%);
+    border-radius: 20px;
+    color: #fff;
+    padding: 22px 28px;
+    box-shadow: 0 10px 25px -5px rgba(255, 86, 28, 0.35);
+  }
+  .header-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+  .btn-dashboard-nav {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff !important;
+    padding: 6px 15px;
+    border-radius: 50px;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none !important;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+  }
+  .btn-dashboard-nav:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+    color: #ffffff !important;
+  }
+
+  /* Status Legend Card */
+  .legend-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 10px 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  }
+  .legend-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .pill-paid { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+  .pill-partial { background: #fef9c3; color: #a16207; border: 1px solid #fde047; }
+  .pill-advance { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+  .pill-unpaid { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+  .pill-vacated { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+  /* Filter Toolbar Card */
+  .filter-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 14px 18px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  }
+  .search-input-wrapper {
+    position: relative;
+    width: 290px;
+    max-width: 100%;
+  }
+  .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 14px;
+    pointer-events: none;
+  }
+  .rental-search-control {
+    padding: 7px 32px 7px 36px !important;
+    font-size: 13.5px !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    background: #ffffff !important;
+    color: #1e293b !important;
+    transition: all 0.2s ease !important;
+  }
+  .rental-search-control:focus {
+    border-color: #ff561c !important;
+    box-shadow: 0 0 0 3px rgba(255, 86, 28, 0.18) !important;
+    outline: none !important;
+  }
+  .clear-search-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 15px;
+    display: none;
+    cursor: pointer;
+    padding: 2px 4px;
+  }
+  .clear-search-btn:hover {
+    color: #dc2626;
+  }
+  .rental-select {
+    height: auto;
+    padding: 7px 34px 7px 12px !important;
+    font-size: 13.5px !important;
+    font-weight: 500 !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #cbd5e1 !important;
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+    cursor: pointer;
+    transition: all 0.2s ease !important;
+  }
+  .rental-select:focus {
+    border-color: #ff561c !important;
+    box-shadow: 0 0 0 3px rgba(255, 86, 28, 0.18) !important;
+    outline: none !important;
+  }
+  .btn-theme-primary {
+    background: linear-gradient(135deg, #ff561c 0%, #e0440d 100%);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 10px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(255, 86, 28, 0.25);
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none !important;
+  }
+  .btn-theme-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(255, 86, 28, 0.35);
+    color: #ffffff !important;
+  }
+
+  /* Metric Stat Cards for Monthly View */
+  .stat-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  }
+  .stat-card .stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .stat-total .stat-icon { background: #f1f5f9; color: #334155; }
+  .stat-paid .stat-icon { background: #dcfce7; color: #16a34a; }
+  .stat-partial .stat-icon { background: #fef9c3; color: #b45309; }
+  .stat-unpaid .stat-icon { background: #fee2e2; color: #dc2626; }
+  .stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 2px;
+  }
+  .stat-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+  }
+
+  /* Table Card Wrappers */
+  .table-card-wrapper {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 13px;
+    margin: 0;
+  }
+  th {
+    background: #1e293b;
+    color: #ffffff;
+    padding: 12px 14px;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    text-align: center;
+  }
+  th:first-child {
+    text-align: left;
+    padding-left: 18px;
+  }
+  td {
+    border: 1px solid #f1f5f9;
+    padding: 10px 12px;
+    text-align: center;
+    vertical-align: middle;
+    transition: background 0.15s ease;
+  }
+  td:first-child {
+    text-align: left;
+    padding-left: 18px;
+  }
+  tr:nth-child(even) td {
+    background: #fbfcfe;
+  }
+  tr:hover td {
+    background: #f1f5f9 !important;
+  }
+
+  /* Month Status Cell Highlights */
+  .paid {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    font-weight: 600;
+  }
+  .paid:hover {
+    background: #bbf7d0 !important;
+  }
+  .unpaid {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+    font-weight: 600;
+  }
+  .unpaid:hover {
+    background: #fecaca !important;
+  }
+  .partial {
+    background: #fef9c3 !important;
+    color: #a16207 !important;
+    font-weight: 600;
+  }
+  .partial:hover {
+    background: #fef08a !important;
+  }
+  .advance {
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+    font-weight: 600;
+  }
+  .advance:hover {
+    background: #bae6fd !important;
+  }
+  .vacated {
+    background: #f8fafc !important;
+    color: #64748b !important;
+  }
+  tr.row-vacated td {
+    background: #f8fafc !important;
+    color: #94a3b8;
+    font-style: italic;
+  }
+  tr.row-vacated td a {
+    color: inherit;
+    opacity: .75;
+  }
+  .paid a, .partial a, .unpaid a, .advance a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+    font-weight: 700;
+  }
+
+  /* Inmate Action Buttons */
+  .btn-receipt-action {
+    background: #ff561c;
+    color: #ffffff !important;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    text-decoration: none !important;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+  }
+  .btn-receipt-action:hover {
+    background: #e0440d;
+    transform: translateY(-1px);
+    color: #ffffff !important;
+  }
+  .btn-checkout-theme {
+    background: #dc2626;
+    color: #ffffff;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+  }
+  .btn-checkout-theme:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+  }
+
   /* Checkout Modal Styling */
   .checkout-option-card {
     border: 1.5px solid #e2e8f0;
@@ -114,424 +483,349 @@
     width: 100% !important;
     border-radius: 0 !important;
   }
-  body {
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background: #f4f7fa;
-    margin: 20px;
-    color: #333;
-  }
-
-  h2 {
-    text-align: center;
-    color: #2c3e50;
-    margin-bottom: 10px;
-  }
-
-  #legend {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    margin-bottom: 15px;
-    font-size: 14px;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .legend-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
-    display: inline-block;
-  }
-
-  .legend-paid { background: #eafaf1; border: 1px solid #2e7d32; }
-  .legend-unpaid { background: #fdecea; border: 1px solid #c0392b; }
-  .legend-partial { background: #fff3cd; border: 1px solid #b57f00; }
-  .legend-advance { background: #e6f7fb; border: 1px solid #03c3ec; }
-  .legend-vacated { background: #eceff1; border: 1px solid #78909c; }
-
-  #yearSelect, .month_clz, .build_clz, .status_clz {
-    display: inline-block;
-    width: auto;
-    margin: 0 4px 15px 4px;
-    padding: 6px 12px;
-    font-size: 16px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    background: #fff;
-    cursor: pointer;
-    vertical-align: middle;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  th {
-    background: cadetblue;
-    color: #fff;
-    padding: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-
-  td {
-    border: 1px solid #eee;
-    padding: 10px;
-    text-align: center;
-    transition: background 0.3s;
-  }
-
-  tr:nth-child(even) td {
-    background: #f9fbfc;
-  }
-
-  td:hover {
-    background: #f0f8ff;
-  }
-
-  .paid {
-    background: #eafaf1;
-    color: #2e7d32;
-    font-weight: 500;
-  }
-
-  .unpaid {
-    background: #fdecea;
-    color: #c0392b;
-    font-weight: 500;
-  }
-
-  .partial {
-    background: #fff3cd;
-    color: #b57f00;
-    font-weight: 500;
-  }
-
-  .advance {
-    background: #e6f7fb;
-    color: #03c3ec;
-    font-weight: 500;
-  }
-
-  .vacated {
-    background: #e0e0e0;
-    color: #555;
-    font-style: italic;
-    font-weight: 500;
-  }
-
-  tr.row-vacated td {
-    background: #eceff1 !important;
-    color: #78909c;
-    font-style: italic;
-  }
-
-  tr.row-vacated td a {
-    color: inherit;
-    opacity: .8;
-  }
-
-  .paid a, .partial a, .unpaid a, .advance a {
-    color: inherit;
-    text-decoration: none;
-    display: block;
-  }
-
-  .yearly_report {
-    display: inline-block;
-    vertical-align: middle;
-    margin: 0 4px 15px 4px;
-  }
-  .yearly_report button {
-    margin: 0;
-    padding: 6px 12px;
-    font-size: 16px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    background: #fff;
-    cursor: pointer;
-  }
-  .yearly_report a {
-    color: black;
-    text-decoration: none;
-  }
 </style>
 </head>
 <body>
 
-<h2>Saiyoojyam Rental Calendar</h2>
+<div class="container-xxl py-4">
 
-<!--- Color Legend -->
-<div id="legend">
-  <div class="legend-item"><span class="legend-color legend-paid"></span> Paid </div>
-  <div class="legend-item"><span class="legend-color legend-partial"></span> Partial</div>
-  <div class="legend-item"><span class="legend-color legend-advance"></span> Advance</div>
-  <div class="legend-item"><span class="legend-color legend-unpaid"></span> Unpaid</div>
-  <div class="legend-item"><span class="legend-color legend-vacated"></span> Checked Out</div>
-</div>
+  <!-- 1. Header Card (Matches Saiyoojyam Dashboard Theme) -->
+  <div class="page-header-card mb-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="header-icon-box">
+        <i class="fa fa-calendar-check-o"></i>
+      </div>
+      <div>
+        <h3 class="fw-bold mb-1 text-white">Saiyoojyam Rental Calendar</h3>
+        <p class="mb-0 text-white-50" style="font-size:13.5px;">Resident monthly rental collection, invoices & checkout management</p>
+      </div>
+    </div>
 
-<div style="text-align: center; margin-bottom: 20px;">
-
-  <div style="position:relative; display:inline-block; vertical-align:middle; margin: 0 4px 15px 4px;">
-    <i class="fa fa-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:14px; pointer-events:none;"></i>
-    <input type="text" id="rentalSearchInput" class="form-control" placeholder="Search inmate, UID, room, phone..." style="width:280px; padding:6px 32px 6px 34px; font-size:14px; border-radius:6px; border:1px solid #ccc; background:#fff;">
-    <button type="button" id="clearSearchBtn" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; color:#94a3b8; font-size:14px; display:none; cursor:pointer; padding:2px 4px;">
-      <i class="fa fa-times-circle"></i>
-    </button>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <a href="<?php echo base_url(); ?>Admin/Home" class="btn-dashboard-nav">
+        <i class="fa fa-th-large me-1.5"></i> Dashboard
+      </a>
+      <a href="<?php echo base_url(); ?>Admin/Inmates" class="btn-dashboard-nav">
+        <i class="fa fa-users me-1.5"></i> Inmates
+      </a>
+      <a href="<?php echo base_url(); ?>Admin/Rooms/Available" class="btn-dashboard-nav">
+        <i class="fa fa-bed me-1.5"></i> Available Rooms
+      </a>
+    </div>
   </div>
 
-  <select id="yearSelect" class="form-control year_clz"></select>
+  <!-- 2. Status Legend Pill Strip -->
+  <div class="legend-card mb-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <span class="text-uppercase fw-bold text-muted" style="font-size:11px;letter-spacing:0.5px;">
+        <i class="fa fa-tag me-1 text-primary"></i> Payment Legend:
+      </span>
+      <div class="d-flex align-items-center flex-wrap gap-2">
+        <span class="legend-pill pill-paid"><i class="fa fa-check-circle me-1"></i> Paid</span>
+        <span class="legend-pill pill-partial"><i class="fa fa-clock-o me-1"></i> Partial</span>
+        <span class="legend-pill pill-advance"><i class="fa fa-rocket me-1"></i> Advance</span>
+        <span class="legend-pill pill-unpaid"><i class="fa fa-exclamation-circle me-1"></i> Unpaid</span>
+        <span class="legend-pill pill-vacated"><i class="fa fa-sign-out me-1"></i> Checked Out</span>
+      </div>
+    </div>
+  </div>
 
-  <select class="form-control month_clz">
-    <option value="" selected>Yearly Calendar (All Months)</option>
-    <?php foreach($month as $mon){ ?> 
-      <option value="<?php echo $mon->month_id;?>"><?php echo $mon->month_short;?></option>
-    <?php } ?>
-  </select>
-
-  <select class="form-control build_clz">
-    <option value="all" selected>All Buildings</option>
-    <?php foreach($building as $build){ ?>
-        <option value="<?php echo $build->building_id;?>"><?php echo $build->building_name;?></option>
-    <?php } ?>
-  </select>
-
-  <select class="form-control status_clz" style="display: none;">
-    <option value="all" selected>All Payment Statuses</option>
-    <option value="unpaid">Unpaid & Partial Only</option>
-    <option value="unpaid_only">Strictly Unpaid Only</option>
-    <option value="paid">Paid Only</option>
-    <option value="partial">Partial Only</option>
-    <option value="advance">Advance Only</option>
-  </select>
-
-  <div class="yearly_report"><button type="button" id="btnYearlyReport"><a href="<?php echo base_url();?>Admin/Inmates/RentalDetails"><i class="fa fa-calendar me-1"></i> Yearly Report</a></button></div>
-
-</div>
-
-<table id="calendarTable">
-  <thead>
-    <tr>
-      <th>Inmates</th>
-      
-      <?php $year =0 ;foreach($month as $mon){ ?> 
-      <th><?php echo $mon->month_short;?></th>
-      <?php } ?>
-    </tr>
-  </thead>
- <tbody class="tbody_data">
-  
-<?php foreach($inmates as $inmate){ ?> 
-  <tr <?php if($inmate->inmates_status == 'checked_out'){ echo 'class="row-vacated"'; } ?>>
-    <td>
-      <strong><?php echo htmlspecialchars($inmate->inmates_name); ?></strong>
-      <br/><small class="text-muted"><?php echo htmlspecialchars($inmate->inmates_uid); ?></small>
-      <?php
-        $todayDate = date('Y-m-d');
-        $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
-        $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
-        $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
-        $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
-        $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
-        $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
-        $roomName = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : 'Assigned Room');
-      ?>
-      <?php if($isCheckedOut) { ?>
-        <br/><span style="font-size:11.5px;color:#dc2626;font-weight:600;">
-          <i class="fa fa-sign-out"></i> Out: <?php echo date('d-M-Y', strtotime($inmate->inmates_check_out_date)); ?>
-        </span>
-      <?php } elseif($isFutureCheckout) { ?>
-        <br/>
-        <div style="display:inline-flex;align-items:center;gap:4px;margin-top:3px;">
-          <span style="font-size:11px;background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:600;" title="Scheduled Upcoming Check Out">
-            <i class="fa fa-calendar-check-o"></i> <?php echo date('d-M-Y', strtotime($inmate->inmates_check_out_date)); ?> (Upcoming)
-          </span>
-          <button type="button" class="btn-checkout-trigger"
-            data-inmate-id="<?php echo $inmate->inmates_id; ?>"
-            data-inmate-name="<?php echo esc($inmate->inmates_name); ?>"
-            data-inmate-uid="<?php echo esc($inmate->inmates_uid); ?>"
-            data-inmate-room="<?php echo esc($roomName); ?>"
-            data-checkin-date="<?php echo !empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-'; ?>"
-            data-checkin-raw="<?php echo $inmate->inmates_check_in_date ?? ''; ?>"
-            data-one-month="<?php echo $oneMonthDate ?: ''; ?>"
-            data-one-month-fmt="<?php echo $oneMonthDate ? date('d-M-Y', strtotime($oneMonthDate)) : ''; ?>"
-            data-can-today="<?php echo $canCheckoutToday ? '1' : '0'; ?>"
-            data-current-checkout="<?php echo $inmate->inmates_check_out_date; ?>"
-            title="Reschedule departure date"
-            style="border:1px solid #0284c7;background:#fff;color:#0284c7;border-radius:4px;padding:1px 5px;font-size:11px;cursor:pointer;">
-            <i class="fa fa-pencil"></i>
-          </button>
-        </div>
-      <?php } else { ?>
-        <br/>
-        <button type="button" class="btn-checkout-trigger"
-          data-inmate-id="<?php echo $inmate->inmates_id; ?>"
-          data-inmate-name="<?php echo esc($inmate->inmates_name); ?>"
-          data-inmate-uid="<?php echo esc($inmate->inmates_uid); ?>"
-          data-inmate-room="<?php echo esc($roomName); ?>"
-          data-checkin-date="<?php echo !empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-'; ?>"
-          data-checkin-raw="<?php echo $inmate->inmates_check_in_date ?? ''; ?>"
-          data-one-month="<?php echo $oneMonthDate ?: ''; ?>"
-          data-one-month-fmt="<?php echo $oneMonthDate ? date('d-M-Y', strtotime($oneMonthDate)) : ''; ?>"
-          data-can-today="<?php echo $canCheckoutToday ? '1' : '0'; ?>"
-          data-current-checkout=""
-          style="font-size:12px;color:#fff;background:#e74c3c;padding:3px 10px;border-radius:4px;border:none;cursor:pointer;display:inline-block;margin-top:3px;font-weight:500;">
-          <i class="fa fa-sign-out"></i> Check Out
+  <!-- 3. Filter Toolbar Card -->
+  <div class="filter-card mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2.5">
+      <!-- Search Input -->
+      <div class="search-input-wrapper">
+        <i class="fa fa-search search-icon"></i>
+        <input type="text" id="rentalSearchInput" class="form-control rental-search-control" placeholder="Search inmate, UID, room, phone...">
+        <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">
+          <i class="fa fa-times-circle"></i>
         </button>
-      <?php } ?>
-    </td>
+      </div>
 
-    <?php  
-    
-      $invoiceMonths = [];
-      foreach($inmate->invoice as $inv){  
-          $parts = explode('-', $inv->invoice_payment_month);
-          $month = (int)$parts[1];
-          $year  = (int)$parts[0];  
-          $invoiceMonths[$month] = [
-              'month'         => $inv->invoice_payment_month,
-              'amount'        => (float)$inv->invoice_paid_amount,
-              'rent'          => (float)$inv->invoice_rent,
-              'status'        => (int)$inv->invoice_status, 
-          ];
-      }
-     
-      $currentMonth = (int)date('m');
-      $currentYear  = (int)date('Y');
-      $yearToShow = $currentYear;
-      $ciDate = strtotime($inmate->inmates_check_in_date);
-      $ciYear = (int)date('Y', $ciDate);
-      $ciMonth = (int)date('m', $ciDate);
-      $ciDay = (int)date('j', $ciDate);
+      <div class="d-flex align-items-center flex-wrap gap-2">
+        <!-- Year Select -->
+        <select id="yearSelect" class="form-select rental-select year_clz" title="Select Calendar Year" style="width: auto;"></select>
 
-      $stayRent = 0.0;
-      if ($ciDay >= 21) {
-        $daysInCiMonth = cal_days_in_month(CAL_GREGORIAN, $ciMonth, $ciYear);
-        $stayDays = $daysInCiMonth - $ciDay + 1;
-        $tariffPrice = !empty($inmate->tariffs_price) ? (float)$inmate->tariffs_price : 0.0;
-        if ($tariffPrice <= 0 && isset($invoiceMonths[$ciMonth + 1])) {
-          $invRent = (float)$invoiceMonths[$ciMonth + 1]['rent'];
-          $tariffPrice = $invRent / (1 + ($stayDays / $daysInCiMonth));
-        }
-        $stayRent = round($stayDays * ($tariffPrice / $daysInCiMonth), 2);
-      }
+        <!-- Month Select -->
+        <select class="form-select rental-select month_clz" title="Select Month View" style="width: auto;">
+          <option value="" selected>Yearly Calendar (All Months)</option>
+          <?php foreach($month as $mon){ ?> 
+            <option value="<?php echo $mon->month_id;?>"><?php echo $mon->month_short;?> (<?php echo $mon->month_name ?? $mon->month_short;?>)</option>
+          <?php } ?>
+        </select>
 
-      for ($m = 1; $m <= 12; $m++) {
+        <!-- Building Select -->
+        <select class="form-select rental-select build_clz" title="Select Building" style="width: auto;">
+          <option value="all" selected>All Buildings</option>
+          <?php foreach($building as $build){ ?>
+            <option value="<?php echo $build->building_id;?>"><?php echo $build->building_name;?></option>
+          <?php } ?>
+        </select>
 
-        if(($yearToShow > $currentYear) || (($yearToShow < $ciYear) || ($yearToShow == $ciYear && $m < $ciMonth))){
-          echo '<td></td>';
-          continue;
-        }
+        <!-- Status Select (Shown in monthly view) -->
+        <select class="form-select rental-select status_clz" style="display: none; width: auto;" title="Filter by Payment Status">
+          <option value="all" selected>All Payment Statuses</option>
+          <option value="unpaid">Unpaid & Partial Only</option>
+          <option value="unpaid_only">Strictly Unpaid Only</option>
+          <option value="paid">Paid Only</option>
+          <option value="partial">Partial Only</option>
+          <option value="advance">Advance Only</option>
+        </select>
 
-        $invData = null;
-        $cellTitle = '';
+        <!-- Yearly Report Reset Button -->
+        <a href="<?php echo base_url();?>Admin/Inmates/RentalDetails" id="btnYearlyReport" class="btn-theme-primary">
+          <i class="fa fa-calendar me-1.5"></i> Yearly Report
+        </a>
+      </div>
+    </div>
+  </div>
 
-        if ($ciDay >= 21 && $yearToShow == $ciYear && $m == $ciMonth) {
-          $nextM = ($ciMonth == 12) ? 1 : ($ciMonth + 1);
-          if (isset($invoiceMonths[$nextM])) {
-            $invData = [
-              'amount' => number_format($stayRent, 2, '.', ''),
-              'status' => $invoiceMonths[$nextM]['status']
-            ];
-            $cellTitle = 'title="Stay Rent: ₹' . number_format($stayRent, 2) . ' (Paid with next month)"';
-          }
-        } elseif ($ciDay >= 21 && $yearToShow == $ciYear && $m == ($ciMonth + 1) && isset($invoiceMonths[$m])) {
-          $inv = $invoiceMonths[$m];
-          $remAmount = max(0, $inv['amount'] - $stayRent);
-          $invData = [
-            'amount' => number_format($remAmount, 2, '.', ''),
-            'status' => $inv['status']
-          ];
-          $cellTitle = 'title="Monthly Rent & Fees: ₹' . number_format($remAmount, 2) . '"';
-        } elseif (isset($invoiceMonths[$m])) {
-          $invData = $invoiceMonths[$m];
-        }
+  <!-- 4. Monthly Summary Stat Cards (Displayed when a month is selected) -->
+  <div id="summaryBanner" style="display:none;" class="mb-4">
+    <div class="row g-3 justify-content-center">
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-total">
+          <div class="stat-icon"><i class="fa fa-users"></i></div>
+          <div>
+            <div class="stat-label">Total Inmates</div>
+            <div class="stat-value" id="sumTotal">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-paid">
+          <div class="stat-icon"><i class="fa fa-check-circle"></i></div>
+          <div>
+            <div class="stat-label">Paid</div>
+            <div class="stat-value text-success" id="sumPaid">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-partial">
+          <div class="stat-icon"><i class="fa fa-clock-o"></i></div>
+          <div>
+            <div class="stat-label">Partial</div>
+            <div class="stat-value text-warning" id="sumPartial">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-unpaid">
+          <div class="stat-icon"><i class="fa fa-exclamation-circle"></i></div>
+          <div>
+            <div class="stat-label">Unpaid</div>
+            <div class="stat-value text-danger" id="sumUnpaid">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        if (!empty($invData)) {
+  <!-- 5. Table 1: 12-Month Yearly Calendar Table -->
+  <div id="calendarCard" class="table-card-wrapper mb-4">
+    <div class="table-responsive">
+      <table id="calendarTable">
+        <thead>
+          <tr>
+            <th style="min-width: 220px;">Inmate Details</th>
+            <?php foreach($month as $mon){ ?> 
+              <th style="min-width: 78px;"><?php echo $mon->month_short;?></th>
+            <?php } ?>
+          </tr>
+        </thead>
+        <tbody class="tbody_data">
+          <?php foreach($inmates as $inmate){ ?> 
+            <tr <?php if($inmate->inmates_status == 'checked_out'){ echo 'class="row-vacated"'; } ?>>
+              <td>
+                <div class="fw-bold text-dark" style="font-size:13.5px;"><?php echo htmlspecialchars($inmate->inmates_name); ?></div>
+                <small class="text-muted font-monospace"><?php echo htmlspecialchars($inmate->inmates_uid); ?></small>
+                <?php
+                  $todayDate = date('Y-m-d');
+                  $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
+                  $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
+                  $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
+                  $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
+                  $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
+                  $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
+                  $roomName = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : 'Assigned Room');
+                ?>
+                <?php if($isCheckedOut) { ?>
+                  <br/><span style="font-size:11px;color:#dc2626;font-weight:600;">
+                    <i class="fa fa-sign-out"></i> Out: <?php echo date('d-M-Y', strtotime($inmate->inmates_check_out_date)); ?>
+                  </span>
+                <?php } elseif($isFutureCheckout) { ?>
+                  <br/>
+                  <div style="display:inline-flex;align-items:center;gap:4px;margin-top:3px;">
+                    <span style="font-size:11px;background:#e0f2fe;color:#0369a1;padding:2px 7px;border-radius:6px;font-weight:600;border:1px solid #bae6fd;" title="Scheduled Upcoming Check Out">
+                      <i class="fa fa-calendar-check-o"></i> <?php echo date('d-M-Y', strtotime($inmate->inmates_check_out_date)); ?>
+                    </span>
+                    <button type="button" class="btn-checkout-trigger"
+                      data-inmate-id="<?php echo $inmate->inmates_id; ?>"
+                      data-inmate-name="<?php echo esc($inmate->inmates_name); ?>"
+                      data-inmate-uid="<?php echo esc($inmate->inmates_uid); ?>"
+                      data-inmate-room="<?php echo esc($roomName); ?>"
+                      data-checkin-date="<?php echo !empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-'; ?>"
+                      data-checkin-raw="<?php echo $inmate->inmates_check_in_date ?? ''; ?>"
+                      data-one-month="<?php echo $oneMonthDate ?: ''; ?>"
+                      data-one-month-fmt="<?php echo $oneMonthDate ? date('d-M-Y', strtotime($oneMonthDate)) : ''; ?>"
+                      data-can-today="<?php echo $canCheckoutToday ? '1' : '0'; ?>"
+                      data-current-checkout="<?php echo $inmate->inmates_check_out_date; ?>"
+                      title="Reschedule departure date"
+                      style="border:1px solid #0284c7;background:#fff;color:#0284c7;border-radius:5px;padding:1px 6px;font-size:11px;cursor:pointer;">
+                      <i class="fa fa-pencil"></i>
+                    </button>
+                  </div>
+                <?php } else { ?>
+                  <br/>
+                  <button type="button" class="btn-checkout-theme btn-checkout-trigger"
+                    data-inmate-id="<?php echo $inmate->inmates_id; ?>"
+                    data-inmate-name="<?php echo esc($inmate->inmates_name); ?>"
+                    data-inmate-uid="<?php echo esc($inmate->inmates_uid); ?>"
+                    data-inmate-room="<?php echo esc($roomName); ?>"
+                    data-checkin-date="<?php echo !empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-'; ?>"
+                    data-checkin-raw="<?php echo $inmate->inmates_check_in_date ?? ''; ?>"
+                    data-one-month="<?php echo $oneMonthDate ?: ''; ?>"
+                    data-one-month-fmt="<?php echo $oneMonthDate ? date('d-M-Y', strtotime($oneMonthDate)) : ''; ?>"
+                    data-can-today="<?php echo $canCheckoutToday ? '1' : '0'; ?>"
+                    data-current-checkout=""
+                    style="margin-top:4px;">
+                    <i class="fa fa-sign-out me-1"></i> Check Out
+                  </button>
+                <?php } ?>
+              </td>
 
-          if ($invData['status'] == 1) {
-            echo '<td class="paid"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
-          } 
-          elseif($invData['status'] == 2) {
-            echo '<td class="partial"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
-          }
-          elseif($invData['status'] == 3) {
-            echo '<td class="advance"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
-          }
-          else{
-            if($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
-              echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
-            } 
-            else {
-              echo '<td></td>'; 
-            }
-          }
+              <?php  
+                $invoiceMonths = [];
+                foreach($inmate->invoice as $inv){  
+                    $parts = explode('-', $inv->invoice_payment_month);
+                    $month = (int)$parts[1];
+                    $year  = (int)$parts[0];  
+                    $invoiceMonths[$month] = [
+                        'month'         => $inv->invoice_payment_month,
+                        'amount'        => (float)$inv->invoice_paid_amount,
+                        'rent'          => (float)$inv->invoice_rent,
+                        'status'        => (int)$inv->invoice_status, 
+                    ];
+                }
+               
+                $currentMonth = (int)date('m');
+                $currentYear  = (int)date('Y');
+                $yearToShow = $currentYear;
+                $ciDate = strtotime($inmate->inmates_check_in_date);
+                $ciYear = (int)date('Y', $ciDate);
+                $ciMonth = (int)date('m', $ciDate);
+                $ciDay = (int)date('j', $ciDate);
 
-        } 
-        else {
-          if ($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
-            echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>'; 
-          } 
-          else {
-            echo '<td></td>'; 
-          }
-        }
-        
-      }
+                $stayRent = 0.0;
+                if ($ciDay >= 21) {
+                  $daysInCiMonth = cal_days_in_month(CAL_GREGORIAN, $ciMonth, $ciYear);
+                  $stayDays = $daysInCiMonth - $ciDay + 1;
+                  $tariffPrice = !empty($inmate->tariffs_price) ? (float)$inmate->tariffs_price : 0.0;
+                  if ($tariffPrice <= 0 && isset($invoiceMonths[$ciMonth + 1])) {
+                    $invRent = (float)$invoiceMonths[$ciMonth + 1]['rent'];
+                    $tariffPrice = $invRent / (1 + ($stayDays / $daysInCiMonth));
+                  }
+                  $stayRent = round($stayDays * ($tariffPrice / $daysInCiMonth), 2);
+                }
 
-    ?>
-  </tr>
-<?php } ?>
+                for ($m = 1; $m <= 12; $m++) {
 
-  
-  
-</tbody>
+                  if(($yearToShow > $currentYear) || (($yearToShow < $ciYear) || ($yearToShow == $ciYear && $m < $ciMonth))){
+                    echo '<td></td>';
+                    continue;
+                  }
 
+                  $invData = null;
+                  $cellTitle = '';
 
-</table>
+                  if ($ciDay >= 21 && $yearToShow == $ciYear && $m == $ciMonth) {
+                    $nextM = ($ciMonth == 12) ? 1 : ($ciMonth + 1);
+                    if (isset($invoiceMonths[$nextM])) {
+                      $invData = [
+                        'amount' => number_format($stayRent, 2, '.', ''),
+                        'status' => $invoiceMonths[$nextM]['status']
+                      ];
+                      $cellTitle = 'title="Stay Rent: ₹' . number_format($stayRent, 2) . ' (Paid with next month)"';
+                    }
+                  } elseif ($ciDay >= 21 && $yearToShow == $ciYear && $m == ($ciMonth + 1) && isset($invoiceMonths[$m])) {
+                    $inv = $invoiceMonths[$m];
+                    $remAmount = max(0, $inv['amount'] - $stayRent);
+                    $invData = [
+                      'amount' => number_format($remAmount, 2, '.', ''),
+                      'status' => $inv['status']
+                    ];
+                    $cellTitle = 'title="Monthly Rent & Fees: ₹' . number_format($remAmount, 2) . '"';
+                  } elseif (isset($invoiceMonths[$m])) {
+                    $invData = $invoiceMonths[$m];
+                  }
 
+                  if (!empty($invData)) {
 
-<!--table2 section start-->
+                    if ($invData['status'] == 1) {
+                      echo '<td class="paid"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
+                    } 
+                    elseif($invData['status'] == 2) {
+                      echo '<td class="partial"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
+                    }
+                    elseif($invData['status'] == 3) {
+                      echo '<td class="advance"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
+                    }
+                    else{
+                      if($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
+                        echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
+                      } 
+                      else {
+                        echo '<td></td>'; 
+                      }
+                    }
 
-<div id="summaryBanner" style="display:none; margin: 15px auto 25px auto; padding: 12px 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); text-align: center;">
-  <span style="margin: 0 15px; font-weight: 600;">Total Inmates: <span id="sumTotal" style="color:#2c3e50;">0</span></span> |
-  <span style="margin: 0 15px; font-weight: 600;">Unpaid: <span id="sumUnpaid" style="color:#c0392b;">0</span></span> |
-  <span style="margin: 0 15px; font-weight: 600;">Partial: <span id="sumPartial" style="color:#b57f00;">0</span></span> |
-  <span style="margin: 0 15px; font-weight: 600;">Paid: <span id="sumPaid" style="color:#2e7d32;">0</span></span>
+                  } 
+                  else {
+                    if ($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
+                      echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>'; 
+                    } 
+                    else {
+                      echo '<td></td>'; 
+                    }
+                  }
+                  
+                }
+
+              ?>
+            </tr>
+          <?php } ?>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 6. Table 2: Monthly Building Table (Displayed when Month or Building is selected) -->
+  <div id="buildingCard" class="table-card-wrapper mb-4" style="display:none;">
+    <div class="table-responsive">
+      <table id="buildingTable">
+        <thead>
+          <tr>
+            <th style="width: 5%; text-align: center;">#</th>
+            <th style="width: 22%;">Inmate Name</th>
+            <th style="width: 18%;">Room & Type</th>
+            <th style="width: 14%;">Phone Number</th>
+            <th style="width: 10%; text-align: right;">Rent (₹)</th>
+            <th style="width: 10%; text-align: right;">Paid (₹)</th>
+            <th style="width: 10%; text-align: right;">Balance (₹)</th>
+            <th style="width: 11%; text-align: center;">Status</th>
+            <th style="width: 10%; text-align: center;">Action</th>
+          </tr>
+        </thead>
+        <tbody class="inmates_details">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
 </div>
-
-<table id="buildingTable" style="display:none;">
-  <thead>
-    <tr>
-      <th style="width: 5%; text-align: center;">#</th>
-      <th style="width: 20%;">Inmate Name</th>
-      <th style="width: 15%;">Room & Type</th>
-      <th style="width: 15%;">Phone Number</th>
-      <th style="width: 10%; text-align: right;">Rent (₹)</th>
-      <th style="width: 10%; text-align: right;">Paid (₹)</th>
-      <th style="width: 10%; text-align: right;">Balance (₹)</th>
-      <th style="width: 10%; text-align: center;">Status</th>
-      <th style="width: 10%; text-align: center;">Action</th>
-    </tr>
-  </thead>
- <tbody class="inmates_details">
-  
-</tbody>
-</table>
 
 <script src="//cdn.jsdelivr.net/npm/alertifyjs@1.13.1/build/alertify.min.js"></script>
-
-<!--table2 section end-->
 <script>
   alertify.set('notifier','position', 'top-center');
 </script>
@@ -653,7 +947,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
 $(document).ready(function () {
@@ -910,7 +1204,7 @@ $(document).ready(function () {
         }
 
         // 1. Filter Calendar Table (when visible)
-        if ($('#calendarTable').is(':visible')) {
+        if ($('#calendarCard').is(':visible')) {
             var calMatches = 0;
             var calTotal = 0;
             $('#calendarTable tbody tr:not(.no-search-row)').each(function() {
@@ -930,7 +1224,7 @@ $(document).ready(function () {
         }
 
         // 2. Filter Building Table (when visible)
-        if ($('#buildingTable').is(':visible')) {
+        if ($('#buildingCard').is(':visible')) {
             var bldMatches = 0;
             var bldTotal = 0;
             $('#buildingTable tbody tr:not(.no-search-row)').each(function() {
@@ -983,8 +1277,8 @@ $(document).ready(function () {
 
         $('.status_clz').show();
         $('.inmates_details').html('<tr><td colspan="9" class="text-center py-4 text-muted"><i class="fa fa-spinner fa-spin me-2"></i>Loading rental details...</td></tr>');
-        $('#calendarTable').hide();
-        $('#buildingTable').show();
+        $('#calendarCard').hide();
+        $('#buildingCard').show();
 
         $.ajax({
             url: "<?php echo base_url(); ?>Admin/Ajax/inmatesDetails",
@@ -1035,8 +1329,8 @@ $(document).ready(function () {
             });
             $('.status_clz').hide();
             $('#summaryBanner').hide();
-            $('#buildingTable').hide();
-            $('#calendarTable').show();
+            $('#buildingCard').hide();
+            $('#calendarCard').show();
         }
     });
 
@@ -1045,8 +1339,8 @@ $(document).ready(function () {
         if (!mVal) {
             $('.status_clz').hide();
             $('#summaryBanner').hide();
-            $('#buildingTable').hide();
-            $('#calendarTable').show();
+            $('#buildingCard').hide();
+            $('#calendarCard').show();
             applySearchFilter();
         } else {
             fetchBuildingInmates();

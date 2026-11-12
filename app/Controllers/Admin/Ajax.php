@@ -752,16 +752,16 @@ class Ajax extends BaseController
                     $statusBadge = '';
                     if ($inmate->payment_status == 1) {
                         $paidCount++;
-                        $statusBadge = '<span class="badge" style="background:#eafaf1; color:#2e7d32; padding:5px 10px; border-radius:4px; font-weight:600; border:1px solid #2e7d32;">Paid</span>';
+                        $statusBadge = '<span class="badge" style="background:#dcfce7; color:#15803d; padding:6px 13px; border-radius:50px; font-weight:700; border:1px solid #86efac; font-size:11.5px;"><i class="fa fa-check-circle me-1"></i> Paid</span>';
                     } elseif ($inmate->payment_status == 2) {
                         $partialCount++;
-                        $statusBadge = '<span class="badge" style="background:#fff3cd; color:#b57f00; padding:5px 10px; border-radius:4px; font-weight:600; border:1px solid #b57f00;">Partial</span>';
+                        $statusBadge = '<span class="badge" style="background:#fef9c3; color:#a16207; padding:6px 13px; border-radius:50px; font-weight:700; border:1px solid #fde047; font-size:11.5px;"><i class="fa fa-clock-o me-1"></i> Partial</span>';
                     } elseif ($inmate->payment_status == 3) {
                         $advanceCount++;
-                        $statusBadge = '<span class="badge" style="background:#e6f7fb; color:#03c3ec; padding:5px 10px; border-radius:4px; font-weight:600; border:1px solid #03c3ec;">Advance</span>';
+                        $statusBadge = '<span class="badge" style="background:#e0f2fe; color:#0369a1; padding:6px 13px; border-radius:50px; font-weight:700; border:1px solid #7dd3fc; font-size:11.5px;"><i class="fa fa-rocket me-1"></i> Advance</span>';
                     } else {
                         $unpaidCount++;
-                        $statusBadge = '<span class="badge" style="background:#fdecea; color:#c0392b; padding:5px 10px; border-radius:4px; font-weight:600; border:1px solid #c0392b;">Unpaid</span>';
+                        $statusBadge = '<span class="badge" style="background:#fee2e2; color:#b91c1c; padding:6px 13px; border-radius:50px; font-weight:700; border:1px solid #fca5a5; font-size:11.5px;"><i class="fa fa-exclamation-circle me-1"></i> Unpaid</span>';
                     }
 
                     $roomName     = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : '-');
@@ -770,7 +770,7 @@ class Ajax extends BaseController
                     $paidAmt      = number_format((float)$inmate->paid_amount, 2);
                     $balanceAmt   = number_format((float)$inmate->balance_amount, 2);
                     $phone        = !empty($inmate->inmates_phone_no) ? $inmate->inmates_phone_no : '-';
-                    $uid          = !empty($inmate->inmates_uid) ? "<br/><small class='text-muted'>UID: ".$inmate->inmates_uid."</small>" : "";
+                    $uid          = !empty($inmate->inmates_uid) ? "<br/><small class='text-muted font-monospace'>UID: ".$inmate->inmates_uid."</small>" : "";
                     $bldLabel     = !empty($inmate->building_name) ? "<br/><small class='text-muted'><i class='fa fa-building-o'></i> " . htmlspecialchars($inmate->building_name) . "</small>" : "";
 
                     $todayDate = date('Y-m-d');
@@ -786,7 +786,7 @@ class Ajax extends BaseController
                         $checkoutBtn = '<span style="font-size:11px;color:#dc2626;font-weight:600;display:block;margin-top:3px;"><i class="fa fa-sign-out"></i> Out: ' . date('d-M-Y', strtotime($inmate->inmates_check_out_date)) . '</span>';
                     } elseif ($isFutureCheckout) {
                         $checkoutBtn = '<div style="display:inline-flex;align-items:center;gap:3px;margin-top:3px;">
-                            <span style="font-size:10.5px;background:#e0f2fe;color:#0369a1;padding:2px 5px;border-radius:4px;font-weight:600;" title="Scheduled Upcoming Check Out">
+                            <span style="font-size:10.5px;background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:5px;font-weight:600;border:1px solid #bae6fd;" title="Scheduled Upcoming Check Out">
                                 <i class="fa fa-calendar-check-o"></i> ' . date('d-M-Y', strtotime($inmate->inmates_check_out_date)) . '
                             </span>
                             <button type="button" class="btn-checkout-trigger"
@@ -806,7 +806,7 @@ class Ajax extends BaseController
                             </button>
                         </div>';
                     } else {
-                        $checkoutBtn = '<button type="button" class="btn btn-sm btn-danger btn-checkout-trigger"
+                        $checkoutBtn = '<button type="button" class="btn-checkout-trigger"
                             data-inmate-id="' . $inmate->inmates_id . '"
                             data-inmate-name="' . htmlspecialchars($inmate->inmates_name, ENT_QUOTES, 'UTF-8') . '"
                             data-inmate-uid="' . htmlspecialchars($inmate->inmates_uid, ENT_QUOTES, 'UTF-8') . '"
@@ -817,13 +817,13 @@ class Ajax extends BaseController
                             data-one-month-fmt="' . ($oneMonthDate ? date('d-M-Y', strtotime($oneMonthDate)) : '') . '"
                             data-can-today="' . ($canCheckoutToday ? '1' : '0') . '"
                             data-current-checkout=""
-                            style="padding:3px 8px; font-size:11.5px; margin-top:3px; display:inline-block;">
+                            style="padding:3px 9px; font-size:11px; margin-top:3px; display:inline-block; background:#dc2626; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:600;">
                             <i class="fa fa-sign-out"></i> Check Out
                         </button>';
                     }
 
-                    $actionBtn = '<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-                        <a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'" class="btn btn-sm btn-primary" style="padding:3px 10px; font-size:12px; text-decoration:none;">Receipt / Collect</a>
+                    $actionBtn = '<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                        <a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'" class="btn btn-sm" style="background:#ff561c; color:#fff; padding:4px 12px; font-size:11.5px; font-weight:600; border-radius:6px; text-decoration:none; box-shadow:0 2px 6px rgba(255,86,28,0.2);"><i class="fa fa-file-text-o me-1"></i> Receipt</a>
                         ' . $checkoutBtn . '
                     </div>';
 

@@ -703,8 +703,9 @@
             $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
             $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
             $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
-            $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
-            $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
+            $isShortTerm = ((int)($inmate->inmates_duration_of_stay ?? 0) === 1);
+            $oneMonthDate = (!$isShortTerm && $checkInDate) ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
+            $canCheckoutToday = $isShortTerm ? (empty($checkInDate) || $todayDate >= $checkInDate) : (empty($oneMonthDate) || ($todayDate >= $oneMonthDate));
             $roomName = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : 'Assigned Room');
             $coDate = $hasCheckout ? strtotime($inmate->inmates_check_out_date) : 0;
             $coYear = $hasCheckout ? (int)date('Y', $coDate) : 0;
@@ -729,6 +730,7 @@
                       data-inmate-name="<?php echo esc($inmate->inmates_name); ?>"
                       data-inmate-uid="<?php echo esc($inmate->inmates_uid); ?>"
                       data-inmate-room="<?php echo esc($roomName); ?>"
+                      data-is-short-term="<?php echo $isShortTerm ? '1' : '0'; ?>"
                       data-checkin-date="<?php echo !empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-'; ?>"
                       data-checkin-raw="<?php echo $inmate->inmates_check_in_date ?? ''; ?>"
                       data-one-month="<?php echo $oneMonthDate ?: ''; ?>"
@@ -747,6 +749,7 @@
                     data-inmate-name="<?php echo esc($inmate->inmates_name); ?>"
                     data-inmate-uid="<?php echo esc($inmate->inmates_uid); ?>"
                     data-inmate-room="<?php echo esc($roomName); ?>"
+                    data-is-short-term="<?php echo $isShortTerm ? '1' : '0'; ?>"
                     data-checkin-date="<?php echo !empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-'; ?>"
                     data-checkin-raw="<?php echo $inmate->inmates_check_in_date ?? ''; ?>"
                     data-one-month="<?php echo $oneMonthDate ?: ''; ?>"
@@ -938,9 +941,13 @@
             <div class="d-flex flex-wrap align-items-center gap-2 text-muted" style="font-size:12px;">
               <span><i class="fa fa-bed me-1 text-danger"></i><span id="co_inmate_room">Room</span></span>
               <span>•</span>
-              <span><i class="fa fa-calendar-check-o me-1 text-primary"></i>Check-in: <strong id="co_inmate_checkin" class="text-dark">-</strong></span>
+              <span id="co_inmate_duration" class="badge bg-light text-dark border">Long Term</span>
               <span>•</span>
-              <span><i class="fa fa-calendar-o me-1 text-success"></i>1-Mo Minimum Stay: <strong id="co_inmate_min_date" class="text-dark">-</strong></span>
+              <span><i class="fa fa-calendar-check-o me-1 text-primary"></i>Check-in: <strong id="co_inmate_checkin" class="text-dark">-</strong></span>
+              <span id="co_min_stay_wrap">
+                <span>•</span>
+                <span><i class="fa fa-calendar-o me-1 text-success"></i>1-Mo Minimum Stay: <strong id="co_inmate_min_date" class="text-dark">-</strong></span>
+              </span>
             </div>
           </div>
 
@@ -1061,6 +1068,7 @@ $(document).ready(function () {
       var room = $(this).data('inmate-room');
       var checkin = $(this).data('checkin-date');
       var checkinRaw = $(this).data('checkin-raw');
+      var isShortTerm = $(this).data('is-short-term') == '1';
       var oneMonth = $(this).data('one-month');
       var oneMonthFmt = $(this).data('one-month-fmt');
       var canToday = $(this).data('can-today') == '1';
@@ -1073,27 +1081,41 @@ $(document).ready(function () {
       $('#co_inmate_checkin').text(checkin || '-');
       $('#co_error_alert').addClass('d-none').text('');
 
-      if (!oneMonth && checkinRaw) {
-        var ciParts = checkinRaw.split('-');
-        var ciD = new Date(parseInt(ciParts[0], 10), parseInt(ciParts[1], 10) - 1, parseInt(ciParts[2], 10));
-        ciD.setMonth(ciD.getMonth() + 1);
-        oneMonth = formatDateYMD(ciD);
-        oneMonthFmt = String(ciD.getDate()).padStart(2, '0') + '-' + ciD.toLocaleString('en-US', {month: 'short'}) + '-' + ciD.getFullYear();
-        canToday = (globalToday >= oneMonth);
+      if (isShortTerm) {
+        $('#co_inmate_duration').removeClass('bg-secondary bg-primary').addClass('bg-info text-dark').html('<i class="fa fa-clock-o me-1"></i>Short Term Stay');
+        $('#co_min_stay_wrap').addClass('d-none');
+        canToday = (!checkinRaw || globalToday >= checkinRaw);
+      } else {
+        $('#co_inmate_duration').removeClass('bg-info text-dark').addClass('bg-primary text-white').html('<i class="fa fa-calendar me-1"></i>Long Term Stay');
+        $('#co_min_stay_wrap').removeClass('d-none');
+        if (!oneMonth && checkinRaw) {
+          var ciParts = checkinRaw.split('-');
+          var ciD = new Date(parseInt(ciParts[0], 10), parseInt(ciParts[1], 10) - 1, parseInt(ciParts[2], 10));
+          ciD.setMonth(ciD.getMonth() + 1);
+          oneMonth = formatDateYMD(ciD);
+          oneMonthFmt = String(ciD.getDate()).padStart(2, '0') + '-' + ciD.toLocaleString('en-US', {month: 'short'}) + '-' + ciD.getFullYear();
+          canToday = (globalToday >= oneMonth);
+        }
+        $('#co_inmate_min_date').text(oneMonthFmt || '-');
       }
-
-      $('#co_inmate_min_date').text(oneMonthFmt || '-');
 
       $('#checkoutForm').data('can-today', canToday ? '1' : '0');
       $('#checkoutForm').data('one-month', oneMonth);
       $('#checkoutForm').data('one-month-fmt', oneMonthFmt);
       $('#checkoutForm').data('checkin-fmt', checkin);
       $('#checkoutForm').data('checkin-raw', checkinRaw);
+      $('#checkoutForm').data('is-short-term', isShortTerm ? '1' : '0');
 
       var tomorrowD = new Date();
       tomorrowD.setDate(tomorrowD.getDate() + 1);
-      var effectiveMinDate = canToday ? formatDateYMD(tomorrowD) : oneMonth;
-      var initialSelectedDate = (currentCheckout && currentCheckout >= effectiveMinDate) ? currentCheckout : effectiveMinDate;
+      var tomorrowStr = formatDateYMD(tomorrowD);
+      var effectiveMinDate;
+      if (isShortTerm) {
+        effectiveMinDate = (checkinRaw && checkinRaw > tomorrowStr) ? checkinRaw : tomorrowStr;
+      } else {
+        effectiveMinDate = canToday ? tomorrowStr : oneMonth;
+      }
+      var initialSelectedDate = (currentCheckout && currentCheckout >= (isShortTerm ? (checkinRaw || tomorrowStr) : effectiveMinDate)) ? currentCheckout : (isShortTerm ? (currentCheckout || tomorrowStr) : effectiveMinDate);
 
       if (checkoutPicker) {
         checkoutPicker.destroy();
@@ -1104,7 +1126,7 @@ $(document).ready(function () {
         altInput: true,
         altFormat: 'd-M-Y (l)',
         altInputClass: 'form-control border-start-0 border-end-0 fw-bold text-dark fancy-datepicker-input',
-        minDate: effectiveMinDate,
+        minDate: isShortTerm ? (checkinRaw || tomorrowStr) : effectiveMinDate,
         defaultDate: initialSelectedDate,
         static: true,
         monthSelectorType: 'static',
@@ -1119,17 +1141,21 @@ $(document).ready(function () {
 
       if (!canToday) {
         $('#co_policy_warning').removeClass('d-none');
-        $('#co_policy_warning_text').html('Inmates can check out only after 1 month from check-in date (' + checkin + '). Earliest eligible check-out date is <strong>' + oneMonthFmt + '</strong>.');
+        if (isShortTerm) {
+          $('#co_policy_warning_text').html('Check out is allowed on or after the check-in date (<strong>' + checkin + '</strong>).');
+        } else {
+          $('#co_policy_warning_text').html('Inmates can check out only after 1 month from check-in date (' + checkin + '). Earliest eligible check-out date is <strong>' + oneMonthFmt + '</strong>.');
+        }
 
         $('#radio_co_today').prop('disabled', true).prop('checked', false);
         $('#card_co_today').addClass('disabled').removeClass('active');
-        $('#co_today_badge').removeClass('bg-danger').addClass('bg-secondary').html('<i class="fa fa-lock me-1"></i>Locked (< 1 Mo)');
-        $('#co_today_desc').html('<span class="text-danger fw-semibold">Not allowed. Must complete 1 month stay (eligible on or after ' + oneMonthFmt + ').</span>');
+        $('#co_today_badge').removeClass('bg-danger').addClass('bg-secondary').html('<i class="fa fa-lock me-1"></i>Locked');
+        $('#co_today_desc').html(isShortTerm ? '<span class="text-danger fw-semibold">Check-in date is in future (' + checkin + ').</span>' : '<span class="text-danger fw-semibold">Not allowed. Must complete 1 month stay (eligible on or after ' + oneMonthFmt + ').</span>');
 
         $('#radio_co_upcoming').prop('disabled', false).prop('checked', true).trigger('change');
         $('#card_co_upcoming').addClass('active');
 
-        $('#co_badge_quick_indicator').html('<i class="fa fa-lock me-1"></i>Min: ' + oneMonthFmt).removeClass('bg-success text-white').addClass('bg-danger text-white');
+        $('#co_badge_quick_indicator').html(isShortTerm ? '<i class="fa fa-calendar me-1"></i>Check-in: ' + checkin : '<i class="fa fa-lock me-1"></i>Min: ' + oneMonthFmt).removeClass('bg-success text-white').addClass('bg-danger text-white');
       } else {
         $('#co_policy_warning').addClass('d-none');
 
@@ -1138,7 +1164,7 @@ $(document).ready(function () {
         $('#co_today_badge').removeClass('bg-secondary').addClass('bg-danger').text(globalTodayFmt);
         $('#co_today_desc').text('Mark resident as departed immediately today and free up the bed.');
 
-        $('#co_badge_quick_indicator').html('<i class="fa fa-check-circle me-1"></i>1-Mo Policy Satisfied').removeClass('bg-danger text-white').addClass('bg-success text-white');
+        $('#co_badge_quick_indicator').html(isShortTerm ? '<i class="fa fa-check-circle me-1"></i>Short Term (Eligible)' : '<i class="fa fa-check-circle me-1"></i>1-Mo Policy Satisfied').removeClass('bg-danger text-white').addClass('bg-success text-white');
 
         if (currentCheckout && currentCheckout > globalToday) {
           $('#radio_co_upcoming').prop('checked', true).trigger('change');
@@ -1198,17 +1224,23 @@ $(document).ready(function () {
       var $btn = $('#btn_submit_checkout');
       var origText = $btn.html();
 
+      var isShortTerm = $form.data('is-short-term') == '1';
       var canToday = $form.data('can-today') == '1';
       var oneMonth = $form.data('one-month');
       var oneMonthFmt = $form.data('one-month-fmt');
       var checkinFmt = $form.data('checkin-fmt');
+      var checkinRaw = $form.data('checkin-raw');
 
       var type = $('input[name="checkout_type"]:checked').val();
       var upcomingDate = $('#co_upcoming_date').val();
 
       if (type === 'today') {
         if (!canToday) {
-          $('#co_error_alert').removeClass('d-none').text('Check out is allowed only after one month from the check in date (' + checkinFmt + '). Earliest eligible check-out date is ' + oneMonthFmt + '.');
+          if (isShortTerm) {
+            $('#co_error_alert').removeClass('d-none').text('Check out is allowed on or after the check in date (' + checkinFmt + ').');
+          } else {
+            $('#co_error_alert').removeClass('d-none').text('Check out is allowed only after one month from the check in date (' + checkinFmt + '). Earliest eligible check-out date is ' + oneMonthFmt + '.');
+          }
           return false;
         }
       } else if (type === 'upcoming') {
@@ -1216,9 +1248,16 @@ $(document).ready(function () {
           $('#co_error_alert').removeClass('d-none').text('Please select an upcoming check out date.');
           return false;
         }
-        if (oneMonth && upcomingDate < oneMonth) {
-          $('#co_error_alert').removeClass('d-none').text('Check out is allowed only after one month from the check in date (' + checkinFmt + '). Selected date cannot be earlier than ' + oneMonthFmt + '.');
-          return false;
+        if (isShortTerm) {
+          if (checkinRaw && upcomingDate < checkinRaw) {
+            $('#co_error_alert').removeClass('d-none').text('Check out date cannot be earlier than check in date (' + checkinFmt + ').');
+            return false;
+          }
+        } else {
+          if (oneMonth && upcomingDate < oneMonth) {
+            $('#co_error_alert').removeClass('d-none').text('Check out is allowed only after one month from the check in date (' + checkinFmt + '). Selected date cannot be earlier than ' + oneMonthFmt + '.');
+            return false;
+          }
         }
       }
 

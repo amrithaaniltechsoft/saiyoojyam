@@ -523,9 +523,10 @@ class Ajax extends BaseController
                 $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
                 $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
                 $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
+                $isShortTerm = ((int)($inmate->inmates_duration_of_stay ?? 0) === 1);
                 $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
-                $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
-                $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
+                $oneMonthDate = (!$isShortTerm && $checkInDate) ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
+                $canCheckoutToday = $isShortTerm ? (empty($checkInDate) || $todayDate >= $checkInDate) : (empty($oneMonthDate) || ($todayDate >= $oneMonthDate));
                 $roomName = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : 'Assigned Room');
                 $coDate = $hasCheckout ? strtotime($inmate->inmates_check_out_date) : 0;
                 $coYear = $hasCheckout ? (int)date('Y', $coDate) : 0;
@@ -550,6 +551,7 @@ class Ajax extends BaseController
                                 data-inmate-name="' . htmlspecialchars($inmate->inmates_name, ENT_QUOTES, 'UTF-8') . '"
                                 data-inmate-uid="' . htmlspecialchars($inmate->inmates_uid, ENT_QUOTES, 'UTF-8') . '"
                                 data-inmate-room="' . htmlspecialchars($roomName, ENT_QUOTES, 'UTF-8') . '"
+                                data-is-short-term="' . ($isShortTerm ? '1' : '0') . '"
                                 data-checkin-date="' . (!empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-') . '"
                                 data-checkin-raw="' . ($inmate->inmates_check_in_date ?? '') . '"
                                 data-one-month="' . ($oneMonthDate ?: '') . '"
@@ -567,6 +569,7 @@ class Ajax extends BaseController
                             data-inmate-name="' . htmlspecialchars($inmate->inmates_name, ENT_QUOTES, 'UTF-8') . '"
                             data-inmate-uid="' . htmlspecialchars($inmate->inmates_uid, ENT_QUOTES, 'UTF-8') . '"
                             data-inmate-room="' . htmlspecialchars($roomName, ENT_QUOTES, 'UTF-8') . '"
+                            data-is-short-term="' . ($isShortTerm ? '1' : '0') . '"
                             data-checkin-date="' . (!empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-') . '"
                             data-checkin-raw="' . ($inmate->inmates_check_in_date ?? '') . '"
                             data-one-month="' . ($oneMonthDate ?: '') . '"
@@ -766,9 +769,10 @@ class Ajax extends BaseController
                     $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
                     $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
                     $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
+                    $isShortTerm = ((int)($inmate->inmates_duration_of_stay ?? 0) === 1);
                     $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
-                    $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
-                    $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
+                    $oneMonthDate = (!$isShortTerm && $checkInDate) ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
+                    $canCheckoutToday = $isShortTerm ? (empty($checkInDate) || $todayDate >= $checkInDate) : (empty($oneMonthDate) || ($todayDate >= $oneMonthDate));
 
                     $statusBadge = '';
                     if ($isCheckedOut) {
@@ -809,6 +813,7 @@ class Ajax extends BaseController
                                 data-inmate-name="' . htmlspecialchars($inmate->inmates_name, ENT_QUOTES, 'UTF-8') . '"
                                 data-inmate-uid="' . htmlspecialchars($inmate->inmates_uid, ENT_QUOTES, 'UTF-8') . '"
                                 data-inmate-room="' . htmlspecialchars($roomName, ENT_QUOTES, 'UTF-8') . '"
+                                data-is-short-term="' . ($isShortTerm ? '1' : '0') . '"
                                 data-checkin-date="' . (!empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-') . '"
                                 data-checkin-raw="' . ($inmate->inmates_check_in_date ?? '') . '"
                                 data-one-month="' . ($oneMonthDate ?: '') . '"
@@ -826,6 +831,7 @@ class Ajax extends BaseController
                             data-inmate-name="' . htmlspecialchars($inmate->inmates_name, ENT_QUOTES, 'UTF-8') . '"
                             data-inmate-uid="' . htmlspecialchars($inmate->inmates_uid, ENT_QUOTES, 'UTF-8') . '"
                             data-inmate-room="' . htmlspecialchars($roomName, ENT_QUOTES, 'UTF-8') . '"
+                            data-is-short-term="' . ($isShortTerm ? '1' : '0') . '"
                             data-checkin-date="' . (!empty($inmate->inmates_check_in_date) ? date('d-M-Y', strtotime($inmate->inmates_check_in_date)) : '-') . '"
                             data-checkin-raw="' . ($inmate->inmates_check_in_date ?? '') . '"
                             data-one-month="' . ($oneMonthDate ?: '') . '"

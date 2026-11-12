@@ -1176,8 +1176,9 @@ public function inmatesMonthRent($date_start,$date_end){
     $currentYear = date('Y',strtotime($date_start));
 
     $query = $this->db->table('saiyoojyam_inmates')
-    ->select('saiyoojyam_inmates.*, saiyoojyam_tariffs.tariffs_price')
+    ->select('saiyoojyam_inmates.*, saiyoojyam_tariffs.tariffs_price, saiyoojyam_rooms.rooms_name')
     ->join('saiyoojyam_tariffs', 'saiyoojyam_inmates.inmates_tariffs = saiyoojyam_tariffs.tariffs_id', 'left')
+    ->join('saiyoojyam_rooms', 'saiyoojyam_inmates.inmates_rooms = saiyoojyam_rooms.rooms_id', 'left')
     
     ->where("DATE_FORMAT(inmates_check_in_date, '%Y') <= $currentYear", NULL, FALSE)
     ->whereNotIn('inmates_status', array('pending', 'rejected', 'cancelled'))

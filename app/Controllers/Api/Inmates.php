@@ -1215,12 +1215,15 @@ class Inmates extends BaseController
         // 3. Split-month rent calculation (if room changed in this month)
         $monthRent = $this->getSplitMonthRent($db, $id, $pm, $baseRent);
 
-        // 4. Vacating prorate (if checking out in this month on or before 10th)
-        $monthRent = $this->getVacatingRent($monthRent, $pm, $inmate->inmates_check_out_date ?? '');
-
-        // 5. First-month check-in prorate (if this is the inmate's check-in month)
+        // 4. Vacating prorate (if checking out in this month)
         $checkInDate = !empty($inmate->inmates_check_in_date) ? $inmate->inmates_check_in_date : '';
-        if ($checkInDate && date('Y-m', strtotime($checkInDate)) === date('Y-m', strtotime($pm))) {
+        $checkOutDate = !empty($inmate->inmates_check_out_date) ? $inmate->inmates_check_out_date : '';
+        $isVacatingThisMonth = (!empty($checkOutDate) && $checkOutDate != '0000-00-00' && date('Y-m', strtotime($checkOutDate)) === date('Y-m', strtotime($pm)));
+
+        $monthRent = $this->getVacatingRent($monthRent, $pm, $checkOutDate, $checkInDate);
+
+        // 5. First-month check-in prorate (if this is the inmate's check-in month and not vacating in same month)
+        if (!$isVacatingThisMonth && $checkInDate && date('Y-m', strtotime($checkInDate)) === date('Y-m', strtotime($pm))) {
             $joinDay = (int) date('j', strtotime($checkInDate));
             $daysInMonth = (int) date('t', strtotime($checkInDate));
 
@@ -1448,7 +1451,7 @@ class Inmates extends BaseController
         return round($split_rent, 2);
     }
 
-    private function getVacatingRent($monthly_rent, $payment_month, $check_out_date)
+    private function getVacatingRent($monthly_rent, $payment_month, $check_out_date, $check_in_date = null)
     {
         if (empty($check_out_date) || $check_out_date == '0000-00-00') {
             return (float) $monthly_rent;
@@ -1461,15 +1464,26 @@ class Inmates extends BaseController
         }
 
         $day = (int) date('j', strtotime($check_out_date));
-        if ($day <= 10) {
-            $year = (int) date('Y', strtotime($check_out_date));
-            $month = (int) date('n', strtotime($check_out_date));
-            $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-            $per_day = $monthly_rent / $days_in_month;
-            $monthly_rent = round($day * $per_day, 2);
+        $year = (int) date('Y', strtotime($check_out_date));
+        $month = (int) date('n', strtotime($check_out_date));
+        $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+
+        $per_day = (float) $monthly_rent / $days_in_month;
+
+        // If the inmate joined in the same month as vacating, charge from check-in to check-out
+        if (!empty($check_in_date) && $check_in_date != '0000-00-00' && date('Y-m', strtotime($check_in_date)) == $cm) {
+            $in_day = (int) date('j', strtotime($check_in_date));
+            $stay_days = max(1, $day - $in_day + 1);
+        } else {
+            // Vacating month (joined in an earlier month): charge for days from 1st to checkout day
+            $stay_days = $day;
         }
 
-        return (float) $monthly_rent;
+        if ($stay_days > $days_in_month) {
+            $stay_days = $days_in_month;
+        }
+
+        return (float) round($stay_days * $per_day, 2);
     }
 
     public function printReceipt($id)

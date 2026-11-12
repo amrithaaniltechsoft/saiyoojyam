@@ -194,7 +194,7 @@
 
                         <div class="row mb-6">
                           <div class="col-sm-10 offset-sm-2">
-                            <small class="text-muted">If vacating on or before the 10th of a month, rent is charged only for the days until the vacating date. If vacating after the 10th, full monthly rent applies.</small>
+                            <small class="text-muted">Rent is charged only for the actual days of stay until the vacating date.</small>
                           </div>
                         </div>
 

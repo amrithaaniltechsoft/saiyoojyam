@@ -869,6 +869,12 @@ $joins = array(
 
                 }
 
+                if (!empty($data['inmates_check_out']) && $data['inmates_check_out'] != '0000-00-00') {
+                    $monthly_rent = $this->getVacatingRent($data['rent_per_month'], $data['payment_month'], $data['inmates_check_out'], $check_in_date);
+                }
+
+                $data['rent_per_month'] = $monthly_rent;
+
                 $total_rent_month  = $monthly_rent + $data['tariffs']->tariffs_caution_deposit + $data['tariffs']->tariffs_admission_fees;
 
                 $data['total_rent_month'] = number_format($total_rent_month, 2, '.', ',');
@@ -904,7 +910,9 @@ $joins = array(
 
                 $data['rent_per_month'] = $monthly_rent;
 
-                $monthly_rent = $this->getVacatingRent($monthly_rent, $data['payment_month'], $data['inmates_check_out']);
+                $monthly_rent = $this->getVacatingRent($monthly_rent, $data['payment_month'], $data['inmates_check_out'], $data['inmates']->inmates_check_in_date);
+
+                $data['rent_per_month'] = $monthly_rent;
 
                 $invoice_single = $this->common_model->FetchLastInvoice('saiyoojyam_invoice',array('invoice_inmates' => $id));
 
@@ -1327,7 +1335,8 @@ $joins = array(
 
                         $response['rent_per_day'] = $monthly_rent;
 
-                        $monthly_rent = $this->getVacatingRent($monthly_rent, $payment_month1, $inmates->inmates_check_out_date);
+                        $monthly_rent = $this->getVacatingRent($monthly_rent, $payment_month1, $inmates->inmates_check_out_date, $inmates->inmates_check_in_date);
+                        $response['rent_per_day'] = $monthly_rent;
 
                         $invoice_last = $this->common_model->FetchLastInvoice('saiyoojyam_invoice',array('invoice_inmates' =>  $this->request->getPost('inmates_id')));
 
@@ -2283,7 +2292,7 @@ $joins = array(
         return round($split_rent, 2);
     }
 
-    private function getVacatingRent($monthly_rent, $payment_month, $check_out_date){
+    private function getVacatingRent($monthly_rent, $payment_month, $check_out_date, $check_in_date = null){
 
         if(empty($check_out_date) || $check_out_date == '0000-00-00'){
 
@@ -2300,19 +2309,26 @@ $joins = array(
         }
 
         $day = (int) date('j', strtotime($check_out_date));
+        $year = (int) date('Y', strtotime($check_out_date));
+        $month = (int) date('n', strtotime($check_out_date));
+        $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
 
-        if($day <= 10){
+        $per_day = $monthly_rent / $days_in_month;
 
-            $year = (int) date('Y', strtotime($check_out_date));
-
-            $month = (int) date('n', strtotime($check_out_date));
-
-            $days_in_month = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-
-            $per_day = $monthly_rent / $days_in_month;
-
-            $monthly_rent = round($day * $per_day, 2);
+        // If the inmate joined in the same month as vacating, charge from check-in to check-out
+        if (!empty($check_in_date) && $check_in_date != '0000-00-00' && date('Y-m', strtotime($check_in_date)) == $cm) {
+            $in_day = (int) date('j', strtotime($check_in_date));
+            $stay_days = max(1, $day - $in_day + 1);
+        } else {
+            // Vacating month (joined in an earlier month): charge for days from 1st to checkout day
+            $stay_days = $day;
         }
+
+        if ($stay_days > $days_in_month) {
+            $stay_days = $days_in_month;
+        }
+
+        $monthly_rent = round($stay_days * $per_day, 2);
 
         return $monthly_rent;
     }

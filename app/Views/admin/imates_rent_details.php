@@ -105,7 +105,7 @@
   .pill-partial { background: #fef9c3; color: #a16207; border: 1px solid #fde047; }
   .pill-advance { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
   .pill-unpaid { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
-  .pill-vacated { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+  .pill-vacated { background: #e2e8f0; color: #334155; border: 1px solid #94a3b8; font-weight: 700; }
 
   /* Filter Toolbar Card */
   .filter-card {
@@ -354,20 +354,43 @@
   .advance:hover {
     background: #bae6fd !important;
   }
-  .vacated {
-    background: #f8fafc !important;
-    color: #64748b !important;
+  .vacated, td.vacated {
+    background: #e2e8f0 !important;
+    color: #475569 !important;
+    font-weight: 600;
+  }
+  .vacated:hover, td.vacated:hover {
+    background: #cbd5e1 !important;
+  }
+  .vacated a, td.vacated a {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+    font-weight: 700;
   }
   tr.row-vacated td {
-    background: #f8fafc !important;
-    color: #94a3b8;
-    font-style: italic;
+    background: #f1f5f9;
+    color: #475569;
+  }
+  tr.row-vacated td:first-child {
+    background: #e2e8f0 !important;
+    border-right: 2px solid #cbd5e1;
+  }
+  tr.row-vacated td.vacated {
+    background: #e2e8f0 !important;
+    color: #64748b !important;
+  }
+  tr.row-vacated:hover td {
+    background: #e2e8f0;
+  }
+  tr.row-vacated:hover td.vacated {
+    background: #cbd5e1 !important;
   }
   tr.row-vacated td a {
     color: inherit;
-    opacity: .75;
+    opacity: .85;
   }
-  .paid a, .partial a, .unpaid a, .advance a {
+  .paid a, .partial a, .unpaid a, .advance a, .vacated a {
     color: inherit;
     text-decoration: none;
     display: block;
@@ -674,24 +697,26 @@
           </tr>
         </thead>
         <tbody class="tbody_data">
-          <?php foreach($inmates as $inmate){ ?> 
-            <tr <?php if($inmate->inmates_status == 'checked_out'){ echo 'class="row-vacated"'; } ?>>
+          <?php foreach($inmates as $inmate){ 
+            $todayDate = date('Y-m-d');
+            $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
+            $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
+            $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
+            $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
+            $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
+            $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
+            $roomName = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : 'Assigned Room');
+            $coDate = $hasCheckout ? strtotime($inmate->inmates_check_out_date) : 0;
+            $coYear = $hasCheckout ? (int)date('Y', $coDate) : 0;
+            $coMonth = $hasCheckout ? (int)date('m', $coDate) : 0;
+          ?> 
+            <tr <?php if($isCheckedOut){ echo 'class="row-vacated"'; } ?>>
               <td>
                 <div class="fw-bold text-dark" style="font-size:13.5px;"><?php echo htmlspecialchars($inmate->inmates_name); ?></div>
                 <small class="text-muted font-monospace"><?php echo htmlspecialchars($inmate->inmates_uid); ?></small>
-                <?php
-                  $todayDate = date('Y-m-d');
-                  $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
-                  $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
-                  $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
-                  $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
-                  $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
-                  $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
-                  $roomName = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : 'Assigned Room');
-                ?>
                 <?php if($isCheckedOut) { ?>
                   <br/><span style="font-size:11px;color:#dc2626;font-weight:600;">
-                    <i class="fa fa-sign-out"></i> Out: <?php echo date('d-M-Y', strtotime($inmate->inmates_check_out_date)); ?>
+                    <i class="fa fa-sign-out"></i> Out: <?php echo date('d-M-Y', $coDate); ?>
                   </span>
                 <?php } elseif($isFutureCheckout) { ?>
                   <br/>
@@ -799,6 +824,13 @@
                     $invData = $invoiceMonths[$m];
                   }
 
+                  $isAfterCheckout = false;
+                  if ($hasCheckout && $isCheckedOut) {
+                    if ($yearToShow > $coYear || ($yearToShow == $coYear && $m > $coMonth)) {
+                      $isAfterCheckout = true;
+                    }
+                  }
+
                   if (!empty($invData)) {
 
                     if ($invData['status'] == 1) {
@@ -811,7 +843,9 @@
                       echo '<td class="advance"><a ' . $cellTitle . ' href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">₹'.$invData['amount'].'</a></td>';
                     }
                     else{
-                      if($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
+                      if ($isAfterCheckout) {
+                        echo '<td class="vacated" title="Checked Out on ' . date('d-M-Y', $coDate) . '">---</td>';
+                      } elseif($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
                         echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
                       } 
                       else {
@@ -821,7 +855,9 @@
 
                   } 
                   else {
-                    if ($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
+                    if ($isAfterCheckout) {
+                      echo '<td class="vacated" title="Checked Out on ' . date('d-M-Y', $coDate) . '">---</td>';
+                    } elseif ($yearToShow > $currentYear || ($yearToShow == $currentYear && $m <= $currentMonth)) {
                       echo '<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>'; 
                     } 
                     else {

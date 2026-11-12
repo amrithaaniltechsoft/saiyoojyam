@@ -519,22 +519,23 @@ class Ajax extends BaseController
 
             foreach($inmates as $inmate){
                
+                $todayDate = date('Y-m-d');
+                $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
+                $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
+                $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
+                $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
+                $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
+                $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
+                $roomName = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : 'Assigned Room');
+                $coDate = $hasCheckout ? strtotime($inmate->inmates_check_out_date) : 0;
+                $coYear = $hasCheckout ? (int)date('Y', $coDate) : 0;
+                $coMonth = $hasCheckout ? (int)date('m', $coDate) : 0;
+
                 $response['year_html'] .="<tr";
-
-                    if($inmate->inmates_status == 'checked_out'){
-                        $response['year_html'] .= ' class="row-vacated"';
-                    }
-
-                    $response['year_html'] .=">";
-
-                    $todayDate = date('Y-m-d');
-                    $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
-                    $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
-                    $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
-                    $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
-                    $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
-                    $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
-                    $roomName = !empty($inmate->rooms_name) ? $inmate->rooms_name : (!empty($inmate->inmates_rooms) ? 'Room ' . $inmate->inmates_rooms : 'Assigned Room');
+                if ($isCheckedOut) {
+                    $response['year_html'] .= ' class="row-vacated"';
+                }
+                $response['year_html'] .=">";
 
                     $checkoutBtnHtml = '';
                     if ($isCheckedOut) {
@@ -659,6 +660,13 @@ class Ajax extends BaseController
                             $invData = $invoiceMonths[$m];
                         }
 
+                        $isAfterCheckout = false;
+                        if ($hasCheckout && $isCheckedOut) {
+                            if ($yearToShow > $coYear || ($yearToShow == $coYear && $m > $coMonth)) {
+                                $isAfterCheckout = true;
+                            }
+                        }
+
                         if(!empty($invData)) {
 
                             if($invData['status'] == 1){
@@ -679,7 +687,9 @@ class Ajax extends BaseController
                             }
                             else{
 
-                                if($upToNow($m)){
+                                if ($isAfterCheckout) {
+                                    $response['year_html'] .='<td class="vacated" title="Checked Out on ' . date('d-M-Y', $coDate) . '">---</td>';
+                                } elseif($upToNow($m)){
 
                                     $response['year_html'] .='<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
 
@@ -692,7 +702,9 @@ class Ajax extends BaseController
                         }
                         else{
 
-                            if ($upToNow($m)) {
+                            if ($isAfterCheckout) {
+                                $response['year_html'] .='<td class="vacated" title="Checked Out on ' . date('d-M-Y', $coDate) . '">---</td>';
+                            } elseif ($upToNow($m)) {
 
                                 $response['year_html'] .='<td class="unpaid"><a href="'.base_url().'Admin/Inmates/Receipt/'.$inmate->inmates_id.'">---</a></td>';
 
@@ -749,8 +761,19 @@ class Ajax extends BaseController
 
                 foreach($inmates as $inmate){
                     $totalCount++;
+
+                    $todayDate = date('Y-m-d');
+                    $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
+                    $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
+                    $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
+                    $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
+                    $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
+                    $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
+
                     $statusBadge = '';
-                    if ($inmate->payment_status == 1) {
+                    if ($isCheckedOut) {
+                        $statusBadge = '<span class="badge" style="background:#e2e8f0; color:#334155; padding:6px 13px; border-radius:50px; font-weight:700; border:1px solid #94a3b8; font-size:11.5px;"><i class="fa fa-sign-out me-1"></i> Checked Out</span>';
+                    } elseif ($inmate->payment_status == 1) {
                         $paidCount++;
                         $statusBadge = '<span class="badge" style="background:#dcfce7; color:#15803d; padding:6px 13px; border-radius:50px; font-weight:700; border:1px solid #86efac; font-size:11.5px;"><i class="fa fa-check-circle me-1"></i> Paid</span>';
                     } elseif ($inmate->payment_status == 2) {
@@ -772,14 +795,6 @@ class Ajax extends BaseController
                     $phone        = !empty($inmate->inmates_phone_no) ? $inmate->inmates_phone_no : '-';
                     $uid          = !empty($inmate->inmates_uid) ? "<br/><small class='text-muted font-monospace'>UID: ".$inmate->inmates_uid."</small>" : "";
                     $bldLabel     = !empty($inmate->building_name) ? "<br/><small class='text-muted'><i class='fa fa-building-o'></i> " . htmlspecialchars($inmate->building_name) . "</small>" : "";
-
-                    $todayDate = date('Y-m-d');
-                    $hasCheckout = (!empty($inmate->inmates_check_out_date) && $inmate->inmates_check_out_date != '0000-00-00');
-                    $isFutureCheckout = ($hasCheckout && $inmate->inmates_check_out_date > $todayDate);
-                    $isCheckedOut = ($inmate->inmates_status === 'checked_out' || ($hasCheckout && $inmate->inmates_check_out_date <= $todayDate));
-                    $checkInDate = (!empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date != '0000-00-00') ? $inmate->inmates_check_in_date : null;
-                    $oneMonthDate = $checkInDate ? date('Y-m-d', strtotime($checkInDate . ' + 1 month')) : null;
-                    $canCheckoutToday = empty($oneMonthDate) || ($todayDate >= $oneMonthDate);
 
                     $checkoutBtn = '';
                     if ($isCheckedOut) {
@@ -827,7 +842,8 @@ class Ajax extends BaseController
                         ' . $checkoutBtn . '
                     </div>';
 
-                    $response['inmates_details'] .= "<tr>
+                    $rowVacatedClass = $isCheckedOut ? " class='row-vacated'" : "";
+                    $response['inmates_details'] .= "<tr" . $rowVacatedClass . ">
                         <td class='text-center'>".$sl++."</td>
                         <td><strong>".htmlspecialchars($inmate->inmates_name)."</strong>".$uid."</td>
                         <td>".htmlspecialchars($roomName)." <small class='text-muted'>(".htmlspecialchars($roomType).")</small>".$bldLabel."</td>

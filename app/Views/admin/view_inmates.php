@@ -840,11 +840,7 @@
                   var hasFutureCheckout = (currentCheckout && currentCheckout > globalToday);
                   var effectiveMinDate;
                   if (isShortTerm) {
-                    if (hasFutureCheckout) {
-                      effectiveMinDate = currentCheckout;
-                    } else {
-                      effectiveMinDate = (checkinRaw && checkinRaw > tomorrowStr) ? checkinRaw : tomorrowStr;
-                    }
+                    effectiveMinDate = (checkinRaw && checkinRaw > globalToday) ? checkinRaw : globalToday;
                   } else {
                     if (hasFutureCheckout) {
                       effectiveMinDate = (oneMonth && oneMonth > currentCheckout) ? oneMonth : currentCheckout;
@@ -852,7 +848,7 @@
                       effectiveMinDate = canToday ? tomorrowStr : oneMonth;
                     }
                   }
-                  var initialSelectedDate = hasFutureCheckout ? currentCheckout : (canToday ? tomorrowStr : effectiveMinDate);
+                  var initialSelectedDate = (currentCheckout && currentCheckout >= effectiveMinDate) ? currentCheckout : (canToday ? (isShortTerm ? globalToday : tomorrowStr) : effectiveMinDate);
 
                   // Initialize Fancy Flatpickr on the input field
                   if (checkoutPicker) {
@@ -877,8 +873,8 @@
 
                   updateHelperInfo(initialSelectedDate, checkinRaw);
 
-                  if (hasFutureCheckout) {
-                    // INMATE ALREADY HAS SCHEDULED UPCOMING DEPARTURE
+                  if (!isShortTerm && hasFutureCheckout) {
+                    // LONG TERM INMATE ALREADY HAS SCHEDULED UPCOMING DEPARTURE
                     var curParts = currentCheckout.split('-');
                     var curD = new Date(parseInt(curParts[0], 10), parseInt(curParts[1], 10) - 1, parseInt(curParts[2], 10));
                     var currentCheckoutFmt = String(curD.getDate()).padStart(2, '0') + '-' + curD.toLocaleString('en-US', {month: 'short'}) + '-' + curD.getFullYear();
@@ -928,14 +924,29 @@
                     $('#co_today_desc').text('Mark resident as departed immediately today and free up the bed.');
 
                     if (isShortTerm) {
-                      $('#co_badge_quick_indicator').html('<i class="fa fa-clock-o me-1"></i>Short Term Stay').removeClass('bg-danger bg-success text-white').addClass('bg-info text-white');
+                      var curCheckoutFmt = '';
+                      if (hasFutureCheckout) {
+                        var curParts = currentCheckout.split('-');
+                        var curD = new Date(parseInt(curParts[0], 10), parseInt(curParts[1], 10) - 1, parseInt(curParts[2], 10));
+                        curCheckoutFmt = ' (Current: ' + String(curD.getDate()).padStart(2, '0') + '-' + curD.toLocaleString('en-US', {month: 'short'}) + '-' + curD.getFullYear() + ')';
+                      }
+                      $('#co_badge_quick_indicator').html('<i class="fa fa-clock-o me-1"></i>Short Term Stay' + curCheckoutFmt).removeClass('bg-danger bg-success text-white').addClass('bg-info text-white');
+
+                      if (hasFutureCheckout) {
+                        $('#radio_co_upcoming').prop('disabled', false).prop('checked', true).trigger('change');
+                        $('#card_co_upcoming').addClass('active');
+                        $('#card_co_today').removeClass('active');
+                      } else {
+                        $('#radio_co_today').prop('checked', true).trigger('change');
+                        $('#card_co_today').addClass('active');
+                        $('#card_co_upcoming').removeClass('active');
+                      }
                     } else {
                       $('#co_badge_quick_indicator').html('<i class="fa fa-check-circle me-1"></i>1-Mo Policy Satisfied').removeClass('bg-danger bg-info text-white').addClass('bg-success text-white');
+                      $('#radio_co_today').prop('checked', true).trigger('change');
+                      $('#card_co_today').addClass('active');
+                      $('#card_co_upcoming').removeClass('active');
                     }
-
-                    $('#radio_co_today').prop('checked', true).trigger('change');
-                    $('#card_co_today').addClass('active');
-                    $('#card_co_upcoming').removeClass('active');
                   }
 
                   // Move modal to body if needed to avoid z-index or stacking clipping

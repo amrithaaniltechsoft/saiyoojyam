@@ -877,6 +877,7 @@ class Inmates extends BaseController
         $reverseInvoices = array_reverse($invoices);
         $lastPaidPeriod = '';
         $lastPaidDate = '';
+        $latestPaidInvoiceId = null;
 
         foreach ($reverseInvoices as $inv) {
             $statusLabel = 'Unpaid';
@@ -901,6 +902,10 @@ class Inmates extends BaseController
                 $lastPaidDate = $dateDisplay;
             }
 
+            if (!$latestPaidInvoiceId && ((int)$inv->invoice_status === 1 || (int)$inv->invoice_status === 3)) {
+                $latestPaidInvoiceId = (int) $inv->invoice_id;
+            }
+
             $formattedInvoices[] = [
                 'id'            => 'INV-' . str_pad($inv->invoice_id, 4, '0', STR_PAD_LEFT),
                 'invoice_id'    => (int) $inv->invoice_id,
@@ -913,6 +918,11 @@ class Inmates extends BaseController
                 'status_code'   => (int) $inv->invoice_status,
                 'print_url'     => base_url('api/inmates/print/' . $id . '?invoice_id=' . $inv->invoice_id),
             ];
+        }
+
+        if (!$latestPaidInvoiceId && !empty($invoices)) {
+            $lastInv = end($invoices);
+            $latestPaidInvoiceId = (int) $lastInv->invoice_id;
         }
 
         $pendingCount = count($pendingBills);
@@ -1002,7 +1012,7 @@ class Inmates extends BaseController
             'is_all_paid'           => $isAllPaid,
             'invoices'              => $formattedInvoices,
             'terms'                 => $terms,
-            'print_url'             => base_url('api/inmates/print/' . $id . (!empty($invoices) ? '?invoice_id=' . $invoices[0]->invoice_id : '')),
+            'print_url'             => base_url('api/inmates/print/' . $id . ($latestPaidInvoiceId ? '?invoice_id=' . $latestPaidInvoiceId : '')),
         ];
 
         return $this->response->setJSON([

@@ -412,12 +412,9 @@ class Rooms extends BaseController
                     $cd = (float) $buildingMap[$bId]['caution_deposit'];
                 }
 
-                // If room has no explicit tariff added in saiyoojyam_tariffs:
+                // If room has no explicit tariff added in saiyoojyam_tariffs, skip it completely
                 if (!$hasTariff || $rentPrice <= 0) {
-                    // For property showcase / room dropdowns or any building with rooms in database:
-                    // Fall back to building tariff or standard room rate so the room displays properly
-                    $rentPrice = !empty($tariffsByBuilding[$bId]) ? $tariffsByBuilding[$bId] : 6000;
-                    $hasTariff = true;
+                    continue;
                 }
 
                 // Client Search Availability Rules:

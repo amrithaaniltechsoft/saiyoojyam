@@ -100,7 +100,7 @@ class Rooms extends BaseController
                 }
             }
 
-            $avail_count = $room_capacity - $occupied_count;
+            $avail_count = max(0, $room_capacity - $occupied_count);
 
             $available_rooms[] = [
                 'room_id'        => $room->rooms_id,
@@ -109,7 +109,7 @@ class Rooms extends BaseController
                 'room_type_name' => $room_type_name,
                 'capacity'       => $room_capacity,
                 'occupied'       => $occupied_count,
-                'available'      => $avail_count > 0 ? $avail_count : 0,
+                'available'      => $avail_count,
                 'status'         => $avail_count > 0 ? 'Available' : 'Full'
             ];
         }
@@ -224,6 +224,23 @@ class Rooms extends BaseController
                     if ($selectedRoomType && !empty($selectedRoomType->room_type_capacity)) {
                         $update_data['rooms_capacity'] = (int) $selectedRoomType->room_type_capacity;
                     }
+                }
+
+                // Check active inmates in this room before reducing capacity
+                $db = \Config\Database::connect();
+                $activeInmateCount = $db->table('saiyoojyam_inmates')
+                    ->where('inmates_rooms', (int)$id)
+                    ->whereNotIn('inmates_status', ['checked_out', 'checkout', 'rejected', 'cancelled', 'inactive'])
+                    ->countAllResults();
+
+                $targetCapacity = (int)($update_data['rooms_capacity'] ?? $data['rooms']->rooms_capacity ?? 1);
+                if ($activeInmateCount > $targetCapacity) {
+                    $flashdata = array(
+                        'type' => 'error',
+                        'msg'  => "Cannot change to this Room Type (Capacity {$targetCapacity}): Room '{$data['rooms']->rooms_name}' currently has {$activeInmateCount} active inmates. Please reallocate or check out inmates first.",
+                    );
+                    $this->session->setFlashdata('alert', $flashdata);
+                    return redirect()->to(site_url('Admin/Rooms/Edit/' . $id));
                 }
 
                 $update_data['rooms_updated_at'] = date('Y-m-d'); 

@@ -322,7 +322,7 @@ class Ajax extends BaseController
             $occupied_count = $this->common_model->fetchAvaliableRooms($room_id, $selected_date);
             $capacity = (int)$room->rooms_capacity;
             $available_count = max(0, $capacity - $occupied_count);
-            $occupancy_pct = $capacity > 0 ? round(($occupied_count / $capacity) * 100) : 0;
+            $occupancy_pct = $capacity > 0 ? min(100, round(($occupied_count / $capacity) * 100)) : 0;
 
             // Tariff for this room: Check room type first, then room ID
             $tariff = null;

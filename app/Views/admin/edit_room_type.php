@@ -58,7 +58,26 @@
                         <div class="row mb-6">
                           <label class="col-sm-2 col-form-label" for="basic-default-capacity">Capacity</label>
                           <div class="col-sm-10">
-                              <input type="number" class="form-control" name="room_type_capacity" value="<?php echo $room_type->room_type_capacity ?? 1; ?>" id="basic-default-capacity" min="1" required>
+                              <input type="number" class="form-control" name="room_type_capacity" value="<?php echo $room_type->room_type_capacity ?? 1; ?>" id="basic-default-capacity" min="<?php echo !empty($min_allowed_capacity) ? $min_allowed_capacity : 1; ?>" required>
+                              <?php if (!empty($min_allowed_capacity) && $min_allowed_capacity > 0 && !empty($occupied_rooms_info)): ?>
+                                <div class="alert alert-warning d-flex align-items-start gap-2 mt-2 p-2.5 rounded-3" style="font-size:12.5px;">
+                                  <i class="fa fa-exclamation-triangle mt-1"></i>
+                                  <div>
+                                    <strong>Minimum allowed capacity: <?php echo $min_allowed_capacity; ?>.</strong><br/>
+                                    Existing rooms of this type currently have active inmates:
+                                    <ul class="mb-0 mt-1 ps-3">
+                                      <?php foreach($occupied_rooms_info as $ori): ?>
+                                        <li>Room <strong><?php echo $ori['room_name']; ?></strong>: <?php echo $ori['occupied']; ?> active inmate(s)</li>
+                                      <?php endforeach; ?>
+                                    </ul>
+                                    <span class="d-block mt-1">To reduce capacity below <?php echo $min_allowed_capacity; ?>, please reallocate or check out inmates first.</span>
+                                  </div>
+                                </div>
+                              <?php else: ?>
+                                <div class="form-text text-muted mt-1">
+                                  Bed capacity for rooms of this room type (minimum 1).
+                                </div>
+                              <?php endif; ?>
                           </div>
                         </div>
 

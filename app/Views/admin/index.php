@@ -1302,14 +1302,14 @@ ul a {
                           <!-- Check Out Date (Shown only if Short Term) -->
                           <div class="mb-3" id="modal_checkout_field_wrapper" style="display:none;">
                             <label class="form-label fw-semibold text-dark d-flex align-items-center justify-content-between" for="modal_checkout_date" style="font-size:13px;">
-                              <span>Check Out Date <span class="badge bg-danger text-white ms-1" style="font-size:10.5px;">Short Term</span></span>
-                              <small class="text-muted fw-normal" style="font-size:11px;">Expected check-out date</small>
+                              <span>Check Out Date <span class="badge bg-warning text-dark ms-1" style="font-size:10.5px;">Short Term</span></span>
+                              <small class="text-muted fw-normal" style="font-size:11px;">Scheduled check-out date (Read-only)</small>
                             </label>
                             <div class="input-group">
-                              <span class="input-group-text bg-light text-danger"><i class="fa fa-calendar-times-o"></i></span>
-                              <input type="date" class="form-control" name="check_out_date" id="modal_checkout_date">
+                              <span class="input-group-text bg-light text-muted"><i class="fa fa-calendar-times-o"></i></span>
+                              <input type="date" class="form-control bg-light" name="check_out_date" id="modal_checkout_date" readonly tabindex="-1" style="cursor:default;pointer-events:none;background-color:#f8fafc;" title="Check-out date is fixed from booking and is read-only.">
                             </div>
-                            <small class="text-muted" style="font-size:11px;">Expected check-out date for this short-term resident</small>
+                            <small class="text-muted" style="font-size:11px;">Expected check-out date for this short-term resident (Read-only)</small>
                           </div>
 
                           <!-- Password with Toggle & Generator -->
@@ -1550,12 +1550,12 @@ ul a {
                     $("#modal_checkout_banner_wrapper").show();
                     $("#modal_display_checkout").text(checkout);
                     $("#modal_checkout_field_wrapper").show();
-                    $("#modal_checkout_date").val(rawCheckout);
+                    $("#modal_checkout_date").val(rawCheckout).prop("readonly", true);
                     $("#modal_display_duration").text("Short Term").css({"background": "#fef3c7", "color": "#92400e"});
                   } else {
                     $("#modal_checkout_banner_wrapper").hide();
                     $("#modal_checkout_field_wrapper").hide();
-                    $("#modal_checkout_date").val("");
+                    $("#modal_checkout_date").val("").prop("readonly", true);
                     $("#modal_display_duration").text(duration).css({"background": "#e0f2fe", "color": "#0369a1"});
                   }
 

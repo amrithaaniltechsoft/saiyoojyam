@@ -179,13 +179,10 @@
                       </select>
                     </div>
 
-                    <!-- Filter / Reset Action Buttons -->
-                    <div class="col-md-3 col-sm-6 d-flex align-items-end gap-1 mt-auto">
-                      <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
-                        <i class="bx bx-filter-alt me-1"></i> Filter
-                      </button>
-                      <a href="<?= base_url('Admin/Payments/View') ?>" class="btn btn-sm btn-outline-secondary" title="Reset Filters">
-                        <i class="bx bx-refresh"></i> Reset
+                    <!-- Reset Action Button -->
+                    <div class="col-md-3 col-sm-6 d-flex align-items-end mt-auto">
+                      <a href="<?= base_url('Admin/Payments/View') ?>" class="btn btn-sm btn-outline-danger" title="Reset Filters">
+                        <i class="bx bx-refresh me-1"></i> Reset
                       </a>
                     </div>
                   </form>

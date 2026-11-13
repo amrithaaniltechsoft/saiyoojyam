@@ -267,6 +267,270 @@
     border-color: #dc2626 !important;
     box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.15) !important;
   }
+
+  /* Inmates Modern Search & Filter Toolbar Styles */
+  .inmates-filter-toolbar {
+    background: #f8fafc;
+    border-bottom: 1px solid #eef2f6;
+  }
+
+  /* Status Segmented Pill Group */
+  .status-pill-group {
+    display: inline-flex;
+    align-items: center;
+    background: #eef2f6;
+    border: 1px solid #e2e8f0;
+    border-radius: 30px;
+    padding: 4px;
+    gap: 3px;
+  }
+  .status-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    text-decoration: none;
+    border-radius: 20px;
+    transition: all 0.2s ease;
+    line-height: 1.2;
+  }
+  .status-pill-btn:hover {
+    color: #1e293b;
+    background: rgba(255, 255, 255, 0.7);
+  }
+  .status-pill-btn.active {
+    background: #ffffff;
+    color: #4f46e5;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+  }
+  .status-pill-btn.pill-active.active {
+    color: #059669;
+  }
+  .status-pill-btn.pill-inactive.active {
+    color: #dc2626;
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-dot.dot-success { background: #10b981; }
+  .status-dot.dot-muted { background: #94a3b8; }
+
+  /* Real-time Search Box */
+  .inmates-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .inmates-search-input {
+    height: 42px;
+    padding-left: 42px !important;
+    padding-right: 64px !important;
+    font-size: 13.5px;
+    border-radius: 10px;
+    border: 1.5px solid #d9dee3;
+    background: #ffffff;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+  .inmates-search-input:focus {
+    border-color: #696cff !important;
+    box-shadow: 0 0 0 0.25rem rgba(105, 108, 255, 0.15) !important;
+  }
+  .search-icon-lead {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    color: #8592a3;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .search-clear-btn {
+    position: absolute;
+    right: 38px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    border: none;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.15s ease;
+    z-index: 5;
+  }
+  .search-clear-btn:hover {
+    background: #cbd5e1;
+    color: #0f172a;
+  }
+  .search-kbd-hint {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10.5px;
+    font-family: inherit;
+    font-weight: 600;
+    color: #94a3b8;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 1px 5px;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  /* Reffer ID Select2 Customization */
+  .inmates-select-box .select2-container--bootstrap-5 .select2-selection {
+    min-height: 42px !important;
+    border-radius: 10px !important;
+    border: 1.5px solid #d9dee3 !important;
+    font-size: 13.5px !important;
+    background: #ffffff !important;
+  }
+  .inmates-select-box .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+    line-height: 40px !important;
+    padding-left: 14px !important;
+    color: #475569 !important;
+  }
+  .inmates-select-box .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+    border-color: #696cff !important;
+    box-shadow: 0 0 0 0.25rem rgba(105, 108, 255, 0.15) !important;
+  }
+
+  /* Date Range Groups */
+  .filter-date-group {
+    height: 42px;
+    border-radius: 10px;
+    border: 1.5px solid #d9dee3;
+    overflow: hidden;
+    background: #ffffff;
+    transition: all 0.2s ease;
+  }
+  .filter-date-group:focus-within {
+    border-color: #696cff;
+    box-shadow: 0 0 0 0.25rem rgba(105, 108, 255, 0.15);
+  }
+  .filter-date-group .input-group-text {
+    border: none !important;
+    background: transparent !important;
+  }
+  .filter-date-group input,
+  .filter-date-group .flatpickr-wrapper > input {
+    height: 40px !important;
+    border: none !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    background: transparent !important;
+    padding-left: 4px !important;
+    color: #334155 !important;
+    box-shadow: none !important;
+  }
+  .filter-date-group input:focus,
+  .filter-date-group .flatpickr-wrapper > input:focus {
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Reset Button */
+  .filter-reset-btn {
+    height: 42px;
+    width: 42px;
+    min-width: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1.5px solid #fee2e2;
+    background: #ffffff;
+    color: #ef4444;
+    transition: all 0.2s ease;
+    padding: 0;
+    text-decoration: none;
+  }
+  .filter-reset-btn:hover:not(.disabled-reset) {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
+  }
+  .filter-reset-btn.disabled-reset {
+    opacity: 0.45;
+    cursor: default;
+    border-color: #e2e8f0;
+    color: #94a3b8;
+  }
+
+  /* Filter Chips */
+  .filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    font-size: 12px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    color: #1e293b;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+  .filter-chip .chip-label {
+    color: #64748b;
+    font-weight: 500;
+  }
+  .filter-chip .chip-remove {
+    color: #ef4444;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    margin-left: 2px;
+  }
+  .filter-chip .chip-remove:hover {
+    color: #b91c1c;
+  }
+  .clear-all-link:hover {
+    text-decoration: underline !important;
+  }
+
+  /* DataTables 2.x Clean layout */
+  .dt-container {
+    padding-top: 6px;
+  }
+  .dt-search, .dataTables_filter {
+    display: none !important;
+  }
+  .dt-length select, .dataTables_length select {
+    border-radius: 8px !important;
+    border: 1px solid #d9dee3 !important;
+    padding: 4px 28px 4px 8px !important;
+    font-size: 13px !important;
+  }
+  .dt-layout-row {
+    padding: 10px 20px !important;
+  }
+  #myTable thead th {
+    background: #f8fafc !important;
+    color: #475569 !important;
+    font-weight: 600 !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    font-size: 13px !important;
+  }
   </style>
 
 
@@ -280,39 +544,155 @@
             <div class="container-xxl flex-grow-1 container-p-y">
               <!-- Basic Bootstrap Table -->
                
-              <div class="card">
-                <h5 class="card-header">View Inmates</h5>
+              <div class="card shadow-sm border-0" style="border-radius:14px;overflow:hidden;">
 
                 <?php
                   $href_base = base_url().'Admin/Inmates';
                   $fq = array();
                   if(!empty($active_status)){ $fq['status'] = $active_status; }
+                  if(!empty($active_ref)){ $fq['ref'] = $active_ref; }
+                  if(!empty($active_check_in)){ $fq['check_in'] = $active_check_in; }
+                  if(!empty($active_check_out)){ $fq['check_out'] = $active_check_out; }
+                  
                   $href = function($extra) use ($fq){
-                    return base_url().'Admin/Inmates?'.http_build_query(array_merge($fq, $extra));
+                    $merged = array_merge($fq, $extra);
+                    $merged = array_filter($merged, function($v){ return $v !== null && $v !== ''; });
+                    return base_url().'Admin/Inmates' . (!empty($merged) ? '?' . http_build_query($merged) : '');
                   };
-                  $cls_ab = $active_status == 'active' ? 'btn-success' : 'btn-outline-success';
-                  $cls_na = $active_status == 'checked_out' ? 'btn-success' : 'btn-outline-success';
+                  
+                  $hasActiveFilters = (!empty($active_status) || !empty($active_ref) || !empty($active_check_in) || !empty($active_check_out));
                 ?>
 
-                <div class="card-header d-flex flex-wrap gap-2 align-items-center">
-                  <select id="ref_filter" class="form-select form-select-sm" style="width:200px;" onchange="var u='<?php echo base_url();?>Admin/Inmates';if(this.value){u+='?ref='+this.value+'<?php echo !empty($active_status)?'&status='.$active_status:''; ?>';}goNav(u);">
-                    <option value="">Filter by Reffer ID</option>
-                    <?php foreach($reffers as $ref){ ?>
-                    <option value="<?php echo $ref->inmates_uid;?>" <?php if(!empty($active_ref) && $active_ref == $ref->inmates_uid){ echo 'selected';} ?>><?php echo $ref->inmates_uid; ?> - <?php echo $ref->inmates_name;?></option>
-                    <?php } ?>
-                  </select>
-                  <a href="<?php echo $href_base;?>" class="btn btn-sm btn-outline-secondary filter-link">All</a>
-                  <a href="<?php echo $href(array('status' => 'active'));?>" class="btn btn-sm filter-link <?php echo $cls_ab;?>">Active</a>
-                  <a href="<?php echo $href(array('status' => 'checked_out'));?>" class="btn btn-sm filter-link <?php echo $cls_na;?>">Inactive</a>
-                  <a href="<?php echo $href_base;?>" class="btn btn-sm btn-outline-danger filter-link">Reset</a>
+                <!-- 1. Modern Card Header with Title and Status Tabs -->
+                <div class="card-header p-3 p-md-4 bg-white border-bottom">
+                  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div>
+                      <h4 class="mb-1 text-heading fw-bold d-flex align-items-center gap-2">
+                        <span class="badge bg-label-primary p-2 rounded-3 shadow-xs">
+                          <i class="bx bx-group fs-4"></i>
+                        </span>
+                        <span>View Inmates</span>
+                        <span class="badge bg-label-secondary rounded-pill px-2.5 py-1 fs-tiny ms-1"><?= count($pagedata); ?> Records</span>
+                      </h4>
+                      <p class="text-muted mb-0 small">
+                        Instant live search across inmates, or filter by status, Reffer ID, and check-in / check-out dates
+                      </p>
+                    </div>
+
+                    <!-- Status Segmented Pills -->
+                    <div class="status-pill-group shadow-xs">
+                      <a href="<?= $href(array('status' => null)); ?>" class="status-pill-btn filter-link <?= empty($active_status) ? 'active' : ''; ?>">
+                        <i class="bx bx-list-ul me-1"></i> All
+                        <span class="badge rounded-pill bg-white text-dark ms-1 shadow-xs"><?= count($pagedata); ?></span>
+                      </a>
+                      <a href="<?= $href(array('status' => 'active')); ?>" class="status-pill-btn pill-active filter-link <?= $active_status == 'active' ? 'active' : ''; ?>">
+                        <span class="status-dot dot-success"></span> Active
+                      </a>
+                      <a href="<?= $href(array('status' => 'checked_out')); ?>" class="status-pill-btn pill-inactive filter-link <?= $active_status == 'checked_out' ? 'active' : ''; ?>">
+                        <span class="status-dot dot-muted"></span> Inactive
+                      </a>
+                    </div>
+                  </div>
                 </div>
 
-                <div class="card-header d-flex flex-wrap gap-2 align-items-center border-top">
-                  <label class="text-muted mb-0">Check In:</label>
-                  <input type="date" class="form-control form-control-sm check_in_filter" style="width:150px;" value="<?php echo $active_check_in; ?>" onchange="goNav('<?php echo base_url();?>Admin/Inmates?check_in='+this.value+'<?php echo !empty($active_check_out)?'&check_out='.$active_check_out:''; ?><?php echo !empty($active_status)?'&status='.$active_status:''; ?>');"/>
-                  <label class="text-muted mb-0 ms-2">Check Out:</label>
-                  <input type="date" class="form-control form-control-sm check_out_filter" style="width:150px;" value="<?php echo $active_check_out; ?>" onchange="goNav('<?php echo base_url();?>Admin/Inmates?check_out='+this.value+'<?php echo !empty($active_check_in)?'&check_in='.$active_check_in:''; ?><?php echo !empty($active_status)?'&status='.$active_status:''; ?>');"/>
-                  <a href="<?php echo $href_base.(!empty($fq) ? '?'.http_build_query($fq) : '');?>" class="btn btn-sm btn-outline-secondary filter-link">Reset Dates</a>
+                <!-- 2. Attractive Search & Filter Toolbar -->
+                <div class="p-3 p-md-4 inmates-filter-toolbar">
+                  <div class="row g-2.5 align-items-center">
+                    
+                    <!-- Real-time Live Search Input -->
+                    <div class="col-12 col-lg-5">
+                      <div class="inmates-search-box position-relative">
+                        <i class="bx bx-search search-icon-lead"></i>
+                        <input type="text" id="inmateLiveSearch" class="form-control inmates-search-input" 
+                               placeholder="Instant search by Name, Reffer ID, Room, Building..." 
+                               autocomplete="off" spellcheck="false" />
+                        <button type="button" id="clearLiveSearch" class="search-clear-btn" title="Clear search" style="display:none;">
+                          <i class="bx bx-x"></i>
+                        </button>
+                        <span class="search-kbd-hint d-none d-md-inline" title="Press Escape to clear">Esc</span>
+                      </div>
+                    </div>
+
+                    <!-- Reffer ID Dropdown Filter -->
+                    <div class="col-12 col-sm-6 col-lg-3">
+                      <div class="inmates-select-box position-relative">
+                        <select id="ref_filter" class="form-select inmates-filter-select">
+                          <option value="">Filter by Reffer ID</option>
+                          <?php foreach($reffers as $ref){ ?>
+                            <option value="<?= $ref->inmates_uid; ?>" <?= (!empty($active_ref) && $active_ref == $ref->inmates_uid) ? 'selected' : ''; ?>>
+                              <?= $ref->inmates_uid; ?> &bull; <?= $ref->inmates_name; ?>
+                            </option>
+                          <?php } ?>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Date Filters & Reset Button -->
+                    <div class="col-12 col-sm-6 col-lg-4">
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="input-group input-group-merge filter-date-group shadow-xs flex-grow-1" title="Filter by Check-In Date">
+                          <span class="input-group-text bg-white border-end-0 text-success px-2.5"><i class="bx bx-calendar-plus fs-5"></i></span>
+                          <input type="text" class="form-control check_in_filter border-start-0 ps-1" 
+                                 placeholder="Check In Date" value="<?= $active_check_in; ?>" />
+                        </div>
+
+                        <div class="input-group input-group-merge filter-date-group shadow-xs flex-grow-1" title="Filter by Check-Out Date">
+                          <span class="input-group-text bg-white border-end-0 text-info px-2.5"><i class="bx bx-calendar-check fs-5"></i></span>
+                          <input type="text" class="form-control check_out_filter border-start-0 ps-1" 
+                                 placeholder="Check Out Date" value="<?= $active_check_out; ?>" />
+                        </div>
+
+                        <a href="<?= $href_base; ?>" class="btn btn-outline-danger filter-reset-btn filter-link <?= !$hasActiveFilters ? 'disabled-reset' : ''; ?>" title="Reset all filters">
+                          <i class="bx bx-reset fs-5"></i>
+                        </a>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <!-- Active Filter Chips / Badges -->
+                  <?php if ($hasActiveFilters): ?>
+                  <div class="active-filter-chips d-flex flex-wrap align-items-center gap-2 mt-3 pt-2.5 border-top">
+                    <span class="text-muted small fw-semibold text-uppercase" style="font-size:11px;letter-spacing:0.5px;">Applied:</span>
+                    
+                    <?php if(!empty($active_status)): ?>
+                      <span class="filter-chip">
+                        <span class="chip-label">Status:</span> 
+                        <strong class="text-capitalize"><?= $active_status == 'checked_out' ? 'Inactive' : $active_status; ?></strong>
+                        <a href="<?= $href(array('status' => null)); ?>" class="chip-remove filter-link" title="Remove status filter">&times;</a>
+                      </span>
+                    <?php endif; ?>
+
+                    <?php if(!empty($active_ref)): ?>
+                      <span class="filter-chip">
+                        <span class="chip-label">Reffer:</span> 
+                        <strong><?= $active_ref; ?></strong>
+                        <a href="<?= $href(array('ref' => null)); ?>" class="chip-remove filter-link" title="Remove reffer filter">&times;</a>
+                      </span>
+                    <?php endif; ?>
+
+                    <?php if(!empty($active_check_in)): ?>
+                      <span class="filter-chip">
+                        <span class="chip-label"><i class="bx bx-calendar-plus text-success me-0.5"></i>Check-in:</span> 
+                        <strong><?= date('d-M-Y', strtotime($active_check_in)); ?></strong>
+                        <a href="<?= $href(array('check_in' => null)); ?>" class="chip-remove filter-link" title="Remove check-in filter">&times;</a>
+                      </span>
+                    <?php endif; ?>
+
+                    <?php if(!empty($active_check_out)): ?>
+                      <span class="filter-chip">
+                        <span class="chip-label"><i class="bx bx-calendar-check text-info me-0.5"></i>Check-out:</span> 
+                        <strong><?= date('d-M-Y', strtotime($active_check_out)); ?></strong>
+                        <a href="<?= $href(array('check_out' => null)); ?>" class="chip-remove filter-link" title="Remove check-out filter">&times;</a>
+                      </span>
+                    <?php endif; ?>
+
+                    <a href="<?= $href_base; ?>" class="clear-all-link filter-link ms-auto text-danger small fw-semibold text-decoration-none">
+                      <i class="bx bx-trash me-1"></i> Clear all filters
+                    </a>
+                  </div>
+                  <?php endif; ?>
+
                 </div>
                
                 <div class="table-responsive text-nowrap">
@@ -731,15 +1111,77 @@
             <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
             <script>
               $(document).ready(function () {
+                // Initialize Select2 for Reffer ID
                 $('#ref_filter').select2({
                   theme: 'bootstrap-5',
                   placeholder: 'Filter by Reffer ID',
                   allowClear: true,
-                  width: '200px'
+                  width: '100%'
                 });
 
-                flatpickr('.check_in_filter', { dateFormat: 'Y-m-d', allowInput: true });
-                flatpickr('.check_out_filter', { dateFormat: 'Y-m-d', allowInput: true });
+                $('#ref_filter').on('change', function () {
+                  var val = $(this).val();
+                  var u = '<?= base_url(); ?>Admin/Inmates';
+                  var params = [];
+                  if (val) { params.push('ref=' + encodeURIComponent(val)); }
+                  <?php if(!empty($active_status)): ?>params.push('status=<?= $active_status ?>');<?php endif; ?>
+                  <?php if(!empty($active_check_in)): ?>params.push('check_in=<?= $active_check_in ?>');<?php endif; ?>
+                  <?php if(!empty($active_check_out)): ?>params.push('check_out=<?= $active_check_out ?>');<?php endif; ?>
+                  if (params.length > 0) { u += '?' + params.join('&'); }
+                  goNav(u);
+                });
+
+                // Flatpickr for date filtering
+                flatpickr('.check_in_filter', {
+                  dateFormat: 'Y-m-d',
+                  allowInput: true,
+                  onChange: function(selectedDates, dateStr) {
+                    if (dateStr !== '<?= $active_check_in; ?>') {
+                      var u = '<?= base_url(); ?>Admin/Inmates?check_in=' + encodeURIComponent(dateStr);
+                      <?php if(!empty($active_check_out)): ?>u += '&check_out=<?= $active_check_out; ?>';<?php endif; ?>
+                      <?php if(!empty($active_status)): ?>u += '&status=<?= $active_status; ?>';<?php endif; ?>
+                      <?php if(!empty($active_ref)): ?>u += '&ref=<?= $active_ref; ?>';<?php endif; ?>
+                      goNav(u);
+                    }
+                  }
+                });
+
+                flatpickr('.check_out_filter', {
+                  dateFormat: 'Y-m-d',
+                  allowInput: true,
+                  onChange: function(selectedDates, dateStr) {
+                    if (dateStr !== '<?= $active_check_out; ?>') {
+                      var u = '<?= base_url(); ?>Admin/Inmates?check_out=' + encodeURIComponent(dateStr);
+                      <?php if(!empty($active_check_in)): ?>u += '&check_in=<?= $active_check_in; ?>';<?php endif; ?>
+                      <?php if(!empty($active_status)): ?>u += '&status=<?= $active_status; ?>';<?php endif; ?>
+                      <?php if(!empty($active_ref)): ?>u += '&ref=<?= $active_ref; ?>';<?php endif; ?>
+                      goNav(u);
+                    }
+                  }
+                });
+
+                // Real-time Instant Search with DataTables
+                var table = $('#myTable').DataTable();
+
+                $('#inmateLiveSearch').on('keyup input', function () {
+                  var q = $(this).val();
+                  if (q.length > 0) {
+                    $('#clearLiveSearch').show();
+                  } else {
+                    $('#clearLiveSearch').hide();
+                  }
+                  table.search(q).draw();
+                });
+
+                $('#clearLiveSearch').on('click', function () {
+                  $('#inmateLiveSearch').val('').trigger('input').focus();
+                });
+
+                $(document).on('keydown', function (e) {
+                  if (e.key === 'Escape' && $('#inmateLiveSearch').is(':focus')) {
+                    $('#inmateLiveSearch').val('').trigger('input').blur();
+                  }
+                });
               });
             </script>
 

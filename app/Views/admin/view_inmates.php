@@ -287,20 +287,15 @@
                   $href_base = base_url().'Admin/Inmates';
                   $fq = array();
                   if(!empty($active_status)){ $fq['status'] = $active_status; }
-                  if(!empty($active_pay)){ $fq['pay'] = $active_pay; }
                   $href = function($extra) use ($fq){
                     return base_url().'Admin/Inmates?'.http_build_query(array_merge($fq, $extra));
                   };
                   $cls_ab = $active_status == 'active' ? 'btn-success' : 'btn-outline-success';
                   $cls_na = $active_status == 'checked_out' ? 'btn-success' : 'btn-outline-success';
-                  $cls_ud = $active_pay == 'unpaid' ? 'btn-warning' : 'btn-outline-warning';
-                  $cls_pd = $active_pay == 'paid' ? 'btn-success' : 'btn-outline-success';
-                  $cls_pt = $active_pay == 'partial' ? 'btn-primary' : 'btn-outline-primary';
-                  $cls_av = $active_pay == 'advance' ? 'btn-info' : 'btn-outline-info';
                 ?>
 
                 <div class="card-header d-flex flex-wrap gap-2 align-items-center">
-                  <select id="ref_filter" class="form-select form-select-sm" style="width:200px;" onchange="var u='<?php echo base_url();?>Admin/Inmates';if(this.value){u+='?ref='+this.value+'<?php echo !empty($active_status)?'&status='.$active_status:''; ?><?php echo !empty($active_pay)?'&pay='.$active_pay:''; ?>';}goNav(u);">
+                  <select id="ref_filter" class="form-select form-select-sm" style="width:200px;" onchange="var u='<?php echo base_url();?>Admin/Inmates';if(this.value){u+='?ref='+this.value+'<?php echo !empty($active_status)?'&status='.$active_status:''; ?>';}goNav(u);">
                     <option value="">Filter by Reffer ID</option>
                     <?php foreach($reffers as $ref){ ?>
                     <option value="<?php echo $ref->inmates_uid;?>" <?php if(!empty($active_ref) && $active_ref == $ref->inmates_uid){ echo 'selected';} ?>><?php echo $ref->inmates_uid; ?> - <?php echo $ref->inmates_name;?></option>
@@ -309,19 +304,14 @@
                   <a href="<?php echo $href_base;?>" class="btn btn-sm btn-outline-secondary filter-link">All</a>
                   <a href="<?php echo $href(array('status' => 'active'));?>" class="btn btn-sm filter-link <?php echo $cls_ab;?>">Active</a>
                   <a href="<?php echo $href(array('status' => 'checked_out'));?>" class="btn btn-sm filter-link <?php echo $cls_na;?>">Inactive</a>
-                  <span class="mx-1 text-muted">Payment:</span>
-                  <a href="<?php echo $href(array('pay' => 'unpaid'));?>" class="btn btn-sm filter-link <?php echo $cls_ud;?>">Unpaid</a>
-                  <a href="<?php echo $href(array('pay' => 'paid'));?>" class="btn btn-sm filter-link <?php echo $cls_pd;?>">Paid</a>
-                  <a href="<?php echo $href(array('pay' => 'partial'));?>" class="btn btn-sm filter-link <?php echo $cls_pt;?>">Partially Paid</a>
-                  <a href="<?php echo $href(array('pay' => 'advance'));?>" class="btn btn-sm filter-link <?php echo $cls_av;?>">Advance</a>
                   <a href="<?php echo $href_base;?>" class="btn btn-sm btn-outline-danger filter-link">Reset</a>
                 </div>
 
                 <div class="card-header d-flex flex-wrap gap-2 align-items-center border-top">
                   <label class="text-muted mb-0">Check In:</label>
-                  <input type="date" class="form-control form-control-sm check_in_filter" style="width:150px;" value="<?php echo $active_check_in; ?>" onchange="goNav('<?php echo base_url();?>Admin/Inmates?check_in='+this.value+'<?php echo !empty($active_check_out)?'&check_out='.$active_check_out:''; ?><?php echo !empty($active_status)?'&status='.$active_status:''; ?><?php echo !empty($active_pay)?'&pay='.$active_pay:''; ?>');"/>
+                  <input type="date" class="form-control form-control-sm check_in_filter" style="width:150px;" value="<?php echo $active_check_in; ?>" onchange="goNav('<?php echo base_url();?>Admin/Inmates?check_in='+this.value+'<?php echo !empty($active_check_out)?'&check_out='.$active_check_out:''; ?><?php echo !empty($active_status)?'&status='.$active_status:''; ?>');"/>
                   <label class="text-muted mb-0 ms-2">Check Out:</label>
-                  <input type="date" class="form-control form-control-sm check_out_filter" style="width:150px;" value="<?php echo $active_check_out; ?>" onchange="goNav('<?php echo base_url();?>Admin/Inmates?check_out='+this.value+'<?php echo !empty($active_check_in)?'&check_in='.$active_check_in:''; ?><?php echo !empty($active_status)?'&status='.$active_status:''; ?><?php echo !empty($active_pay)?'&pay='.$active_pay:''; ?>');"/>
+                  <input type="date" class="form-control form-control-sm check_out_filter" style="width:150px;" value="<?php echo $active_check_out; ?>" onchange="goNav('<?php echo base_url();?>Admin/Inmates?check_out='+this.value+'<?php echo !empty($active_check_in)?'&check_in='.$active_check_in:''; ?><?php echo !empty($active_status)?'&status='.$active_status:''; ?>');"/>
                   <a href="<?php echo $href_base.(!empty($fq) ? '?'.http_build_query($fq) : '');?>" class="btn btn-sm btn-outline-secondary filter-link">Reset Dates</a>
                 </div>
                

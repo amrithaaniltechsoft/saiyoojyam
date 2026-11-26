@@ -54,9 +54,10 @@ class Easebuzz extends BaseController
         $rawProduct = preg_replace('/[^a-zA-Z0-9\s]/', '', (string)($input['productinfo'] ?? 'Hostel Room Reservation'));
         $productinfo = !empty(trim($rawProduct)) ? substr(trim($rawProduct), 0, 50) : 'Room Reservation';
 
-        $clientUrl = rtrim(env('FRONTEND_URL', 'http://localhost:3000'), '/');
-        $surl = $input['surl'] ?? "$clientUrl/checkout?payment_status=success";
-        $furl = $input['furl'] ?? "$clientUrl/checkout?payment_status=failed";
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? (isset($_SERVER['HTTP_REFERER']) ? parse_url($_SERVER['HTTP_REFERER'], PHP_URL_SCHEME) . '://' . parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST) : null);
+        $clientUrl = !empty($origin) ? rtrim($origin, '/') : rtrim(env('FRONTEND_URL', 'https://saiyoojyam-main-yyd7.vercel.app'), '/');
+        $surl = !empty($input['surl']) ? $input['surl'] : "$clientUrl/checkout?payment_status=success";
+        $furl = !empty($input['furl']) ? $input['furl'] : "$clientUrl/checkout?payment_status=failed";
 
         $udf1 = $input['udf1'] ?? '';
         $udf2 = $input['udf2'] ?? '';

@@ -212,3 +212,5 @@ ERROR - 2026-11-26 04:17:04 --> [Easebuzz::webhook] Hash verification failed for
 DEBUG - 2026-11-26 04:17:41 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
 INFO - 2026-11-26 04:17:41 --> [Easebuzz::webhook] Payload received: {"key":"R7VTLTD2H","status":"success","txnid":"TEST_TXN_123","easepayid":"E20261125TEST","amount":"100.00","productinfo":"Hostel Room Reservation","firstname":"John","email":"john@example.com","hash":"7d097d1452310f1f71a946932b7f373b429bddf18795d6819a25b80db102d819cfdb1912e1450dade0c3a8bda581fad85bdcb2fbeec34fbe4cb53f34e01c7107"}
 INFO - 2026-11-26 04:17:41 --> [Easebuzz::webhook] Payment SUCCESS confirmed for txnid: TEST_TXN_123, easepayid: E20261125TEST, amount: 100.00
+DEBUG - 2026-11-26 04:30:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.
+DEBUG - 2026-11-26 04:30:53 --> Session: Class initialized using 'CodeIgniter\Session\Handlers\FileHandler' driver.

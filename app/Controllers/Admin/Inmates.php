@@ -1002,7 +1002,7 @@ $joins = array(
                 $admission_check = $this->request->getPost('admission_check');
 
                 if($caution_check == 1){
-                 
+                     
                     $caution_deposit = $this->request->getPost('caution_deposit');
 
                 }

@@ -550,7 +550,10 @@ ul a {
                                 $isShortTerm = ($booking->inmates_duration_of_stay == 1 || strtolower(trim($booking->duration_stay ?? '')) === 'short term');
                                 $checkOutFmt = (!empty($booking->inmates_check_out_date) && $booking->inmates_check_out_date != '0000-00-00') ? date('d-m-Y', strtotime($booking->inmates_check_out_date)) : '-';
                                 $rawCheckOut = (!empty($booking->inmates_check_out_date) && $booking->inmates_check_out_date != '0000-00-00') ? $booking->inmates_check_out_date : '';
-                                $paidAmt = !empty($booking->invoice_paid_amount) ? $booking->invoice_paid_amount : (!empty($booking->invoice_total) ? $booking->invoice_total : ($booking->inmates_caution_deposit + $booking->inmates_admission_fee));
+                                $totalAmt = !empty($booking->invoice_total) ? (float)$booking->invoice_total : ((float)$booking->inmates_caution_deposit + (float)$booking->inmates_admission_fee);
+                                $isPaid = (!empty($booking->payments_status) && $booking->payments_status === 'paid') || ((int)($booking->invoice_status ?? 0) === 1 && (float)($booking->invoice_paid_amount ?? 0) > 0);
+                                $isFailed = (!empty($booking->payments_status) && $booking->payments_status === 'failed');
+                                $paidAmt = $isPaid ? (float)($booking->invoice_paid_amount ?: $totalAmt) : 0.00;
                                 $idProofUrl = !empty($booking->inmates_id_proof) ? base_url('uploads/inmates/' . $booking->inmates_id_proof) : '';
                                 $photoUrl = !empty($booking->inmates_photo) ? base_url('uploads/inmates/' . $booking->inmates_photo) : '';
                               ?>
@@ -587,10 +590,24 @@ ul a {
                                     <?php endif; ?>
                                   </td>
                                   <td>
-                                    <div class="fw-bold text-success" style="font-size:14px;">
-                                      ₹<?php echo number_format((float)$paidAmt, 2); ?>
-                                    </div>
-                                    <span class="badge bg-success" style="font-size:10px;"><i class="fa fa-check me-1"></i>PAID</span>
+                                    <?php if ($isPaid): ?>
+                                      <div class="fw-bold text-success" style="font-size:14px;">
+                                        ₹<?php echo number_format($paidAmt, 2); ?>
+                                      </div>
+                                      <span class="badge bg-success" style="font-size:10px;"><i class="fa fa-check me-1"></i>PAID</span>
+                                    <?php elseif ($isFailed): ?>
+                                      <div class="fw-bold text-danger" style="font-size:14px;">
+                                        ₹0.00
+                                      </div>
+                                      <span class="badge bg-danger" style="font-size:10px;"><i class="fa fa-times-circle me-1"></i>FAILED</span>
+                                      <div class="text-muted" style="font-size:11px;margin-top:2px;">Total: ₹<?php echo number_format($totalAmt, 2); ?></div>
+                                    <?php else: ?>
+                                      <div class="fw-bold text-warning" style="font-size:14px;">
+                                        ₹0.00
+                                      </div>
+                                      <span class="badge bg-warning text-dark" style="font-size:10px;"><i class="fa fa-clock-o me-1"></i>PAYMENT PENDING</span>
+                                      <div class="text-muted" style="font-size:11px;margin-top:2px;">Total: ₹<?php echo number_format($totalAmt, 2); ?></div>
+                                    <?php endif; ?>
                                   </td>
                                   <td>
                                     <div class="d-flex gap-1">
@@ -1206,7 +1223,18 @@ ul a {
                                 </div>
                               </div>
                               <div class="text-end">
-                                <span class="badge bg-success" style="font-size:10px;">PAID ₹<?php echo number_format((float)($pb->invoice_paid_amount ?: $pb->invoice_total), 2); ?></span>
+                                <?php 
+                                  $pbIsPaid = (!empty($pb->payments_status) && $pb->payments_status === 'paid') || ((int)($pb->invoice_status ?? 0) === 1 && (float)($pb->invoice_paid_amount ?? 0) > 0);
+                                  $pbPaidAmt = $pbIsPaid ? (float)($pb->invoice_paid_amount ?: $pb->invoice_total) : 0.00;
+                                  $pbTotal = (float)($pb->invoice_total ?? ($pb->inmates_caution_deposit + $pb->inmates_admission_fee));
+                                ?>
+                                <?php if ($pbIsPaid): ?>
+                                  <span class="badge bg-success" style="font-size:10px;">PAID ₹<?php echo number_format($pbPaidAmt, 2); ?></span>
+                                <?php elseif (!empty($pb->payments_status) && $pb->payments_status === 'failed'): ?>
+                                  <span class="badge bg-danger" style="font-size:10px;">FAILED (₹<?php echo number_format($pbTotal, 2); ?>)</span>
+                                <?php else: ?>
+                                  <span class="badge bg-warning text-dark" style="font-size:10px;">PENDING (₹<?php echo number_format($pbTotal, 2); ?>)</span>
+                                <?php endif; ?>
                                 <div class="text-muted" style="font-size:10px;">Check-in: <?php echo date('d-m-Y', strtotime($pb->inmates_check_in_date)); ?></div>
                               </div>
                             </div>
@@ -1543,7 +1571,12 @@ ul a {
                   $("#modal_display_uid").text(uid);
                   $("#modal_display_room").text(room);
                   $("#modal_display_checkin").text(checkin);
-                  $("#modal_display_paid").text("₹" + paid);
+                  var isPaid = parseFloat(paid) > 0;
+                  if (isPaid) {
+                    $("#modal_display_paid").text("₹" + paid + " (PAID)").removeClass("text-warning text-danger").addClass("text-success");
+                  } else {
+                    $("#modal_display_paid").text("₹0.00 (PENDING)").removeClass("text-success text-danger").addClass("text-warning");
+                  }
 
                   // Short Term vs Long Term Check-Out Handling
                   if (isShortTerm) {

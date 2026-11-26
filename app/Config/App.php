@@ -18,6 +18,23 @@ class App extends BaseConfig
      */
     public string $baseURL = 'http://localhost/saiyoojyam';
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Auto-detect production domain so image URLs never point to localhost on the live site
+        if (!empty($_SERVER['HTTP_HOST'])) {
+            $host = strtolower($_SERVER['HTTP_HOST']);
+            if (str_contains($host, 'janamithrasociety.com') || (!str_contains($host, 'localhost') && !str_contains($host, '127.0.0.1'))) {
+                $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                    || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
+                    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+                $scheme = $isHttps ? 'https://' : 'http://';
+                $this->baseURL = $scheme . $_SERVER['HTTP_HOST'] . '/';
+            }
+        }
+    }
+
     /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.
      * If you want to accept multiple Hostnames, set this.

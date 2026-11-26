@@ -133,6 +133,7 @@ $routes->post('Admin/Payments/PayBalance', '\App\Controllers\Admin\Payments::Pay
 $routes->match(['GET', 'POST'], 'Admin/Inmates/CheckOut', '\App\Controllers\Admin\Inmates::CheckOut');
 $routes->match(['GET', 'POST'], 'Admin/Inmates/CheckOut/(:num)', '\App\Controllers\Admin\Inmates::CheckOut/$1');
 $routes->post('api/checkout', '\App\Controllers\Api\Inmates::create');
+$routes->match(['GET', 'POST', 'OPTIONS'], 'api/checkout/update-payment', '\App\Controllers\Api\Inmates::updatePayment');
 $routes->post('api/inmates', '\App\Controllers\Api\Inmates::create');
 $routes->match(['GET', 'POST', 'OPTIONS'], 'api/payu/generate-hash', '\App\Controllers\Api\Payu::generateHash');
 $routes->match(['GET', 'POST', 'OPTIONS'], 'api/easebuzz/initiate', '\App\Controllers\Api\Easebuzz::initiate');

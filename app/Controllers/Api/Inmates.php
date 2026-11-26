@@ -108,11 +108,21 @@ class Inmates extends BaseController
                 ->getRow();
 
             if ($existingActiveInmate) {
-                $statusText = $existingActiveInmate->inmates_status === 'pending' ? 'a pending booking' : 'an active resident';
-                return $this->response->setStatusCode(400)->setJSON([
-                    'status'  => false,
-                    'message' => "The email '{$email}' is already registered to {$statusText} (" . ($existingActiveInmate->inmates_name ?: 'Resident') . "). Each resident must have their own unique email address for login and notifications.",
-                ]);
+                // If it is a recent pending booking created within the last 30 minutes, allow replacing it for this new attempt
+                $isRecentPending = ($existingActiveInmate->inmates_status === 'pending') &&
+                    (!empty($existingActiveInmate->inmates_created_at) && strtotime($existingActiveInmate->inmates_created_at) >= (time() - 1800));
+
+                if ($isRecentPending) {
+                    $db->table('saiyoojyam_payments')->where('payments_user_id', (int)$existingActiveInmate->inmates_id)->delete();
+                    $db->table('saiyoojyam_invoice')->where('invoice_inmates', (string)$existingActiveInmate->inmates_id)->delete();
+                    $db->table('saiyoojyam_inmates')->where('inmates_id', (int)$existingActiveInmate->inmates_id)->delete();
+                } else {
+                    $statusText = $existingActiveInmate->inmates_status === 'pending' ? 'a pending booking' : 'an active resident';
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'status'  => false,
+                        'message' => "The email '{$email}' is already registered to {$statusText} (" . ($existingActiveInmate->inmates_name ?: 'Resident') . "). Each resident must have their own unique email address for login and notifications.",
+                    ]);
+                }
             }
 
             // Also verify auth_identities to ensure no other ACTIVE or PENDING resident account uses this email
@@ -575,7 +585,10 @@ class Inmates extends BaseController
             }
 
             $totalAmount = $calculatedRent + $cautionDeposit + $admissionFee;
-            $paidAmount = $totalAmount;
+            $paymentStatus = strtolower(trim((string)($input['payment_status'] ?? 'pending')));
+            $isPaid = ($paymentStatus === 'paid' || $paymentStatus === 'success');
+            $paidAmount = $isPaid ? $totalAmount : 0.00;
+            $balanceAmount = $isPaid ? 0.00 : $totalAmount;
 
             $paymentMethod = $input['payment_method'] ?? 'Online Payment Gateway';
             $gatewayProvider = $input['payment_gateway'] ?? 'Payment Gateway';
@@ -585,12 +598,12 @@ class Inmates extends BaseController
                 'invoice_rent'          => $calculatedRent,
                 'invoice_total'         => $totalAmount,
                 'invoice_paid_amount'   => $paidAmount,
-                'invoice_balance'       => 0.00,
+                'invoice_balance'       => $balanceAmount,
                 'invoice_advance'       => 0.00,
                 'invoice_inmates'       => (string) $insertId,
                 'invoice_paid_date'     => $currentDate,
                 'invoice_payment_month' => $paymentMonth,
-                'invoice_status'        => 1, // Fully Paid
+                'invoice_status'        => $isPaid ? 1 : 0, // 0 = Pending/Unpaid, 1 = Fully Paid
             ];
 
             $db->table('saiyoojyam_invoice')->insert($invoiceData);
@@ -602,9 +615,9 @@ class Inmates extends BaseController
                     $db->table('saiyoojyam_payments')->insert([
                         'payments_user_id'    => (int) $insertId,
                         'payments_room_id'    => (int) $roomId,
-                        'payments_amount'     => $paidAmount,
+                        'payments_amount'     => $totalAmount,
                         'payments_date'       => $currentDate,
-                        'payments_status'     => 'paid',
+                        'payments_status'     => $isPaid ? 'paid' : 'pending',
                         'payments_created_at' => date('Y-m-d H:i:s'),
                     ]);
                 } catch (\Throwable $ex) {
@@ -612,9 +625,13 @@ class Inmates extends BaseController
                 }
             }
 
+            $successMsg = $isPaid
+                ? 'Room booking request submitted and payment received! Awaiting admin approval.'
+                : 'Room booking request saved! Payment is pending.';
+
             return $this->response->setJSON([
                 'status'  => true,
-                'message' => 'Room booking request submitted and payment received! Awaiting admin approval.',
+                'message' => $successMsg,
                 'data'    => [
                     'inmates_id'               => $insertId,
                     'inmates_uid'              => $uid,
@@ -626,6 +643,7 @@ class Inmates extends BaseController
                     'inmates_duration_of_stay' => $durationId,
                     'inmates_status'           => 'pending',
                     'inmates_email'            => $email,
+                    'payment_status'           => $isPaid ? 'paid' : 'pending',
                     'transaction_id'           => $transactionId,
                     'payment_method'           => $paymentMethod,
                     'payment_gateway'          => $gatewayProvider,
@@ -633,13 +651,13 @@ class Inmates extends BaseController
                         'invoice_id'              => $invoiceId,
                         'invoice_payment_month'   => $paymentMonth,
                         'payment_month_display'   => ($join_day >= 21 ? date('M Y', strtotime($checkInDate)) . ' & ' . date('M Y', strtotime($paymentMonth)) : date('M Y', strtotime($paymentMonth))),
-                        'invoice_paid_date'       => $currentDate,
+                        'invoice_paid_date'       => $isPaid ? $currentDate : null,
                         'invoice_rent'            => $calculatedRent,
                         'invoice_caution_deposit' => $cautionDeposit,
                         'invoice_admission_fee'   => $admissionFee,
                         'invoice_total'           => $totalAmount,
                         'invoice_paid_amount'     => $paidAmount,
-                        'invoice_status'          => 'Fully Paid',
+                        'invoice_status'          => $isPaid ? 'Fully Paid' : 'Pending',
                         'transaction_id'          => $transactionId,
                         'payment_method'          => $paymentMethod,
                         'payment_gateway'         => $gatewayProvider,
@@ -656,6 +674,115 @@ class Inmates extends BaseController
                 'message' => 'Server error: ' . $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * POST /api/checkout/update-payment
+     * Updates payment status to 'paid', 'pending', or 'failed'
+     */
+    public function updatePayment()
+    {
+        $this->setCorsHeaders();
+        if (strtolower($this->request->getMethod()) === 'options') {
+            return $this->response->setStatusCode(200)->setJSON(['status' => true]);
+        }
+
+        $input = $this->request->getJSON(true) ?? $this->request->getPost();
+        if (empty($input)) {
+            $raw = file_get_contents('php://input');
+            $input = json_decode($raw, true) ?? [];
+        }
+
+        $inmateId = (int) ($input['inmates_id'] ?? $input['inmate_id'] ?? 0);
+        $invoiceId = (int) ($input['invoice_id'] ?? 0);
+        $status = strtolower(trim((string) ($input['status'] ?? 'pending'))); // 'paid', 'pending', 'failed'
+        $txnid = trim((string) ($input['transaction_id'] ?? $input['txnid'] ?? ''));
+        $paymentMethod = trim((string) ($input['payment_method'] ?? 'Online Payment Gateway'));
+        $gateway = trim((string) ($input['payment_gateway'] ?? 'Easebuzz'));
+
+        $db = Database::connect('default');
+
+        if ($inmateId <= 0 && $invoiceId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'status'  => false,
+                'message' => 'Inmate ID or Invoice ID is required',
+            ]);
+        }
+
+        if ($invoiceId <= 0 && $inmateId > 0) {
+            $invRow = $db->table('saiyoojyam_invoice')
+                ->where('invoice_inmates', (string)$inmateId)
+                ->orderBy('invoice_id', 'DESC')
+                ->get()
+                ->getRow();
+            if ($invRow) {
+                $invoiceId = (int) $invRow->invoice_id;
+            }
+        }
+
+        $invoice = null;
+        if ($invoiceId > 0) {
+            $invoice = $db->table('saiyoojyam_invoice')->where('invoice_id', $invoiceId)->get()->getRow();
+        }
+
+        $currentDate = date('Y-m-d');
+
+        if ($status === 'paid' || $status === 'success') {
+            // Update Invoice to Paid
+            if ($invoice) {
+                $db->table('saiyoojyam_invoice')
+                    ->where('invoice_id', $invoiceId)
+                    ->update([
+                        'invoice_status'      => 1,
+                        'invoice_paid_amount' => $invoice->invoice_total,
+                        'invoice_balance'     => 0.00,
+                        'invoice_paid_date'   => $currentDate,
+                    ]);
+            }
+
+            // Update Payments to Paid
+            if ($db->tableExists('saiyoojyam_payments') && $inmateId > 0) {
+                $payRow = $db->table('saiyoojyam_payments')
+                    ->where('payments_user_id', $inmateId)
+                    ->orderBy('payments_id', 'DESC')
+                    ->get()
+                    ->getRow();
+
+                if ($payRow) {
+                    $db->table('saiyoojyam_payments')
+                        ->where('payments_id', $payRow->payments_id)
+                        ->update([
+                            'payments_status' => 'paid',
+                            'payments_date'   => $currentDate,
+                        ]);
+                }
+            }
+        } elseif ($status === 'failed') {
+            // Update Payments to Failed
+            if ($db->tableExists('saiyoojyam_payments') && $inmateId > 0) {
+                $payRow = $db->table('saiyoojyam_payments')
+                    ->where('payments_user_id', $inmateId)
+                    ->orderBy('payments_id', 'DESC')
+                    ->get()
+                    ->getRow();
+
+                if ($payRow) {
+                    $db->table('saiyoojyam_payments')
+                        ->where('payments_id', $payRow->payments_id)
+                        ->update([
+                            'payments_status' => 'failed',
+                        ]);
+                }
+            }
+        }
+
+        return $this->response->setJSON([
+            'status'         => true,
+            'message'        => 'Payment status updated to ' . strtoupper($status),
+            'payment_status' => $status,
+            'inmates_id'     => $inmateId,
+            'invoice_id'     => $invoiceId,
+        ]);
     }
 
     public function receipt($id)

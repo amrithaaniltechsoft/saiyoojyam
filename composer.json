@@ -16,6 +16,7 @@
         "codeigniter4/shield": "^1.1",
         "laminas/laminas-escaper": "^2.14",
         "mpdf/mpdf": "^8.2",
+        "phpoffice/phpspreadsheet": "^5.12",
         "psr/log": "^3.0"
     },
     "require-dev": {

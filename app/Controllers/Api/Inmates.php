@@ -577,6 +577,10 @@ class Inmates extends BaseController
             $totalAmount = $calculatedRent + $cautionDeposit + $admissionFee;
             $paidAmount = $totalAmount;
 
+            $paymentMethod = $input['payment_method'] ?? 'Online Payment Gateway';
+            $gatewayProvider = $input['payment_gateway'] ?? 'Payment Gateway';
+            $transactionId = $input['transaction_id'] ?? ('TXN_' . date('YmdHis') . rand(1000, 9999));
+
             $invoiceData = [
                 'invoice_rent'          => $calculatedRent,
                 'invoice_total'         => $totalAmount,
@@ -592,6 +596,22 @@ class Inmates extends BaseController
             $db->table('saiyoojyam_invoice')->insert($invoiceData);
             $invoiceId = $db->insertID();
 
+            // Record transaction in saiyoojyam_payments if table exists
+            if ($db->tableExists('saiyoojyam_payments')) {
+                try {
+                    $db->table('saiyoojyam_payments')->insert([
+                        'payments_user_id'    => (int) $insertId,
+                        'payments_room_id'    => (int) $roomId,
+                        'payments_amount'     => $paidAmount,
+                        'payments_date'       => $currentDate,
+                        'payments_status'     => 'paid',
+                        'payments_created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                } catch (\Throwable $ex) {
+                    log_message('warning', '[Api\Inmates::create] Payments table insert notice: ' . $ex->getMessage());
+                }
+            }
+
             return $this->response->setJSON([
                 'status'  => true,
                 'message' => 'Room booking request submitted and payment received! Awaiting admin approval.',
@@ -606,6 +626,9 @@ class Inmates extends BaseController
                     'inmates_duration_of_stay' => $durationId,
                     'inmates_status'           => 'pending',
                     'inmates_email'            => $email,
+                    'transaction_id'           => $transactionId,
+                    'payment_method'           => $paymentMethod,
+                    'payment_gateway'          => $gatewayProvider,
                     'invoice'                  => [
                         'invoice_id'              => $invoiceId,
                         'invoice_payment_month'   => $paymentMonth,
@@ -617,6 +640,9 @@ class Inmates extends BaseController
                         'invoice_total'           => $totalAmount,
                         'invoice_paid_amount'     => $paidAmount,
                         'invoice_status'          => 'Fully Paid',
+                        'transaction_id'          => $transactionId,
+                        'payment_method'          => $paymentMethod,
+                        'payment_gateway'         => $gatewayProvider,
                     ],
                     'receipt_url'              => base_url('Admin/Inmates/Receipt/' . $insertId),
                     'print_url'                => base_url('Admin/Inmates/Print/' . $insertId . '?invoice_id=' . $invoiceId),

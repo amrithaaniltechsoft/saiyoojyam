@@ -361,7 +361,7 @@ class Inmates extends BaseController
         
         }
 
-        $data['duration'] = $this->common_model->FetchAllOrder('saiyoojyam_duration_of_stay','duration_stay','ASC');
+        $data['duration'] = $this->common_model->FetchWhereOrderby('saiyoojyam_duration_of_stay', array('duration_id !=' => 1), 'duration_stay', 'ASC');
 
         $data['building'] = $this->common_model->FetchAllOrder('saiyoojyam_building','building_name','ASC');
 
@@ -2034,9 +2034,11 @@ $joins = array(
             return redirect()->to(site_url().'Admin/Inmates');
         }
 
+        $overrideLock = ($this->request->getPost('override_lock') == '1');
+
         // Validate 1-month minimum stay rule: Inmates can check out only after 1 month from check in date
         // Note: Policy applies ONLY to Long Term stay. Short Term stays (duration_of_stay == 1) do NOT require a 1-month minimum stay!
-        if (!$isShortTerm && !empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date !== '0000-00-00') {
+        if (!$overrideLock && !$isShortTerm && !empty($inmate->inmates_check_in_date) && $inmate->inmates_check_in_date !== '0000-00-00') {
             $one_month = date('Y-m-d', strtotime($inmate->inmates_check_in_date . ' + 1 month'));
             if ($checkout_date < $one_month) {
                 $checkin_fmt = date('d-M-Y', strtotime($inmate->inmates_check_in_date));

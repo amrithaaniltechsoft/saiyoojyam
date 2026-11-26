@@ -134,11 +134,18 @@ $routes->match(['GET', 'POST'], 'Admin/Inmates/CheckOut', '\App\Controllers\Admi
 $routes->match(['GET', 'POST'], 'Admin/Inmates/CheckOut/(:num)', '\App\Controllers\Admin\Inmates::CheckOut/$1');
 $routes->post('api/checkout', '\App\Controllers\Api\Inmates::create');
 $routes->post('api/inmates', '\App\Controllers\Api\Inmates::create');
+$routes->match(['GET', 'POST', 'OPTIONS'], 'api/payu/generate-hash', '\App\Controllers\Api\Payu::generateHash');
+$routes->match(['GET', 'POST', 'OPTIONS'], 'api/easebuzz/initiate', '\App\Controllers\Api\Easebuzz::initiate');
+$routes->match(['GET', 'POST', 'OPTIONS'], 'api/easebuzz/verify', '\App\Controllers\Api\Easebuzz::verify');
+$routes->match(['GET', 'POST', 'OPTIONS'], 'api/easebuzz/webhook', '\App\Controllers\Api\Easebuzz::webhook');
 $routes->get('api/inmates/dashboard', '\App\Controllers\Api\Inmates::dashboard');
 $routes->get('api/inmates/dashboard/(:num)', '\App\Controllers\Api\Inmates::dashboard/$1');
 $routes->post('api/inmates/pay-rent', '\App\Controllers\Api\Inmates::payRent');
 $routes->get('api/inmates/receipt/(:num)', '\App\Controllers\Api\Inmates::receipt/$1');
 $routes->get('api/inmates/print/(:num)', '\App\Controllers\Api\Inmates::printReceipt/$1');
+
+$routes->match(['GET', 'POST'], 'Admin/Tariff/Import', '\App\Controllers\Admin\Tariff::Import');
+$routes->get('Admin/Tariff/DownloadSample', '\App\Controllers\Admin\Tariff::DownloadSample');
 
 $routes->get('Admin/Building/EditWeb/(:num)', '\App\Controllers\Admin\Building::EditWeb/$1');
 $routes->post('Admin/Building/EditWeb/(:num)', '\App\Controllers\Admin\Building::EditWeb/$1');

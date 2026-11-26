@@ -23,9 +23,16 @@
                 <!-- Basic Layout -->
                 <div class="col-xxl">
                   <div class="card">
-                    <div class="card-header d-flex align-items-center justify-content-between">
+                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                       <h5 class="mb-0">Add Tariff</h5>
-                      
+                      <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-success btn-sm d-flex align-items-center gap-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                          <i class="bx bx-file me-1"></i> Import Excel / CSV
+                        </button>
+                        <a href="<?php echo base_url('Admin/Tariff/DownloadSample'); ?>" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" title="Download Excel template">
+                          <i class="bx bx-download me-1"></i> Sample Template
+                        </a>
+                      </div>
                     </div>
                     <div class="card-body">
                       <form id="add_form">
@@ -96,6 +103,88 @@
 
             <!-- / Footer -->
 
+            <!-- Import Excel Modal -->
+            <div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content shadow-lg border-0">
+                  <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title d-flex align-items-center gap-2" id="importExcelModalLabel">
+                      <span class="badge bg-label-success p-2 rounded"><i class="bx bx-file fs-4 text-success"></i></span>
+                      <span class="fw-bold">Import Tariffs via Excel / CSV</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+
+                  <form id="excel_import_form" enctype="multipart/form-data">
+                    <div class="modal-body p-4">
+                      <!-- Guide alert -->
+                      <div class="alert alert-primary d-flex align-items-start gap-2 py-3 px-3 mb-4 rounded-3" style="font-size:12.5px;">
+                        <i class="bx bx-info-circle fs-5 mt-0.5 text-primary"></i>
+                        <div class="flex-grow-1">
+                          <strong>Required Columns in Excel / CSV:</strong>
+                          <div class="mt-1">
+                            Your spreadsheet only needs these <strong>3 columns</strong>:
+                            <div class="mt-1 d-flex flex-wrap gap-1">
+                              <span class="badge bg-white text-primary border">1. Building Name</span>
+                              <span class="badge bg-white text-primary border">2. Room Type Name</span>
+                              <span class="badge bg-white text-primary border">3. Monthly Rent</span>
+                            </div>
+                            <small class="text-muted d-block mt-1.5" style="font-size:11px;">
+                              Admission fees and caution deposit will automatically use each building's defaults.
+                            </small>
+                          </div>
+                          <div class="mt-2.5">
+                            <a href="<?php echo base_url('Admin/Tariff/DownloadSample'); ?>" class="btn btn-sm btn-primary py-1 px-3 text-white fw-semibold">
+                              <i class="bx bx-download me-1"></i> Download 3-Column Sample Template (.xlsx)
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- File upload field -->
+                      <div class="mb-3">
+                        <label class="form-label fw-bold text-dark mb-1">Select Excel / CSV File <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                          <input type="file" class="form-control" id="excel_file_input" name="excel_file" accept=".xlsx,.xls,.csv" required>
+                        </div>
+                        <small class="text-muted mt-1 d-block" style="font-size:11.5px;">Supported formats: .xlsx (Excel), .xls, or .csv (Max 10MB)</small>
+                      </div>
+
+                      <!-- Options -->
+                      <div class="form-check form-switch mb-3 p-2 bg-light rounded border">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" id="update_existing" name="update_existing" value="1" checked>
+                        <label class="form-check-label fw-semibold text-dark" for="update_existing" style="font-size:13px;">
+                          Update price if tariff already exists for the building & room type
+                        </label>
+                        <small class="text-muted d-block ps-4 ms-2" style="font-size:11.5px;">
+                          When enabled, existing matching tariffs will have their monthly price updated and recorded in the price history.
+                        </small>
+                      </div>
+
+                      <!-- Live Result Box (hidden initially) -->
+                      <div id="import_result_box" class="d-none mt-3">
+                        <div id="import_alert" class="alert py-2.5 px-3 mb-2 rounded-2"></div>
+                        <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
+                          <span class="fw-bold text-dark" style="font-size:12px;">Import Details Log:</span>
+                          <span id="import_badges" class="d-flex gap-1.5"></span>
+                        </div>
+                        <div id="import_details_wrap" class="border rounded p-2.5 bg-white" style="max-height: 200px; overflow-y: auto; font-size: 12px;">
+                          <ul id="import_logs_list" class="list-unstyled mb-0 space-y-1"></ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="modal-footer border-top p-3 bg-light d-flex justify-content-between">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                      <button type="submit" id="btn_submit_import" class="btn btn-success fw-bold px-4">
+                        <i class="bx bx-upload me-1"></i> Upload & Import
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
             <script>
               document.addEventListener("DOMContentLoaded", function(event) {
                 $(document).ready(function () {
@@ -156,7 +245,7 @@
                     }
                   });
 
-                  /* Submit Handler */
+                  /* Submit Handler for Manual Add */
                   var form = $('#add_form');
                   form.validate({
                     errorClass: "text-danger",
@@ -181,6 +270,76 @@
                       });
                     }
                   });
+
+                  /* Submit Handler for Excel Import */
+                  $('#excel_import_form').on('submit', function (e) {
+                    e.preventDefault();
+
+                    var fileInput = $('#excel_file_input')[0];
+                    if (!fileInput.files.length) {
+                      alertify.error('Please select an Excel or CSV file.').delay(3).dismissOthers();
+                      return;
+                    }
+
+                    var btn = $('#btn_submit_import');
+                    var origText = btn.html();
+                    btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i> Importing...');
+
+                    var formData = new FormData(this);
+
+                    $('#import_result_box').addClass('d-none');
+                    $('#import_logs_list').empty();
+                    $('#import_badges').empty();
+
+                    $.ajax({
+                      url: '<?php echo base_url("Admin/Tariff/Import"); ?>',
+                      type: 'POST',
+                      data: formData,
+                      contentType: false,
+                      processData: false,
+                      dataType: 'json',
+                      success: function (res) {
+                        btn.prop('disabled', false).html(origText);
+                        $('#import_result_box').removeClass('d-none');
+
+                        if (res && res.status) {
+                          alertify.success(res.message).delay(5).dismissOthers();
+                          $('#import_alert').removeClass('alert-danger').addClass('alert-success').html('<strong><i class="bx bx-check-circle me-1"></i>Success:</strong> ' + res.message);
+                        } else {
+                          alertify.error(res?.message || 'Import failed').delay(5).dismissOthers();
+                          $('#import_alert').removeClass('alert-success').addClass('alert-danger').html('<strong><i class="bx bx-error me-1"></i>Notice:</strong> ' + (res?.message || 'Import failed.'));
+                        }
+
+                        // Add badges
+                        if (res.added !== undefined && res.added > 0) {
+                          $('#import_badges').append('<span class="badge bg-success" style="font-size:11px;"><i class="bx bx-check me-0.5"></i>' + res.added + ' Added</span>');
+                        }
+                        if (res.updated !== undefined && res.updated > 0) {
+                          $('#import_badges').append('<span class="badge bg-info" style="font-size:11px;"><i class="bx bx-edit me-0.5"></i>' + res.updated + ' Updated</span>');
+                        }
+                        if (res.skipped !== undefined && res.skipped > 0) {
+                          $('#import_badges').append('<span class="badge bg-warning text-dark" style="font-size:11px;"><i class="bx bx-skip-next me-0.5"></i>' + res.skipped + ' Skipped</span>');
+                        }
+
+                        if (res.logs && res.logs.length > 0) {
+                          res.logs.forEach(function (log) {
+                            var badge = log.status === 'added' ? '<span class="badge bg-label-success" style="font-size:10.5px;">Added</span>' :
+                                       log.status === 'updated' ? '<span class="badge bg-label-info" style="font-size:10.5px;">Updated</span>' :
+                                       '<span class="badge bg-label-danger" style="font-size:10.5px;">Skipped</span>';
+                            $('#import_logs_list').append('<li class="py-1.5 border-bottom d-flex align-items-center justify-content-between gap-2"><span>' + log.message + '</span> ' + badge + '</li>');
+                          });
+                        }
+                      },
+                      error: function (xhr) {
+                        btn.prop('disabled', false).html(origText);
+                        $('#import_result_box').removeClass('d-none');
+                        var err = xhr.responseJSON?.message || 'An error occurred during import. Please check file format and try again.';
+                        $('#import_alert').removeClass('alert-success').addClass('alert-danger').html('<strong><i class="bx bx-error me-1"></i>Error:</strong> ' + err);
+                        alertify.error(err).delay(5).dismissOthers();
+                      }
+                    });
+                  });
+
                 });
               });
             </script>

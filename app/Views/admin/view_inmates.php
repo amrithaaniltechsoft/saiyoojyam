@@ -893,6 +893,7 @@
                   <form id="checkoutForm" method="POST" action="<?php echo base_url('Admin/Inmates/CheckOut'); ?>">
                     <input type="hidden" name="inmates_id" id="co_inmate_id" value="">
                     <input type="hidden" name="is_ajax" value="1">
+                    <input type="hidden" name="override_lock" id="co_override_lock" value="0">
                     
                     <div class="modal-body p-4" style="overflow-y:auto;max-height:calc(92vh - 130px);">
                       <!-- Inmate Info Banner -->
@@ -1326,19 +1327,31 @@
 
                     $('#co_badge_quick_indicator').html('<i class="fa fa-calendar-check-o me-1"></i>Scheduled: ' + currentCheckoutFmt).removeClass('bg-success bg-danger text-white').addClass('bg-info text-white');
                   } else if (!canToday) {
-                    // INMATE CANNOT CHECK OUT TODAY
+                    // INMATE CANNOT CHECK OUT TODAY (Less than 1-month stay)
+                    $('#co_override_lock').val('0');
                     $('#co_policy_warning').removeClass('d-none');
                     if (isShortTerm) {
                       $('#co_policy_warning_text').html('Check out is allowed on or after the check-in date (<strong>' + checkin + '</strong>).');
                     } else {
-                      $('#co_policy_warning_text').html('Inmates can check out only after 1 month from check-in date (' + checkin + '). Earliest eligible check-out date is <strong>' + oneMonthFmt + '</strong>.');
+                      $('#co_policy_warning_text').html('Inmates can check out only after 1 month from check-in date (' + checkin + '). Earliest eligible check-out date is <strong>' + oneMonthFmt + '</strong>. Click "Locked" or <a href="javascript:void(0);" class="btn-unlock-date fw-bold text-decoration-underline">click here</a> to select a custom date.');
                     }
 
-                    // Disable "Check Out Today" option
+                    // Disable "Check Out Today" option by default until unlocked
                     $('#radio_co_today').prop('disabled', true).prop('checked', false);
                     $('#card_co_today').addClass('disabled').removeClass('active');
-                    $('#co_today_badge').removeClass('bg-danger').addClass('bg-secondary').html('<i class="fa fa-lock me-1"></i>Locked');
-                    $('#co_today_desc').html(isShortTerm ? '<span class="text-danger fw-semibold">Check-in date is in future (' + checkin + ').</span>' : '<span class="text-danger fw-semibold">Not allowed. Must complete 1 month stay (eligible on or after ' + oneMonthFmt + ').</span>');
+                    $('#co_today_badge')
+                      .removeClass('bg-danger bg-warning text-dark')
+                      .addClass('bg-secondary text-white')
+                      .css('cursor', 'pointer')
+                      .attr('title', 'Click to unlock and select date')
+                      .html('<i class="fa fa-lock me-1"></i>Locked <span style="font-size:10px;text-decoration:underline;">(Click to Select Date)</span>');
+
+                    $('#co_today_desc').html(
+                      (isShortTerm
+                        ? '<span class="text-danger fw-semibold">Check-in date is in future (' + checkin + ').</span>'
+                        : '<span class="text-danger fw-semibold">Not allowed. Must complete 1 month stay (eligible on or after ' + oneMonthFmt + ').</span>') +
+                      ' <a href="javascript:void(0);" class="btn-unlock-date text-primary fw-bold text-decoration-underline ms-1" style="font-size:11.5px;"><i class="fa fa-calendar me-0.5"></i>Click to select date</a>'
+                    );
 
                     // Auto-select "Select Upcoming Date"
                     $('#radio_co_upcoming').prop('disabled', false).prop('checked', true).trigger('change');
@@ -1415,8 +1428,63 @@
                   }
                 });
 
-                // Clicking card triggers radio
+                // Function to unlock date selection when clicking Locked
+                function unlockCheckoutDate() {
+                  var checkinRaw = $('#checkoutForm').data('checkin-raw');
+                  var checkinFmt = $('#checkoutForm').data('checkin-fmt');
+
+                  $('#co_override_lock').val('1');
+
+                  // Change badge to Unlocked
+                  $('#co_today_badge')
+                    .removeClass('bg-secondary bg-danger text-white')
+                    .addClass('bg-warning text-dark')
+                    .html('<i class="fa fa-unlock me-1"></i>Unlocked <span style="font-size:10px;">(Select Date)</span>');
+
+                  $('#co_today_desc').html('<span class="text-success fw-semibold"><i class="fa fa-check-circle me-1"></i>Early check-out unlocked: Choose a departure date below or select Check Out Today.</span>');
+
+                  // Allow Check Out Today as well
+                  $('#radio_co_today').prop('disabled', false);
+                  $('#card_co_today').removeClass('disabled');
+
+                  // Switch to Select Upcoming Date
+                  $('#radio_co_upcoming').prop('disabled', false).prop('checked', true).trigger('change');
+                  $('#card_co_upcoming').addClass('active');
+
+                  // Update Flatpickr minDate to check-in date
+                  if (checkoutPicker) {
+                    var minDt = (checkinRaw && checkinRaw < globalToday) ? checkinRaw : globalToday;
+                    checkoutPicker.set('minDate', minDt);
+                    checkoutPicker.setDate(globalToday, true);
+                    setTimeout(function() {
+                      checkoutPicker.open();
+                    }, 120);
+                  }
+
+                  // Update policy warning banner
+                  $('#co_policy_warning').removeClass('d-none');
+                  $('#co_policy_warning_text').html('<span class="text-warning fw-bold"><i class="fa fa-unlock me-1"></i>Early Check-Out Unlocked:</span> You can select any departure date on or after check-in date (<strong>' + (checkinFmt || checkinRaw) + '</strong>).');
+
+                  $('#co_badge_quick_indicator')
+                    .html('<i class="fa fa-unlock me-1"></i>Custom Date Allowed')
+                    .removeClass('bg-danger bg-success')
+                    .addClass('bg-warning text-dark');
+                }
+
+                // Click on Locked badge or helper link triggers date selection
+                $(document).on('click', '#co_today_badge, .btn-unlock-date', function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  unlockCheckoutDate();
+                });
+
+                // Clicking card triggers radio or triggers unlock if disabled
                 $(document).on('click', '.checkout-option-card', function(e) {
+                  if ($(this).attr('id') === 'card_co_today' && $(this).hasClass('disabled')) {
+                    e.preventDefault();
+                    unlockCheckoutDate();
+                    return false;
+                  }
                   if ($(this).hasClass('disabled') || $(this).find('input[type="radio"]').is(':disabled')) {
                     e.preventDefault();
                     return false;
@@ -1440,6 +1508,7 @@
                   var checkinFmt = $form.data('checkin-fmt');
                   var checkinRaw = $form.data('checkin-raw');
                   var currentCheckout = $form.data('current-checkout');
+                  var isOverrideLock = $('#co_override_lock').val() === '1';
 
                   var type = $('input[name="checkout_type"]:checked').val();
                   var upcomingDate = $('#co_upcoming_date').val();
@@ -1452,7 +1521,7 @@
                       $('#co_error_alert').removeClass('d-none').text('Departure is already scheduled for ' + curFmt + '. Check out today is not allowed.');
                       return false;
                     }
-                    if (!canToday) {
+                    if (!canToday && !isOverrideLock) {
                       if (isShortTerm) {
                         $('#co_error_alert').removeClass('d-none').text('Check out is allowed on or after the check in date (' + checkinFmt + ').');
                       } else {
@@ -1472,12 +1541,11 @@
                       $('#co_error_alert').removeClass('d-none').text('Check out date cannot be earlier than currently scheduled date (' + curFmt + ').');
                       return false;
                     }
-                    if (isShortTerm) {
-                      if (checkinRaw && upcomingDate < checkinRaw) {
-                        $('#co_error_alert').removeClass('d-none').text('Check out date cannot be earlier than check in date (' + checkinFmt + ').');
-                        return false;
-                      }
-                    } else {
+                    if (checkinRaw && upcomingDate < checkinRaw) {
+                      $('#co_error_alert').removeClass('d-none').text('Check out date cannot be earlier than check in date (' + checkinFmt + ').');
+                      return false;
+                    }
+                    if (!isShortTerm && !isOverrideLock) {
                       if (oneMonth && upcomingDate < oneMonth) {
                         $('#co_error_alert').removeClass('d-none').text('Check out is allowed only after one month from the check in date (' + checkinFmt + '). Selected date cannot be earlier than ' + oneMonthFmt + '.');
                         return false;

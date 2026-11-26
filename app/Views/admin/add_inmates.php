@@ -238,13 +238,14 @@
                           <label class="col-sm-2 col-form-label" for="basic-default-name">Duration of Stay</label>
                           <div class="col-sm-10">
                             <select id="defaultSelect" class="form-select duration_of_stay" name="inmates_duration_of_stay" required>
-                              <option value="" selected disabled>Select Duration</option>
-                               <?php foreach($duration as $durat){?>
-                                <option value="<?php echo $durat->duration_id; ?>"><?php echo $durat->duration_stay;?></option>
+                               <?php foreach($duration as $durat){
+                                 if ((int)$durat->duration_id === 1 || stripos($durat->duration_stay, 'short') !== false) {
+                                   continue;
+                                 }
+                               ?>
+                                <option value="<?php echo $durat->duration_id; ?>" selected><?php echo $durat->duration_stay;?></option>
                                 <?php } ?>
-                              
                             </select>
-                             
                           </div>
                         </div>
 

@@ -340,5 +340,429 @@ class Tariff extends BaseController
     }
 
 
-    
+    /**
+     * Download Sample Excel Template for Tariff Import
+     */
+    public function DownloadSample()
+    {
+        $db = \Config\Database::connect();
+        $buildings = $db->table('saiyoojyam_building')->orderBy('building_name', 'ASC')->get()->getResult();
+        $roomTypes = $db->table('saiyoojyam_room_type')->orderBy('room_type_name', 'ASC')->get()->getResult();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+        // Sheet 1: Template with exactly 3 columns: building, room type, monthly rent
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Tariff Import Template');
+
+        $headers = [
+            'A1' => 'Building Name',
+            'B1' => 'Room Type Name',
+            'C1' => 'Monthly Rent'
+        ];
+
+        foreach ($headers as $cell => $text) {
+            $sheet->setCellValue($cell, $text);
+            $sheet->getStyle($cell)->getFont()->setBold(true);
+            $sheet->getStyle($cell)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFF1F5F9');
+        }
+
+        // Add prefilled sample rows from actual database
+        $rowIndex = 2;
+        $sampleCount = 0;
+        foreach ($buildings as $b) {
+            $bTypes = array_filter($roomTypes, function($rt) use ($b) {
+                return (int)$rt->room_type_building_id === (int)$b->building_id;
+            });
+
+            foreach ($bTypes as $rt) {
+                $sheet->setCellValue('A' . $rowIndex, $b->building_name);
+                $sheet->setCellValue('B' . $rowIndex, $rt->room_type_name);
+                $sheet->setCellValue('C' . $rowIndex, 6000 + ($sampleCount * 500));
+                $rowIndex++;
+                $sampleCount++;
+                if ($sampleCount >= 6) break 2;
+            }
+        }
+
+        foreach (range('A', 'C') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Sheet 2: Reference Guide
+        $refSheet = $spreadsheet->createSheet();
+        $refSheet->setTitle('Reference Guide');
+        $refSheet->setCellValue('A1', 'Building Name');
+        $refSheet->setCellValue('B1', 'Available Room Type');
+        $refSheet->setCellValue('C1', 'Building ID');
+        $refSheet->setCellValue('D1', 'Room Type ID');
+
+        foreach (range('A', 'D') as $col) {
+            $refSheet->getStyle($col . '1')->getFont()->setBold(true);
+            $refSheet->getStyle($col . '1')->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFE2E8F0');
+        }
+
+        $refRow = 2;
+        foreach ($buildings as $b) {
+            $bTypes = array_filter($roomTypes, function($rt) use ($b) {
+                return (int)$rt->room_type_building_id === (int)$b->building_id;
+            });
+
+            if (empty($bTypes)) {
+                $refSheet->setCellValue('A' . $refRow, $b->building_name);
+                $refSheet->setCellValue('B' . $refRow, '(No room types created)');
+                $refSheet->setCellValue('C' . $refRow, $b->building_id);
+                $refSheet->setCellValue('D' . $refRow, '-');
+                $refRow++;
+            } else {
+                foreach ($bTypes as $rt) {
+                    $refSheet->setCellValue('A' . $refRow, $b->building_name);
+                    $refSheet->setCellValue('B' . $refRow, $rt->room_type_name);
+                    $refSheet->setCellValue('C' . $refRow, $b->building_id);
+                    $refSheet->setCellValue('D' . $refRow, $rt->room_type_id);
+                    $refRow++;
+                }
+            }
+        }
+
+        foreach (range('A', 'D') as $col) {
+            $refSheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        $fileName = 'Tariff_Import_Template_' . date('Ymd_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $fileName . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit();
+    }
+
+
+    /**
+     * Import Tariffs from Excel / CSV file
+     */
+    public function Import()
+    {
+        if ($this->request->getMethod() !== 'POST') {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Invalid request method.'
+            ]);
+        }
+
+        $file = $this->request->getFile('excel_file');
+        if (!$file || !$file->isValid()) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Please select a valid Excel or CSV file to upload.'
+            ]);
+        }
+
+        $ext = strtolower($file->getClientExtension());
+        if (!in_array($ext, ['xlsx', 'xls', 'csv'])) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Invalid file format (' . $ext . '). Supported formats: .xlsx, .xls, .csv'
+            ]);
+        }
+
+        $updateExisting = ($this->request->getPost('update_existing') == '1');
+
+        $tempPath = $file->getTempName();
+        $rawRows = [];
+
+        try {
+            if ($ext === 'csv') {
+                $handle = fopen($tempPath, 'r');
+                if ($handle !== false) {
+                    $bom = fread($handle, 3);
+                    if ($bom !== "\xEF\xBB\xBF") {
+                        rewind($handle);
+                    }
+                    while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                        $rawRows[] = $data;
+                    }
+                    fclose($handle);
+                }
+            } else {
+                $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($tempPath);
+                $reader->setReadDataOnly(true);
+                $spreadsheet = $reader->load($tempPath);
+                $sheet = $spreadsheet->getActiveSheet();
+                $sheetData = $sheet->toArray(null, true, true, false);
+                $rawRows = $sheetData;
+            }
+        } catch (\Throwable $e) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Error reading file: ' . $e->getMessage()
+            ]);
+        }
+
+        if (empty($rawRows) || count($rawRows) < 2) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'The uploaded spreadsheet contains no data rows.'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        $buildings = $db->table('saiyoojyam_building')->get()->getResult();
+        $roomTypes = $db->table('saiyoojyam_room_type')->get()->getResult();
+
+        $buildingMap = [];
+        foreach ($buildings as $b) {
+            $buildingMap[(int)$b->building_id] = $b;
+            $cleanName = strtolower(trim($b->building_name));
+            $buildingMap[$cleanName] = $b;
+            if (!empty($b->building_slug)) {
+                $buildingMap[strtolower(trim($b->building_slug))] = $b;
+            }
+        }
+
+        $roomTypeMap = [];
+        foreach ($roomTypes as $rt) {
+            $roomTypeMap[(int)$rt->room_type_id] = $rt;
+            $compositeKey = (int)$rt->room_type_building_id . '_' . strtolower(trim($rt->room_type_name));
+            $roomTypeMap[$compositeKey] = $rt;
+        }
+
+        // Header detection (default: 3 columns: 0=Building, 1=Room Type, 2=Monthly Rent)
+        $headerRow = array_shift($rawRows);
+        $colBuilding  = 0;
+        $colRoomType  = 1;
+        $colPrice     = 2;
+        $colAdmission = null;
+        $colCaution   = null;
+
+        $hasDetectedHeader = false;
+        foreach ($headerRow as $cIdx => $cVal) {
+            $colName = strtolower(trim((string)$cVal));
+            if (str_contains($colName, 'building') || str_contains($colName, 'property') || str_contains($colName, 'hostel')) {
+                $colBuilding = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'room') || str_contains($colName, 'sharing') || str_contains($colName, 'type')) {
+                $colRoomType = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'rent') || str_contains($colName, 'price') || str_contains($colName, 'tariff') || str_contains($colName, 'amount')) {
+                $colPrice = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'admission')) {
+                $colAdmission = $cIdx;
+            } elseif (str_contains($colName, 'caution') || str_contains($colName, 'deposit') || str_contains($colName, 'security')) {
+                $colCaution = $cIdx;
+            }
+        }
+
+        if (!$hasDetectedHeader && is_numeric($headerRow[$colPrice] ?? '')) {
+            array_unshift($rawRows, $headerRow);
+        }
+
+        $addedCount   = 0;
+        $updatedCount = 0;
+        $skippedCount = 0;
+        $logs         = [];
+
+        $rowNum = 1;
+        foreach ($rawRows as $row) {
+            $rowNum++;
+
+            $nonEmpty = array_filter($row, function($v) { return trim((string)$v) !== ''; });
+            if (empty($nonEmpty)) continue;
+
+            $rawBuilding   = trim((string)($row[$colBuilding] ?? ''));
+            $rawRoomType   = trim((string)($row[$colRoomType] ?? ''));
+            $rawPrice      = trim((string)($row[$colPrice] ?? ''));
+            $rawAdmission  = ($colAdmission !== null && isset($row[$colAdmission])) ? trim((string)$row[$colAdmission]) : '';
+            $rawCaution    = ($colCaution !== null && isset($row[$colCaution])) ? trim((string)$row[$colCaution]) : '';
+
+            if ($rawBuilding === '' || $rawRoomType === '' || $rawPrice === '') {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Missing required field(s) (Building: '{$rawBuilding}', Room Type: '{$rawRoomType}', Price: '{$rawPrice}')."
+                ];
+                continue;
+            }
+
+            // Resolve Building
+            $matchedBuilding = null;
+            if (is_numeric($rawBuilding) && isset($buildingMap[(int)$rawBuilding])) {
+                $matchedBuilding = $buildingMap[(int)$rawBuilding];
+            } else {
+                $cleanB = strtolower($rawBuilding);
+                if (isset($buildingMap[$cleanB])) {
+                    $matchedBuilding = $buildingMap[$cleanB];
+                } else {
+                    foreach ($buildings as $b) {
+                        if (stripos($b->building_name, $rawBuilding) !== false || stripos($rawBuilding, $b->building_name) !== false) {
+                            $matchedBuilding = $b;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!$matchedBuilding) {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Building '{$rawBuilding}' could not be found."
+                ];
+                continue;
+            }
+
+            $bId = (int)$matchedBuilding->building_id;
+
+            // Resolve Room Type
+            $matchedRoomType = null;
+            if (is_numeric($rawRoomType) && isset($roomTypeMap[(int)$rawRoomType])) {
+                $matchedRoomType = $roomTypeMap[(int)$rawRoomType];
+            } else {
+                $cleanRt = strtolower($rawRoomType);
+                $key = $bId . '_' . $cleanRt;
+                if (isset($roomTypeMap[$key])) {
+                    $matchedRoomType = $roomTypeMap[$key];
+                } else {
+                    foreach ($roomTypes as $rt) {
+                        if ((int)$rt->room_type_building_id === $bId) {
+                            $dbRtName = strtolower(trim($rt->room_type_name));
+                            if (stripos($dbRtName, $cleanRt) !== false || stripos($cleanRt, $dbRtName) !== false) {
+                                $matchedRoomType = $rt;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!$matchedRoomType) {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Room Type '{$rawRoomType}' not found in Building '{$matchedBuilding->building_name}'."
+                ];
+                continue;
+            }
+
+            $rtId = (int)$matchedRoomType->room_type_id;
+
+            // Price validation
+            $cleanPrice = (float)preg_replace('/[^0-9.]/', '', $rawPrice);
+            if ($cleanPrice < 0) {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Invalid price '{$rawPrice}'."
+                ];
+                continue;
+            }
+
+            $admissionFee = is_numeric($rawAdmission) && (float)$rawAdmission > 0
+                ? (float)$rawAdmission
+                : (float)$matchedBuilding->building_admission_fees;
+
+            $cautionDeposit = is_numeric($rawCaution) && (float)$rawCaution > 0
+                ? (float)$rawCaution
+                : (float)$matchedBuilding->building_caution_deposit;
+
+            $existing = $db->table('saiyoojyam_tariffs')
+                ->where('tariffs_building', $bId)
+                ->where('tariffs_room_types', $rtId)
+                ->get()
+                ->getRow();
+
+            if ($existing) {
+                if ($updateExisting) {
+                    $oldPrice = (float)$existing->tariffs_price;
+                    $db->table('saiyoojyam_tariffs')
+                        ->where('tariffs_id', $existing->tariffs_id)
+                        ->update([
+                            'tariffs_price'           => $cleanPrice,
+                            'tariffs_admission_fees'  => $admissionFee,
+                            'tariffs_caution_deposit' => $cautionDeposit,
+                            'tariffs_updated_at'      => date('Y-m-d H:i:s'),
+                        ]);
+
+                    if ($oldPrice != $cleanPrice) {
+                        $this->common_model->InsertData('saiyoojyam_tariff_history', [
+                            'tariff_history_tariff_id'       => $existing->tariffs_id,
+                            'tariff_history_old_price'       => $oldPrice,
+                            'tariff_history_new_price'       => $cleanPrice,
+                            'tariff_history_effective_month' => date('Y-m'),
+                            'tariff_history_created_at'      => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+
+                    $updatedCount++;
+                    $logs[] = [
+                        'row'       => $rowNum,
+                        'status'    => 'updated',
+                        'building'  => $matchedBuilding->building_name,
+                        'room_type' => $matchedRoomType->room_type_name,
+                        'price'     => $cleanPrice,
+                        'message'   => "Row $rowNum: Updated {$matchedBuilding->building_name} - {$matchedRoomType->room_type_name} to ₹" . number_format($cleanPrice, 2)
+                    ];
+                } else {
+                    $skippedCount++;
+                    $logs[] = [
+                        'row'     => $rowNum,
+                        'status'  => 'skipped',
+                        'message' => "Row $rowNum: Tariff for {$matchedBuilding->building_name} - {$matchedRoomType->room_type_name} already exists (Skipped)."
+                    ];
+                }
+            } else {
+                $db->table('saiyoojyam_tariffs')->insert([
+                    'tariffs_building'        => $bId,
+                    'tariffs_room_types'      => $rtId,
+                    'tariffs_rooms'           => null,
+                    'tariffs_admission_fees'  => $admissionFee,
+                    'tariffs_caution_deposit' => $cautionDeposit,
+                    'tariffs_price'           => $cleanPrice,
+                    'tariffs_created_at'      => date('Y-m-d H:i:s'),
+                    'tariffs_updated_at'      => date('Y-m-d H:i:s'),
+                ]);
+
+                $addedCount++;
+                $logs[] = [
+                    'row'       => $rowNum,
+                    'status'    => 'added',
+                    'building'  => $matchedBuilding->building_name,
+                    'room_type' => $matchedRoomType->room_type_name,
+                    'price'     => $cleanPrice,
+                    'message'   => "Row $rowNum: Added {$matchedBuilding->building_name} - {$matchedRoomType->room_type_name} at ₹" . number_format($cleanPrice, 2)
+                ];
+            }
+        }
+
+        $summaryParts = [];
+        if ($addedCount > 0) $summaryParts[] = "$addedCount Tariff(s) Added";
+        if ($updatedCount > 0) $summaryParts[] = "$updatedCount Tariff(s) Updated";
+        if ($skippedCount > 0) $summaryParts[] = "$skippedCount Row(s) Skipped";
+
+        $summaryMsg = !empty($summaryParts) ? implode(', ', $summaryParts) : 'No tariffs were processed.';
+
+        return $this->response->setJSON([
+            'status'  => ($addedCount > 0 || $updatedCount > 0),
+            'message' => $summaryMsg,
+            'added'   => $addedCount,
+            'updated' => $updatedCount,
+            'skipped' => $skippedCount,
+            'total'   => count($rawRows),
+            'logs'    => $logs,
+        ]);
+    }
+
 }

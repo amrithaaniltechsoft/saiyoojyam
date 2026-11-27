@@ -63,7 +63,7 @@
                               <tr><th class="text-nowrap" style="width:140px;">Check In</th><td><?php echo date('d-M-Y',strtotime($inmate->inmates_check_in_date)); ?></td></tr>
                               <tr><th>Check Out</th><td><?php if($inmate->inmates_check_out_date != '0000-00-00'){ echo date('d-M-Y',strtotime($inmate->inmates_check_out_date)); } else { echo '---'; } ?></td></tr>
                               <tr><th>Duration of Stay</th><td><?php if(!empty($duration)){ echo $duration->duration_stay; } ?></td></tr>
-                              <tr><th>Place of Work</th><td><?php echo $inmate->inmates_place_of_work; ?></td></tr>
+                              <tr><th>Place of work or<br>institute name</th><td><?php echo $inmate->inmates_place_of_work; ?></td></tr>
                             </tbody>
                           </table>
                         </div>

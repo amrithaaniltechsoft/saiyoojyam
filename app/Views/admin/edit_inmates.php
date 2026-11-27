@@ -325,9 +325,9 @@
                         </div>
 
                         <div class="row mb-6">
-                          <label class="col-sm-2 col-form-label" for="basic-default-name">Place Of Work</label>
+                          <label class="col-sm-2 col-form-label" for="basic-default-name">Place of work or<br>institute name</label>
                           <div class="col-sm-10">
-                            <input type="text" class="form-control" name="place_of_work" id="html5-date-input" value="<?php echo $inmate->inmates_place_of_work;?>"/>
+                            <input type="text" class="form-control" name="place_of_work" id="html5-date-input" placeholder="e.g., Company or College name" value="<?php echo $inmate->inmates_place_of_work;?>"/>
                           </div>
                         </div>
 

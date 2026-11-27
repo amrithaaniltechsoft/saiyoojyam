@@ -77,7 +77,7 @@ class Inmates extends BaseController
             $guardianName = trim($input['guardianName'] ?? $input['inmates_guardian_name'] ?? '');
             $relation = trim($input['relation'] ?? $input['inmates_relation'] ?? 'Parent');
             $guardianContact = trim($input['contactNumber'] ?? $input['inmates_guardian_contact'] ?? '');
-            $placeOfWork = trim($input['placeOfWork'] ?? $input['inmates_place_of_work'] ?? '');
+            $placeOfWork = trim($input['placeOfWork'] ?? $input['inmates_place_of_work'] ?? $input['place_of_work'] ?? '');
 
             if (empty($name)) {
                 return $this->response->setStatusCode(400)->setJSON([

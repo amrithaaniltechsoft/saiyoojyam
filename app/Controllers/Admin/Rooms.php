@@ -17,16 +17,40 @@ class Rooms extends BaseController
         $db = \Config\Database::connect();
         $builder = $db->table('saiyoojyam_rooms');
 
+        // Multi-select or single-select support for Building
         if (!empty($building)) {
-            $builder->where('rooms_building', $building);
+            if (is_array($building)) {
+                $bIds = array_values(array_filter($building));
+                if (!empty($bIds)) {
+                    $builder->whereIn('rooms_building', $bIds);
+                }
+            } else {
+                $builder->where('rooms_building', $building);
+            }
         }
 
+        // Multi-select or single-select support for Room Type
         if (!empty($room_type)) {
-            $builder->where('rooms_type', $room_type);
+            if (is_array($room_type)) {
+                $rtIds = array_values(array_filter($room_type));
+                if (!empty($rtIds)) {
+                    $builder->whereIn('rooms_type', $rtIds);
+                }
+            } else {
+                $builder->where('rooms_type', $room_type);
+            }
         }
 
+        // Multi-select or single-select support for Room
         if (!empty($room)) {
-            $builder->where('rooms_id', $room);
+            if (is_array($room)) {
+                $rIds = array_values(array_filter($room));
+                if (!empty($rIds)) {
+                    $builder->whereIn('rooms_id', $rIds);
+                }
+            } else {
+                $builder->where('rooms_id', $room);
+            }
         }
 
         $builder->orderBy('rooms_id', 'DESC');
@@ -38,24 +62,48 @@ class Rooms extends BaseController
         $data['room_types'] = $this->common_model->FetchAll('saiyoojyam_room_type');
 
         if (!empty($building)) {
-            $data['dropdown_room_types'] = $this->common_model->FetchWhereOrderby('saiyoojyam_room_type', array('room_type_building_id' => $building), 'room_type_name', 'ASC');
+            if (is_array($building)) {
+                $bIds = array_values(array_filter($building));
+                if (!empty($bIds)) {
+                    $data['dropdown_room_types'] = $db->table('saiyoojyam_room_type')
+                        ->whereIn('room_type_building_id', $bIds)
+                        ->orderBy('room_type_name', 'ASC')
+                        ->get()
+                        ->getResult();
+                } else {
+                    $data['dropdown_room_types'] = $this->common_model->FetchAllOrder('saiyoojyam_room_type', 'room_type_name', 'ASC');
+                }
+            } else {
+                $data['dropdown_room_types'] = $this->common_model->FetchWhereOrderby('saiyoojyam_room_type', array('room_type_building_id' => $building), 'room_type_name', 'ASC');
+            }
         } else {
             $data['dropdown_room_types'] = $this->common_model->FetchAllOrder('saiyoojyam_room_type', 'room_type_name', 'ASC');
         }
 
-        $room_cond = array();
+        $roomBuilder = $db->table('saiyoojyam_rooms');
         if (!empty($building)) {
-            $room_cond['rooms_building'] = $building;
+            if (is_array($building)) {
+                $bIds = array_values(array_filter($building));
+                if (!empty($bIds)) {
+                    $roomBuilder->whereIn('rooms_building', $bIds);
+                }
+            } else {
+                $roomBuilder->where('rooms_building', $building);
+            }
         }
         if (!empty($room_type)) {
-            $room_cond['rooms_type'] = $room_type;
+            if (is_array($room_type)) {
+                $rtIds = array_values(array_filter($room_type));
+                if (!empty($rtIds)) {
+                    $roomBuilder->whereIn('rooms_type', $rtIds);
+                }
+            } else {
+                $roomBuilder->where('rooms_type', $room_type);
+            }
         }
 
-        if (!empty($room_cond)) {
-            $data['dropdown_rooms'] = $this->common_model->FetchWhereOrderby('saiyoojyam_rooms', $room_cond, 'rooms_name', 'ASC');
-        } else {
-            $data['dropdown_rooms'] = $this->common_model->FetchAllOrder('saiyoojyam_rooms', 'rooms_name', 'ASC');
-        }
+        $roomBuilder->orderBy('rooms_name', 'ASC');
+        $data['dropdown_rooms'] = $roomBuilder->get()->getResult();
 
         $data['selected_building']  = $building;
         $data['selected_room_type'] = $room_type;

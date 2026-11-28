@@ -12,6 +12,63 @@
 
   <!--header section end-->
 
+  <!-- Select2 CSS & Bootstrap 5 Theme -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet"/>
+
+  <style>
+    /* Select2 Bootstrap 5 Styling */
+    .select2-container--bootstrap-5 .select2-selection {
+      min-height: 40px !important;
+      border-radius: 8px !important;
+      border: 1.5px solid #d9dee3 !important;
+      font-size: 13.5px !important;
+      background: #ffffff !important;
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .select2-container--bootstrap-5 .select2-selection--single {
+      height: 40px !important;
+      display: flex !important;
+      align-items: center !important;
+    }
+    .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
+      line-height: 38px !important;
+      padding-left: 12px !important;
+      color: #495057 !important;
+    }
+    .select2-container--bootstrap-5.select2-container--focus .select2-selection {
+      border-color: #696cff !important;
+      box-shadow: 0 0 0 0.2rem rgba(105, 108, 255, 0.15) !important;
+    }
+    .select2-container--bootstrap-5 .select2-dropdown {
+      border-radius: 8px !important;
+      border-color: #d9dee3 !important;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+      font-size: 13.5px !important;
+      z-index: 9999 !important;
+    }
+    /* Ensure the search bar inside dropdown is always visible, prominent, and styled */
+    .select2-container--bootstrap-5 .select2-search--dropdown {
+      display: block !important;
+      padding: 8px !important;
+      background: #f8f9fa;
+      border-bottom: 1px solid #ebecef;
+    }
+    .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+      display: block !important;
+      width: 100% !important;
+      border-radius: 6px !important;
+      border: 1px solid #ced4da !important;
+      font-size: 13.5px !important;
+      padding: 7px 12px !important;
+      outline: none !important;
+    }
+    .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field:focus {
+      border-color: #696cff !important;
+      box-shadow: 0 0 0 0.2rem rgba(105, 108, 255, 0.15) !important;
+    }
+  </style>
+
 
 
        
@@ -27,43 +84,62 @@
                 <div class="card-body pb-2">
                   <form id="filter_form" method="GET" action="<?php echo base_url(); ?>Admin/Rooms">
                     <?php 
-                      $selected_building  = !empty($selected_building) ? $selected_building : (!empty($_GET['building']) ? $_GET['building'] : '');
-                      $selected_room_type = !empty($selected_room_type) ? $selected_room_type : (!empty($_GET['room_type']) ? $_GET['room_type'] : '');
-                      $selected_room      = !empty($selected_room) ? $selected_room : (!empty($_GET['room']) ? $_GET['room'] : '');
+                      $sel_build = !empty($selected_building) ? (is_array($selected_building) ? reset($selected_building) : $selected_building) : ($_GET['building'] ?? '');
+                      $sel_rtype = !empty($selected_room_type) ? (is_array($selected_room_type) ? reset($selected_room_type) : $selected_room_type) : ($_GET['room_type'] ?? '');
+                      $sel_room  = !empty($selected_room) ? (is_array($selected_room) ? reset($selected_room) : $selected_room) : ($_GET['room'] ?? '');
                     ?>
 
-                    <div class="row g-3 align-items-center justify-content-center mb-3">
-                      <div class="col-md-3 col-lg-3">
-                        <select id="building_filter" class="form-select build_clz" name="building">
+                    <div class="row g-3 align-items-end mb-3">
+                      <!-- Building Filter -->
+                      <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">
+                          <i class="bx bx-buildings text-primary me-1"></i> Building
+                        </label>
+                        <select id="building_filter" class="form-select select2-filter build_clz" name="building" data-placeholder="All Buildings">
                           <option value="">All Buildings</option>
                           <?php foreach($buildings as $build){ ?>
-                            <option value="<?php echo $build->building_id; ?>" <?php if($selected_building == $build->building_id){echo "selected"; }?>><?php echo $build->building_name;?></option>
+                            <option value="<?php echo $build->building_id; ?>" <?php if((string)$build->building_id === (string)$sel_build){ echo "selected"; }?>>
+                              <?php echo $build->building_name;?>
+                            </option>
                           <?php } ?>
                         </select>
                       </div>
 
-                      <div class="col-md-3 col-lg-3">
-                        <select id="room_type_filter" class="form-select room_clz" name="room_type">
+                      <!-- Room Type Filter -->
+                      <div class="col-12 col-md-4">
+                        <label class="form-label fw-semibold text-dark small mb-1">
+                          <i class="bx bx-category text-primary me-1"></i> Room Type
+                        </label>
+                        <select id="room_type_filter" class="form-select select2-filter room_clz" name="room_type" data-placeholder="All Room Types">
                           <option value="">All Room Types</option>
                           <?php if(!empty($dropdown_room_types)){ foreach($dropdown_room_types as $rt){ ?> 
-                            <option value="<?php echo $rt->room_type_id; ?>" <?php if($selected_room_type == $rt->room_type_id){echo "selected";}?>><?php echo $rt->room_type_name;?></option>
+                            <option value="<?php echo $rt->room_type_id; ?>" <?php if((string)$rt->room_type_id === (string)$sel_rtype){ echo "selected"; }?>>
+                              <?php echo $rt->room_type_name;?>
+                            </option>
                           <?php } } ?> 
                         </select>
                       </div>
 
-                      <div class="col-md-3 col-lg-3">
-                        <select id="room_filter" class="form-select room_item_clz" name="room">
+                      <!-- Room Filter -->
+                      <div class="col-12 col-md-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                          <label class="form-label fw-semibold text-dark small mb-0">
+                            <i class="bx bx-door-open text-primary me-1"></i> Room
+                          </label>
+                          <?php if(!empty($sel_build) || !empty($sel_rtype) || !empty($sel_room)): ?>
+                            <a href="<?php echo base_url(); ?>Admin/Rooms" class="small text-danger text-decoration-none fw-semibold">
+                              <i class="bx bx-x-circle me-1"></i>Reset
+                            </a>
+                          <?php endif; ?>
+                        </div>
+                        <select id="room_filter" class="form-select select2-filter room_item_clz" name="room" data-placeholder="All Rooms">
                           <option value="">All Rooms</option>
                           <?php if(!empty($dropdown_rooms)){ foreach($dropdown_rooms as $r){ ?> 
-                            <option value="<?php echo $r->rooms_id; ?>" <?php if($selected_room == $r->rooms_id){echo "selected";}?>><?php echo $r->rooms_name;?></option>
+                            <option value="<?php echo $r->rooms_id; ?>" <?php if((string)$r->rooms_id === (string)$sel_room){ echo "selected"; }?>>
+                              <?php echo $r->rooms_name;?>
+                            </option>
                           <?php } } ?> 
                         </select>
-                      </div>
-
-                      <div class="col-auto">
-                        <a href="<?php echo base_url(); ?>Admin/Rooms" class="btn btn-outline-secondary" title="Reset filter">
-                          <i class="bx bx-reset me-1"></i> Reset
-                        </a>
                       </div>
                     </div>
                   </form>
@@ -149,24 +225,49 @@
 
             <!--Footer section end-->
 
+            <!-- Select2 JS -->
+            <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
             <script>
               $(document).ready(function() {
-                // When building changes: clear room type and room, then submit
-                $('#filter_form .build_clz').on('change', function() {
-                  $('#filter_form .room_clz').val('');
-                  $('#filter_form .room_item_clz').val('');
+                // Initialize Select2 with search enabled on all dropdowns
+                $('#building_filter').select2({
+                  theme: 'bootstrap-5',
+                  placeholder: 'All Buildings',
+                  allowClear: true,
+                  width: '100%',
+                  minimumResultsForSearch: 0
+                });
+
+                $('#room_type_filter').select2({
+                  theme: 'bootstrap-5',
+                  placeholder: 'All Room Types',
+                  allowClear: true,
+                  width: '100%',
+                  minimumResultsForSearch: 0
+                });
+
+                $('#room_filter').select2({
+                  theme: 'bootstrap-5',
+                  placeholder: 'All Rooms',
+                  allowClear: true,
+                  width: '100%',
+                  minimumResultsForSearch: 0
+                });
+
+                // Auto-submit filter form on dropdown selection change
+                $('#building_filter, #room_type_filter, #room_filter').on('change', function() {
                   $('#filter_form').submit();
                 });
 
-                // When room type changes: clear room, then submit
-                $('#filter_form .room_clz').on('change', function() {
-                  $('#filter_form .room_item_clz').val('');
-                  $('#filter_form').submit();
-                });
-
-                // When room changes: submit
-                $('#filter_form .room_item_clz').on('change', function() {
-                  $('#filter_form').submit();
+                // Auto-focus search input field when Select2 dropdown opens
+                $(document).on('select2:open', function() {
+                  setTimeout(function() {
+                    var searchInput = document.querySelector('.select2-container--open .select2-search__field');
+                    if (searchInput) {
+                      searchInput.focus();
+                    }
+                  }, 50);
                 });
               });
             </script>

@@ -160,37 +160,22 @@
                     </thead>
                     <tbody class="table-border-bottom-0">
 
-                      <?php $i=1; foreach($pagedata as $page_data){?> 
+                      <?php $i=1; foreach($pagedata as $page_data){
+                        $bName = !empty($page_data->building_name) ? $page_data->building_name : '';
+                        $rtName = !empty($page_data->room_type_name) ? $page_data->room_type_name : '';
+                        $curCap = !empty($page_data->room_type_capacity) ? $page_data->room_type_capacity : $page_data->rooms_capacity;
+                      ?> 
                       <tr>
                         <td><?php echo $i; ?></td>
-                        <?php foreach($buildings as $build){
-                        if($build->building_id == $page_data->rooms_building){  
-                        ?> 
-                        <td><?php echo $build->building_name; ?></td>
-                        <?php } } ?>
-                        
-                        <?php 
-                        $curCap = $page_data->rooms_capacity;
-                        foreach($room_types as $room_type){
-                          if($room_type->room_type_id  == $page_data->rooms_type){
-                            if(!empty($room_type->room_type_capacity)){
-                              $curCap = $room_type->room_type_capacity;
-                            }
-                        ?> 
-                        <td><?php echo $room_type->room_type_name;?></td>
-
-                        <?php } } ?>
-
+                        <td><?php echo $bName; ?></td>
+                        <td><?php echo $rtName; ?></td>
                         <td><?php echo $page_data->rooms_name;?></td>
                         <td><?php echo $curCap;?></td>
-                        
                         <td>
                           <a class="dropdown-item" href="<?php echo base_url();?>Admin/Rooms/Edit/<?php echo $page_data->rooms_id;?>"><i class="icon-base bx bx-edit-alt me-2"></i> </a>
                           <a class="dropdown-item" href="<?php echo base_url();?>Admin/Rooms/Delete/<?php echo $page_data->rooms_id; ?>"><i class="icon-base bx bx-trash me-2"></i> </a>
                         </td>
-                        
                       </tr>
-
                       <?php $i++; } ?>
                       
                      
@@ -212,12 +197,21 @@
               
               
 
-            <!-- Contextual Classes -->
+              <!-- Contextual Classes -->
 
               
               
             </div>
             <!-- / Content -->
+
+            <div id="filterLoader" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:99999;text-align:center;">
+              <div style="margin-top:20%;">
+                <div class="spinner-border text-light" style="width:3rem;height:3rem;" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <br/><span style="color:#fff;font-weight:600;">Filtering...</span>
+              </div>
+            </div>
 
             <!-- Footer section start-->
             
@@ -257,6 +251,7 @@
 
                 // Auto-submit filter form on dropdown selection change
                 $('#building_filter, #room_type_filter, #room_filter').on('change', function() {
+                  $('#filterLoader').show();
                   $('#filter_form').submit();
                 });
 

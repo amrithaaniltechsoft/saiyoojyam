@@ -15,17 +15,20 @@ class Rooms extends BaseController
         $room      = $this->request->getGet('room') ?? '';
 
         $db = \Config\Database::connect();
-        $builder = $db->table('saiyoojyam_rooms');
+        $builder = $db->table('saiyoojyam_rooms r');
+        $builder->select('r.*, b.building_name, rt.room_type_name, rt.room_type_capacity');
+        $builder->join('saiyoojyam_building b', 'b.building_id = r.rooms_building', 'left');
+        $builder->join('saiyoojyam_room_type rt', 'rt.room_type_id = r.rooms_type', 'left');
 
         // Multi-select or single-select support for Building
         if (!empty($building)) {
             if (is_array($building)) {
                 $bIds = array_values(array_filter($building));
                 if (!empty($bIds)) {
-                    $builder->whereIn('rooms_building', $bIds);
+                    $builder->whereIn('r.rooms_building', $bIds);
                 }
             } else {
-                $builder->where('rooms_building', $building);
+                $builder->where('r.rooms_building', $building);
             }
         }
 
@@ -34,10 +37,10 @@ class Rooms extends BaseController
             if (is_array($room_type)) {
                 $rtIds = array_values(array_filter($room_type));
                 if (!empty($rtIds)) {
-                    $builder->whereIn('rooms_type', $rtIds);
+                    $builder->whereIn('r.rooms_type', $rtIds);
                 }
             } else {
-                $builder->where('rooms_type', $room_type);
+                $builder->where('r.rooms_type', $room_type);
             }
         }
 
@@ -46,14 +49,14 @@ class Rooms extends BaseController
             if (is_array($room)) {
                 $rIds = array_values(array_filter($room));
                 if (!empty($rIds)) {
-                    $builder->whereIn('rooms_id', $rIds);
+                    $builder->whereIn('r.rooms_id', $rIds);
                 }
             } else {
-                $builder->where('rooms_id', $room);
+                $builder->where('r.rooms_id', $room);
             }
         }
 
-        $builder->orderBy('rooms_id', 'DESC');
+        $builder->orderBy('r.rooms_id', 'DESC');
         $data['pagedata'] = $builder->get()->getResult();
 
         $data['buildings'] = $this->common_model->FetchAllOrder('saiyoojyam_building', 'building_name', 'ASC');

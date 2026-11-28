@@ -193,9 +193,16 @@
                 <!-- Basic Layout -->
                 <div class="col-xxl">
                   <div class="card">
-                    <div class="card-header d-flex align-items-center justify-content-between">
+                    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                       <h5 class="mb-0">Add Inmates</h5>
-                      
+                      <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-success btn-sm d-flex align-items-center gap-1 shadow-sm" data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                          <i class="bx bx-file me-1"></i> Import Excel / CSV
+                        </button>
+                        <a href="<?php echo base_url('Admin/Inmates/DownloadSample'); ?>" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" title="Download Excel template">
+                          <i class="bx bx-download me-1"></i> Sample Template
+                        </a>
+                      </div>
                     </div>
                     <div class="card-body">
                       <form id="add_form" enctype="multipart/form-data">
@@ -400,6 +407,103 @@
 
             <!-- / Footer -->
 
+            <!-- Import Excel Modal -->
+            <div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content shadow-lg border-0">
+                  <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title d-flex align-items-center gap-2" id="importExcelModalLabel">
+                      <span class="badge bg-label-success p-2 rounded"><i class="bx bx-file fs-4 text-success"></i></span>
+                      <span class="fw-bold">Import Inmates via Excel / CSV</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+
+                  <form id="excel_import_form" enctype="multipart/form-data">
+                    <div class="modal-body p-4">
+                      <!-- Guide alert -->
+                      <div class="alert alert-primary d-flex align-items-start gap-2 py-3 px-3 mb-4 rounded-3" style="font-size:12.5px;">
+                        <i class="bx bx-info-circle fs-5 mt-0.5 text-primary"></i>
+                        <div class="flex-grow-1">
+                          <strong>Supported Columns in Excel / CSV:</strong>
+                          <div class="mt-1">
+                            <div class="mb-1"><strong>Required:</strong> <span class="badge bg-white text-primary border">Full Name</span> <span class="badge bg-white text-primary border">Age</span> <span class="badge bg-white text-primary border">Phone Number</span> <span class="badge bg-white text-primary border">Building Name</span> <span class="badge bg-white text-primary border">Room Name</span></div>
+                            <div><strong>Optional:</strong> WhatsApp Number, Email, Join Date (defaults to today), Duration of Stay (defaults to Long Term), Check Out Date, Place of Work / College, Guardian Name, Relation, Guardian Contact.</div>
+                            <small class="text-muted d-block mt-1.5" style="font-size:11px;">
+                              Room Type, Tariffs, Admission Fee, and Caution Deposit are automatically resolved from the assigned Room and Building!
+                            </small>
+                          </div>
+                          <div class="mt-2.5">
+                            <a href="<?php echo base_url('Admin/Inmates/DownloadSample'); ?>" class="btn btn-sm btn-primary py-1 px-3 text-white fw-semibold">
+                              <i class="bx bx-download me-1"></i> Download Sample Excel Template (.xlsx)
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- File upload field -->
+                      <div class="mb-3">
+                        <label class="form-label fw-bold text-dark mb-1">Select Excel / CSV File <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                          <input type="file" class="form-control" id="excel_file_input" name="excel_file" accept=".xlsx,.xls,.csv" required>
+                        </div>
+                        <small class="text-muted mt-1 d-block" style="font-size:11.5px;">Supported formats: .xlsx (Excel), .xls, or .csv (Max 10MB)</small>
+                      </div>
+
+                      <!-- Options -->
+                      <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                          <div class="p-2.5 bg-light rounded border h-100 d-flex align-items-center gap-2">
+                            <span class="badge bg-success p-1.5 rounded-circle"><i class="bx bx-check-shield fs-5 text-white"></i></span>
+                            <div>
+                              <strong class="d-block text-dark" style="font-size:12.5px;">Strict Duplicate Protection</strong>
+                              <small class="text-muted d-block" style="font-size:11px;">Prevents duplicate phone, email, or resident within file & database.</small>
+                            </div>
+                            <input type="hidden" name="skip_duplicates" value="1">
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="form-check form-switch p-2.5 bg-light rounded border h-100">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" id="ignore_capacity" name="ignore_capacity" value="1">
+                            <label class="form-check-label fw-semibold text-dark" for="ignore_capacity" style="font-size:12.5px;">
+                              Allow over-capacity assignment
+                            </label>
+                            <small class="text-muted d-block ps-4 ms-2" style="font-size:11px;">
+                              Useful when bulk migrating existing/legacy resident records.
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Live Result Box (hidden initially) -->
+                      <div id="import_result_box" class="d-none mt-3">
+                        <div id="import_alert" class="alert py-2.5 px-3 mb-2 rounded-2"></div>
+                        <div class="d-flex align-items-center justify-content-between mb-1.5 px-1">
+                          <span class="fw-bold text-dark" style="font-size:12px;">Import Details Log:</span>
+                          <span id="import_badges" class="d-flex gap-1.5"></span>
+                        </div>
+                        <div id="import_details_wrap" class="border rounded p-2.5 bg-white" style="max-height: 220px; overflow-y: auto; font-size: 12px;">
+                          <ul id="import_logs_list" class="list-unstyled mb-0 space-y-1"></ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="modal-footer border-top p-3 bg-light d-flex justify-content-between">
+                      <div>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <a href="<?php echo base_url('Admin/Inmates'); ?>" id="btn_goto_inmates" class="btn btn-primary d-none ms-2">
+                          <i class="bx bx-list-ul me-1"></i> View Inmates
+                        </a>
+                      </div>
+                      <button type="submit" id="btn_submit_import" class="btn btn-success fw-bold px-4">
+                        <i class="bx bx-upload me-1"></i> Upload & Import
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
             <!-- Flatpickr JS -->
             <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
 
@@ -543,6 +647,85 @@
                     $('.build_clz').val('');
                     $('.room_clz').val('');
                   }
+                });
+
+                // Excel / CSV Import Handler
+                $('#excel_import_form').on('submit', function(e) {
+                  e.preventDefault();
+                  var $submitBtn = $('#btn_submit_import');
+                  var fileVal = $('#excel_file_input').val();
+
+                  if (!fileVal) {
+                    alertify.error('Please select an Excel or CSV file.').delay(3).dismissOthers();
+                    return;
+                  }
+
+                  $submitBtn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i> Importing...');
+                  $('#import_result_box').addClass('d-none');
+                  $('#import_logs_list').empty();
+                  $('#import_badges').empty();
+
+                  var formData = new FormData(this);
+
+                  $.ajax({
+                    url: '<?php echo base_url('Admin/Inmates/Import'); ?>',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    dataType: 'json',
+                    success: function(res) {
+                      $submitBtn.prop('disabled', false).html('<i class="bx bx-upload me-1"></i> Upload & Import');
+                      $('#import_result_box').removeClass('d-none');
+
+                      var alertClz = res.status ? 'alert-success' : 'alert-danger';
+                      var alertIcon = res.status ? 'bx-check-circle' : 'bx-error-circle';
+                      $('#import_alert').attr('class', 'alert py-2.5 px-3 mb-2 rounded-2 ' + alertClz)
+                        .html('<div class="d-flex align-items-center gap-2"><i class="bx ' + alertIcon + ' fs-5"></i><span>' + res.message + '</span></div>');
+
+                      var badgesHtml = '';
+                      if (res.imported_count !== undefined) {
+                        badgesHtml += '<span class="badge bg-success">' + res.imported_count + ' Imported</span> ';
+                      }
+                      if (res.skipped_count !== undefined) {
+                        badgesHtml += '<span class="badge bg-warning text-dark">' + res.skipped_count + ' Skipped</span> ';
+                      }
+                      $('#import_badges').html(badgesHtml);
+
+                      if (res.logs && res.logs.length > 0) {
+                        $.each(res.logs, function(idx, item) {
+                          var icon = item.status === 'success'
+                            ? '<i class="bx bx-check text-success me-1"></i>'
+                            : '<i class="bx bx-info-circle text-warning me-1"></i>';
+                          var textClass = item.status === 'success' ? 'text-success' : 'text-muted';
+                          $('#import_logs_list').append('<li class="py-1 border-bottom ' + textClass + '">' + icon + item.message + '</li>');
+                        });
+                      }
+
+                      if (res.imported_count > 0) {
+                        $('#btn_goto_inmates').removeClass('d-none');
+                        alertify.success(res.message).delay(4).dismissOthers();
+                      } else {
+                        alertify.warning(res.message).delay(4).dismissOthers();
+                      }
+                    },
+                    error: function(xhr, status, err) {
+                      $submitBtn.prop('disabled', false).html('<i class="bx bx-upload me-1"></i> Upload & Import');
+                      $('#import_result_box').removeClass('d-none');
+                      var errMsg = 'Server error processing import. Please try again.';
+                      if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errMsg = xhr.responseJSON.message;
+                      } else if (xhr.responseText) {
+                        try {
+                          var parsed = JSON.parse(xhr.responseText);
+                          if (parsed && parsed.message) errMsg = parsed.message;
+                        } catch(e) {}
+                      }
+                      $('#import_alert').attr('class', 'alert alert-danger py-2.5 px-3 mb-2 rounded-2')
+                        .html('<div class="d-flex align-items-center gap-2"><i class="bx bx-error-circle fs-5"></i><span>' + errMsg + '</span></div>');
+                      alertify.error(errMsg).delay(4).dismissOthers();
+                    }
+                  });
                 });
               });
             </script>

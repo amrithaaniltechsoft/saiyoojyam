@@ -261,7 +261,31 @@ class Inmates extends BaseController
 
                 if ($conflictInmate) {
                     $response['status'] = false;
-                    $response['msg'] = "The email '{$email}' is already registered to another resident ({$conflictInmate->inmates_name}).";
+                    $response['msg'] = "The email '{$email}' is already registered to another resident ({$conflictInmate->inmates_name} - {$conflictInmate->inmates_uid}).";
+                    echo json_encode($response);
+                    return;
+                }
+            }
+
+            // Check if phone number belongs to another active or pending resident (in Add mode)
+            $phone = trim((string)$this->request->getPost('inmates_phone_no'));
+            if (!empty($phone)) {
+                $cleanPhoneDigits = preg_replace('/\D/', '', $phone);
+                $normPhone10 = (strlen($cleanPhoneDigits) >= 10) ? substr($cleanPhoneDigits, -10) : $cleanPhoneDigits;
+
+                $phoneConflictQuery = $db->table('saiyoojyam_inmates')
+                    ->whereIn('inmates_status', ['active', 'pending'])
+                    ->groupStart()
+                        ->where('inmates_phone_no', $phone)
+                        ->orWhere('inmates_phone_no', $normPhone10)
+                        ->orWhere('inmates_phone_no', '+91' . $normPhone10)
+                        ->orWhere('inmates_phone_no', '0' . $normPhone10)
+                    ->groupEnd();
+
+                $conflictPhone = $phoneConflictQuery->get()->getRow();
+                if ($conflictPhone) {
+                    $response['status'] = false;
+                    $response['msg'] = "The phone number '{$phone}' is already registered to another resident ({$conflictPhone->inmates_name} - {$conflictPhone->inmates_uid}).";
                     echo json_encode($response);
                     return;
                 }
@@ -270,6 +294,24 @@ class Inmates extends BaseController
             $roomId = $this->request->getPost('inmates_rooms');
             $buildingId = $this->request->getPost('inmates_building');
             $roomTypeId = $this->request->getPost('inmates_room_type');
+
+            // Check if resident with exact same name is already in this room
+            $name = trim((string)$this->request->getPost('inmates_name'));
+            if (!empty($name) && !empty($roomId)) {
+                $conflictNameRoom = $db->table('saiyoojyam_inmates')
+                    ->where('LOWER(TRIM(inmates_name))', strtolower($name))
+                    ->where('inmates_rooms', $roomId)
+                    ->whereIn('inmates_status', ['active', 'pending'])
+                    ->get()
+                    ->getRow();
+
+                if ($conflictNameRoom) {
+                    $response['status'] = false;
+                    $response['msg'] = "A resident named '{$name}' is already assigned to this room ({$conflictNameRoom->inmates_uid}).";
+                    echo json_encode($response);
+                    return;
+                }
+            }
 
             $db = \Config\Database::connect();
             $tariff = null;
@@ -3223,5 +3265,872 @@ $joins = array(
                 "portal_url" => "http://localhost:3000",
             ],
         ]);
+    }
+
+    /**
+     * Download Sample Excel Template for Inmates Import
+     */
+    public function DownloadSample()
+    {
+        $db = \Config\Database::connect();
+        $buildings = $db->table('saiyoojyam_building')->orderBy('building_name', 'ASC')->get()->getResult();
+        $rooms = $db->table('saiyoojyam_rooms')->orderBy('rooms_name', 'ASC')->get()->getResult();
+        $roomTypes = $db->table('saiyoojyam_room_type')->orderBy('room_type_name', 'ASC')->get()->getResult();
+
+        $roomTypeMap = [];
+        foreach ($roomTypes as $rt) {
+            $roomTypeMap[$rt->room_type_id] = $rt->room_type_name;
+        }
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+        // Sheet 1: Inmates Import Template
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Inmates Import Template');
+
+        $headers = [
+            'A1' => 'Full Name *',
+            'B1' => 'Age *',
+            'C1' => 'Phone Number *',
+            'D1' => 'WhatsApp Number',
+            'E1' => 'Email',
+            'F1' => 'Building Name *',
+            'G1' => 'Room Name *',
+            'H1' => 'Join Date (YYYY-MM-DD)',
+            'I1' => 'Duration of Stay',
+            'J1' => 'Check Out Date (YYYY-MM-DD)',
+            'K1' => 'Place of Work / College',
+            'L1' => 'Guardian Name',
+            'M1' => 'Relation',
+            'N1' => 'Guardian Contact'
+        ];
+
+        foreach ($headers as $cell => $text) {
+            $sheet->setCellValue($cell, $text);
+            $sheet->getStyle($cell)->getFont()->setBold(true);
+            $sheet->getStyle($cell)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFF1F5F9');
+        }
+
+        // Add prefilled sample rows using actual database buildings and rooms
+        $sampleData = [
+            ['Ananya Sharma', 22, '9876543210', '9876543210', 'ananya.s@example.com', 'Long Term', 'Infopark Kochi', 'Rajesh Sharma', 'Father', '9876543211'],
+            ['Sneha Patel', 24, '9876543220', '9876543220', 'sneha.p@example.com', 'Long Term', 'TCS Kakkanad', 'Mahesh Patel', 'Father', '9876543221'],
+            ['Pooja Nair', 21, '9876543230', '9876543230', 'pooja.n@example.com', 'Long Term', 'Rajagiri College', 'Suresh Nair', 'Guardian', '9876543231'],
+            ['Riya Joseph', 25, '9876543240', '9876543240', 'riya.j@example.com', 'Short Term', 'Wipro Technologies', 'Joseph Varghese', 'Father', '9876543241'],
+        ];
+
+        $buildingRoomPairs = [];
+        foreach ($buildings as $b) {
+            $bRooms = array_filter($rooms, function($r) use ($b) {
+                return (int)$r->rooms_building === (int)$b->building_id;
+            });
+            foreach ($bRooms as $r) {
+                $buildingRoomPairs[] = ['building' => $b->building_name, 'room' => $r->rooms_name];
+                if (count($buildingRoomPairs) >= 4) break 2;
+            }
+        }
+
+        $today = date('Y-m-d');
+        $nextMonth = date('Y-m-d', strtotime('+30 days'));
+
+        $rowIndex = 2;
+        for ($i = 0; $i < count($sampleData); $i++) {
+            $pair = !empty($buildingRoomPairs) ? $buildingRoomPairs[$i % count($buildingRoomPairs)] : ['building' => 'Saiyoojyam Annex', 'room' => '1A-ANX'];
+            $sample = $sampleData[$i];
+
+            $sheet->setCellValue('A' . $rowIndex, $sample[0]);
+            $sheet->setCellValue('B' . $rowIndex, $sample[1]);
+            $sheet->setCellValueExplicit('C' . $rowIndex, $sample[2], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('D' . $rowIndex, $sample[3], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue('E' . $rowIndex, $sample[4]);
+            $sheet->setCellValue('F' . $rowIndex, $pair['building']);
+            $sheet->setCellValue('G' . $rowIndex, $pair['room']);
+            $sheet->setCellValue('H' . $rowIndex, $today);
+            $sheet->setCellValue('I' . $rowIndex, $sample[5]);
+            $sheet->setCellValue('J' . $rowIndex, ($sample[5] === 'Short Term') ? $nextMonth : '');
+            $sheet->setCellValue('K' . $rowIndex, $sample[6]);
+            $sheet->setCellValue('L' . $rowIndex, $sample[7]);
+            $sheet->setCellValue('M' . $rowIndex, $sample[8]);
+            $sheet->setCellValueExplicit('N' . $rowIndex, $sample[9], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+
+            $rowIndex++;
+        }
+
+        foreach (range('A', 'N') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Sheet 2: Reference Guide - Available Buildings & Rooms
+        $refSheet = $spreadsheet->createSheet();
+        $refSheet->setTitle('Reference Guide - Rooms');
+        $refHeaders = [
+            'A1' => 'Building Name',
+            'B1' => 'Room Name',
+            'C1' => 'Room Type',
+            'D1' => 'Capacity',
+            'E1' => 'Building ID',
+            'F1' => 'Room ID'
+        ];
+
+        foreach ($refHeaders as $cell => $text) {
+            $refSheet->setCellValue($cell, $text);
+            $refSheet->getStyle($cell)->getFont()->setBold(true);
+            $refSheet->getStyle($cell)->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFE2E8F0');
+        }
+
+        $refRow = 2;
+        foreach ($buildings as $b) {
+            $bRooms = array_filter($rooms, function($r) use ($b) {
+                return (int)$r->rooms_building === (int)$b->building_id;
+            });
+            if (empty($bRooms)) {
+                $refSheet->setCellValue('A' . $refRow, $b->building_name);
+                $refSheet->setCellValue('B' . $refRow, '(No rooms created)');
+                $refSheet->setCellValue('C' . $refRow, '-');
+                $refSheet->setCellValue('D' . $refRow, '-');
+                $refSheet->setCellValue('E' . $refRow, $b->building_id);
+                $refSheet->setCellValue('F' . $refRow, '-');
+                $refRow++;
+            } else {
+                foreach ($bRooms as $r) {
+                    $refSheet->setCellValue('A' . $refRow, $b->building_name);
+                    $refSheet->setCellValue('B' . $refRow, $r->rooms_name);
+                    $refSheet->setCellValue('C' . $refRow, $roomTypeMap[$r->rooms_type] ?? '-');
+                    $refSheet->setCellValue('D' . $refRow, $r->rooms_capacity);
+                    $refSheet->setCellValue('E' . $refRow, $b->building_id);
+                    $refSheet->setCellValue('F' . $refRow, $r->rooms_id);
+                    $refRow++;
+                }
+            }
+        }
+
+        foreach (range('A', 'F') as $col) {
+            $refSheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Sheet 3: Import Instructions
+        $instSheet = $spreadsheet->createSheet();
+        $instSheet->setTitle('Import Instructions');
+        $instSheet->setCellValue('A1', 'Field');
+        $instSheet->setCellValue('B1', 'Requirement');
+        $instSheet->setCellValue('C1', 'Description & Accepted Values');
+        foreach (range('A', 'C') as $col) {
+            $instSheet->getStyle($col . '1')->getFont()->setBold(true);
+            $instSheet->getStyle($col . '1')->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFE2E8F0');
+        }
+
+        $instructions = [
+            ['Full Name', 'Required', 'Resident full name.'],
+            ['Age', 'Required', 'Age in years (e.g., 22).'],
+            ['Phone Number', 'Required', 'Mobile number.'],
+            ['WhatsApp Number', 'Optional', 'If left blank, will automatically use Phone Number.'],
+            ['Email', 'Optional', 'Must be a valid email. Unique among active residents.'],
+            ['Building Name', 'Required', 'Name of the building as shown in "Reference Guide - Rooms" tab (or building ID).'],
+            ['Room Name', 'Required', 'Room name as shown in "Reference Guide - Rooms" tab (or room ID). Room Type and Tariffs are automatically resolved.'],
+            ['Join Date', 'Optional', 'Date format: YYYY-MM-DD or DD/MM/YYYY. If blank, defaults to today.'],
+            ['Duration of Stay', 'Optional', 'Enter "Long Term" or "Short Term". Defaults to "Long Term".'],
+            ['Check Out Date', 'Optional', 'Only required for Short Term stay. Leave blank for Long Term.'],
+            ['Place of Work / College', 'Optional', 'Company or college name.'],
+            ['Guardian Name', 'Optional', 'Parent or guardian full name.'],
+            ['Relation', 'Optional', 'e.g., Father, Mother, Guardian.'],
+            ['Guardian Contact', 'Optional', 'Emergency contact phone number.']
+        ];
+
+        $iRow = 2;
+        foreach ($instructions as $ins) {
+            $instSheet->setCellValue('A' . $iRow, $ins[0]);
+            $instSheet->setCellValue('B' . $iRow, $ins[1]);
+            $instSheet->setCellValue('C' . $iRow, $ins[2]);
+            $iRow++;
+        }
+        foreach (range('A', 'C') as $col) {
+            $instSheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        $fileName = 'Inmates_Import_Template_' . date('Ymd_His') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $fileName . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit();
+    }
+
+    /**
+     * Import Inmates from Excel / CSV file
+     */
+    public function Import()
+    {
+        if ($this->request->getMethod() !== 'POST') {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Invalid request method.'
+            ]);
+        }
+
+        $file = $this->request->getFile('excel_file');
+        if (!$file || !$file->isValid()) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Please select a valid Excel or CSV file to upload.'
+            ]);
+        }
+
+        $ext = strtolower($file->getClientExtension());
+        if (!in_array($ext, ['xlsx', 'xls', 'csv'])) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Invalid file format (' . $ext . '). Supported formats: .xlsx, .xls, .csv'
+            ]);
+        }
+
+        $skipDuplicates = ($this->request->getPost('skip_duplicates') == '1');
+        $ignoreCapacity = ($this->request->getPost('ignore_capacity') == '1');
+
+        $tempPath = $file->getTempName();
+        $rawRows = [];
+
+        try {
+            if ($ext === 'csv') {
+                $handle = fopen($tempPath, 'r');
+                if ($handle !== false) {
+                    $bom = fread($handle, 3);
+                    if ($bom !== "\xEF\xBB\xBF") {
+                        rewind($handle);
+                    }
+                    while (($data = fgetcsv($handle, 1000, ',')) !== false) {
+                        $rawRows[] = $data;
+                    }
+                    fclose($handle);
+                }
+            } else {
+                $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($tempPath);
+                $reader->setReadDataOnly(false);
+                $spreadsheet = $reader->load($tempPath);
+                $sheet = $spreadsheet->getActiveSheet();
+
+                $highestRow = $sheet->getHighestRow();
+                $highestColumn = $sheet->getHighestColumn();
+                $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+
+                for ($row = 1; $row <= $highestRow; $row++) {
+                    $rowData = [];
+                    for ($col = 1; $col <= $highestColumnIndex; $col++) {
+                        $cell = $sheet->getCell([$col, $row]);
+                        $val = $cell->getValue();
+
+                        if (\PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell)) {
+                            try {
+                                $dateObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($val);
+                                $val = $dateObj->format('Y-m-d');
+                            } catch (\Throwable $e) {}
+                        }
+                        $rowData[] = $val;
+                    }
+                    $rawRows[] = $rowData;
+                }
+            }
+        } catch (\Throwable $e) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'Error reading file: ' . $e->getMessage()
+            ]);
+        }
+
+        if (empty($rawRows) || count($rawRows) < 2) {
+            return $this->response->setJSON([
+                'status'  => false,
+                'message' => 'The uploaded spreadsheet contains no data rows.'
+            ]);
+        }
+
+        $db = \Config\Database::connect();
+        $buildings = $db->table('saiyoojyam_building')->get()->getResult();
+        $rooms = $db->table('saiyoojyam_rooms')->get()->getResult();
+        $roomTypes = $db->table('saiyoojyam_room_type')->get()->getResult();
+        $tariffs = $db->table('saiyoojyam_tariffs')->get()->getResult();
+
+        // Building maps
+        $buildingMap = [];
+        foreach ($buildings as $b) {
+            $buildingMap[(int)$b->building_id] = $b;
+            $cleanName = strtolower(trim($b->building_name));
+            $buildingMap[$cleanName] = $b;
+            if (!empty($b->building_slug)) {
+                $buildingMap[strtolower(trim($b->building_slug))] = $b;
+            }
+        }
+
+        // Room maps
+        $roomMapById = [];
+        $roomMapByBuildingAndName = [];
+        foreach ($rooms as $r) {
+            $roomMapById[(int)$r->rooms_id] = $r;
+            $key = (int)$r->rooms_building . '_' . strtolower(trim($r->rooms_name));
+            $roomMapByBuildingAndName[$key] = $r;
+        }
+
+        // Header detection
+        $headerRow = array_shift($rawRows);
+        $colMap = [
+            'name'             => 0,
+            'age'              => 1,
+            'phone'            => 2,
+            'whatsapp'         => 3,
+            'email'            => 4,
+            'building'         => 5,
+            'room'             => 6,
+            'join_date'        => 7,
+            'duration'         => 8,
+            'checkout_date'    => 9,
+            'work'             => 10,
+            'guardian_name'    => 11,
+            'relation'         => 12,
+            'guardian_contact' => 13,
+        ];
+
+        $hasDetectedHeader = false;
+        foreach ($headerRow as $cIdx => $cVal) {
+            $colName = strtolower(trim((string)$cVal));
+            if (empty($colName)) continue;
+
+            if (str_contains($colName, 'name') && !str_contains($colName, 'guardian') && !str_contains($colName, 'building') && !str_contains($colName, 'room')) {
+                $colMap['name'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif ($colName === 'age' || str_contains($colName, 'age')) {
+                $colMap['age'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'whatsapp') || str_contains($colName, 'whats app')) {
+                $colMap['whatsapp'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'phone') || str_contains($colName, 'mobile') || str_contains($colName, 'contact') && !str_contains($colName, 'guardian')) {
+                $colMap['phone'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'email') || str_contains($colName, 'mail')) {
+                $colMap['email'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'building') || str_contains($colName, 'hostel')) {
+                $colMap['building'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'room') && !str_contains($colName, 'type')) {
+                $colMap['room'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'join') || str_contains($colName, 'check in') || str_contains($colName, 'check_in') || str_contains($colName, 'admission date')) {
+                $colMap['join_date'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'duration') || str_contains($colName, 'stay')) {
+                $colMap['duration'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'checkout') || str_contains($colName, 'check out') || str_contains($colName, 'check_out')) {
+                $colMap['checkout_date'] = $cIdx;
+                $hasDetectedHeader = true;
+            } elseif (str_contains($colName, 'work') || str_contains($colName, 'college') || str_contains($colName, 'institute') || str_contains($colName, 'company')) {
+                $colMap['work'] = $cIdx;
+            } elseif (str_contains($colName, 'guardian') && str_contains($colName, 'name') || str_contains($colName, 'parent')) {
+                $colMap['guardian_name'] = $cIdx;
+            } elseif (str_contains($colName, 'relation')) {
+                $colMap['relation'] = $cIdx;
+            } elseif ((str_contains($colName, 'guardian') || str_contains($colName, 'emergency')) && (str_contains($colName, 'contact') || str_contains($colName, 'phone') || str_contains($colName, 'number'))) {
+                $colMap['guardian_contact'] = $cIdx;
+            }
+        }
+
+        if (!$hasDetectedHeader && is_numeric($headerRow[$colMap['age']] ?? '')) {
+            array_unshift($rawRows, $headerRow);
+        }
+
+        // Preload active/pending inmates from DB for strict duplicate prevention
+        $existingInmates = $db->table('saiyoojyam_inmates')
+            ->select('inmates_id, inmates_uid, inmates_name, inmates_phone_no, inmates_email, inmates_building, inmates_rooms, inmates_status')
+            ->whereIn('inmates_status', ['active', 'pending'])
+            ->get()
+            ->getResult();
+
+        $existingPhones = [];
+        $existingEmails = [];
+        $existingNameAndRoom = [];
+        $existingNameAndPhone = [];
+
+        foreach ($existingInmates as $ex) {
+            $rawP = trim((string)$ex->inmates_phone_no);
+            if (!empty($rawP)) {
+                $existingPhones[$rawP] = $ex;
+                $cleanDigits = preg_replace('/\D/', '', $rawP);
+                if (strlen($cleanDigits) >= 10) {
+                    $existingPhones[substr($cleanDigits, -10)] = $ex;
+                }
+            }
+            $rawE = strtolower(trim((string)$ex->inmates_email));
+            if (!empty($rawE)) {
+                $existingEmails[$rawE] = $ex;
+            }
+            $rawN = strtolower(trim((string)$ex->inmates_name));
+            if (!empty($rawN)) {
+                $nrKey = $rawN . '_' . (int)$ex->inmates_building . '_' . (int)$ex->inmates_rooms;
+                $existingNameAndRoom[$nrKey] = $ex;
+                if (!empty($rawP)) {
+                    $npDigits = substr(preg_replace('/\D/', '', $rawP), -10);
+                    $existingNameAndPhone[$rawN . '_' . $npDigits] = $ex;
+                }
+            }
+        }
+
+        // In-memory collections to prevent duplicate rows within the uploaded spreadsheet itself
+        $seenFilePhones       = [];
+        $seenFileEmails       = [];
+        $seenFileNameAndRoom  = [];
+        $seenFileNameAndPhone = [];
+
+        $importedCount = 0;
+        $skippedCount  = 0;
+        $logs          = [];
+        $now           = date('Y-m-d H:i:s');
+
+        $rowNum = 1;
+        foreach ($rawRows as $row) {
+            $rowNum++;
+
+            $nonEmpty = array_filter($row, function($v) { return trim((string)$v) !== ''; });
+            if (empty($nonEmpty)) continue;
+
+            $name            = trim((string)($row[$colMap['name']] ?? ''));
+            $age             = trim((string)($row[$colMap['age']] ?? ''));
+            $phone           = trim((string)($row[$colMap['phone']] ?? ''));
+            $whatsapp        = isset($colMap['whatsapp']) ? trim((string)($row[$colMap['whatsapp']] ?? '')) : '';
+            $email           = isset($colMap['email']) ? trim((string)($row[$colMap['email']] ?? '')) : '';
+            $rawBuilding     = isset($colMap['building']) ? trim((string)($row[$colMap['building']] ?? '')) : '';
+            $rawRoom         = isset($colMap['room']) ? trim((string)($row[$colMap['room']] ?? '')) : '';
+            $rawJoinDate     = isset($colMap['join_date']) ? trim((string)($row[$colMap['join_date']] ?? '')) : '';
+            $rawDuration     = isset($colMap['duration']) ? trim((string)($row[$colMap['duration']] ?? '')) : '';
+            $rawCheckoutDate = isset($colMap['checkout_date']) ? trim((string)($row[$colMap['checkout_date']] ?? '')) : '';
+            $work            = isset($colMap['work']) ? trim((string)($row[$colMap['work']] ?? '')) : '';
+            $guardianName    = isset($colMap['guardian_name']) ? trim((string)($row[$colMap['guardian_name']] ?? '')) : '';
+            $relation        = isset($colMap['relation']) ? trim((string)($row[$colMap['relation']] ?? '')) : '';
+            $guardianContact = isset($colMap['guardian_contact']) ? trim((string)($row[$colMap['guardian_contact']] ?? '')) : '';
+
+            if (empty($whatsapp)) {
+                $whatsapp = $phone;
+            }
+
+            // 1. Validate required fields
+            if ($name === '' || $age === '' || $phone === '') {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Name, Age, and Phone are required."
+                ];
+                continue;
+            }
+
+            // Clean age
+            $ageInt = (int)$age;
+            if ($ageInt <= 0 || $ageInt > 120) {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Invalid age '{$age}' for resident '{$name}'."
+                ];
+                continue;
+            }
+
+            // Validate email format if provided
+            if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Invalid email format '{$email}' for '{$name}'."
+                ];
+                continue;
+            }
+
+            // 2. Normalize identifiers for strict duplicate checking
+            $cleanPhoneDigits = preg_replace('/\D/', '', $phone);
+            $normPhone10 = (strlen($cleanPhoneDigits) >= 10) ? substr($cleanPhoneDigits, -10) : $cleanPhoneDigits;
+            $cleanEmail = strtolower($email);
+            $cleanName = strtolower($name);
+
+            // A. Check duplicates WITHIN the uploaded file itself
+            if (!empty($normPhone10) && isset($seenFilePhones[$normPhone10])) {
+                $prevRow = $seenFilePhones[$normPhone10];
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Duplicate in spreadsheet skipped ('{$name}'). Phone number '{$phone}' was already entered in row {$prevRow}."
+                ];
+                continue;
+            }
+
+            if (!empty($cleanEmail) && isset($seenFileEmails[$cleanEmail])) {
+                $prevRow = $seenFileEmails[$cleanEmail];
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Duplicate in spreadsheet skipped ('{$name}'). Email '{$email}' was already entered in row {$prevRow}."
+                ];
+                continue;
+            }
+
+            $fileNpKey = $cleanName . '_' . $normPhone10;
+            if (isset($seenFileNameAndPhone[$fileNpKey])) {
+                $prevRow = $seenFileNameAndPhone[$fileNpKey];
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Duplicate in spreadsheet skipped ('{$name}'). Same resident name and phone was already entered in row {$prevRow}."
+                ];
+                continue;
+            }
+
+            // B. Check duplicates against existing active/pending residents in Database
+            if (!empty($normPhone10) && (isset($existingPhones[$normPhone10]) || isset($existingPhones[$phone]))) {
+                $conflict = $existingPhones[$normPhone10] ?? $existingPhones[$phone];
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Duplicate resident skipped ('{$name}'). Phone number '{$phone}' is already registered to active resident {$conflict->inmates_name} ({$conflict->inmates_uid})."
+                ];
+                continue;
+            }
+
+            if (!empty($cleanEmail) && isset($existingEmails[$cleanEmail])) {
+                $conflict = $existingEmails[$cleanEmail];
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Duplicate resident skipped ('{$name}'). Email '{$email}' is already registered to active resident {$conflict->inmates_name} ({$conflict->inmates_uid})."
+                ];
+                continue;
+            }
+
+            $dbNpKey = $cleanName . '_' . $normPhone10;
+            if (isset($existingNameAndPhone[$dbNpKey])) {
+                $conflict = $existingNameAndPhone[$dbNpKey];
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Duplicate resident skipped ('{$name}'). Resident already registered with ID {$conflict->inmates_uid}."
+                ];
+                continue;
+            }
+
+            // 3. Resolve Building
+            $matchedBuilding = null;
+            if (is_numeric($rawBuilding) && isset($buildingMap[(int)$rawBuilding])) {
+                $matchedBuilding = $buildingMap[(int)$rawBuilding];
+            } else {
+                $cleanB = strtolower($rawBuilding);
+                if (isset($buildingMap[$cleanB])) {
+                    $matchedBuilding = $buildingMap[$cleanB];
+                } else {
+                    foreach ($buildings as $b) {
+                        if (stripos($b->building_name, $rawBuilding) !== false || stripos($rawBuilding, $b->building_name) !== false) {
+                            $matchedBuilding = $b;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!$matchedBuilding) {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Building '{$rawBuilding}' could not be matched for '{$name}'."
+                ];
+                continue;
+            }
+
+            $bId = (int)$matchedBuilding->building_id;
+
+            // 4. Resolve Room
+            $matchedRoom = null;
+            if (is_numeric($rawRoom) && isset($roomMapById[(int)$rawRoom])) {
+                $matchedRoom = $roomMapById[(int)$rawRoom];
+            } else {
+                $roomKey = $bId . '_' . strtolower($rawRoom);
+                if (isset($roomMapByBuildingAndName[$roomKey])) {
+                    $matchedRoom = $roomMapByBuildingAndName[$roomKey];
+                } else {
+                    foreach ($rooms as $r) {
+                        if ((int)$r->rooms_building === $bId) {
+                            if (strcasecmp($r->rooms_name, $rawRoom) === 0 || stripos($r->rooms_name, $rawRoom) !== false || stripos($rawRoom, $r->rooms_name) !== false) {
+                                $matchedRoom = $r;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!$matchedRoom) {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Room '{$rawRoom}' not found in building '{$matchedBuilding->building_name}' for '{$name}'."
+                ];
+                continue;
+            }
+
+            $roomId = (int)$matchedRoom->rooms_id;
+            $roomTypeId = (int)$matchedRoom->rooms_type;
+
+            // C. Check duplicate resident assigned to the SAME room
+            $nrKey = $cleanName . '_' . $bId . '_' . $roomId;
+            if (isset($seenFileNameAndRoom[$nrKey])) {
+                $prevRow = $seenFileNameAndRoom[$nrKey];
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Duplicate in spreadsheet skipped ('{$name}'). Resident already assigned to Room '{$matchedRoom->rooms_name}' in row {$prevRow}."
+                ];
+                continue;
+            }
+
+            if (isset($existingNameAndRoom[$nrKey])) {
+                $conflict = $existingNameAndRoom[$nrKey];
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Duplicate resident skipped ('{$name}'). Resident is already active in Room '{$matchedRoom->rooms_name}' ({$conflict->inmates_uid})."
+                ];
+                continue;
+            }
+
+            // 5. Parse Dates
+            $checkInDate = $this->parseInmateDate($rawJoinDate);
+            if (!$checkInDate) {
+                $checkInDate = date('Y-m-d');
+            }
+
+            // Duration
+            $durationId = 2; // Long term default
+            if (!empty($rawDuration)) {
+                if (stripos($rawDuration, 'short') !== false || $rawDuration == '1') {
+                    $durationId = 1;
+                }
+            }
+
+            $checkOutDate = '0000-00-00';
+            if ($durationId === 1 && !empty($rawCheckoutDate)) {
+                $coParsed = $this->parseInmateDate($rawCheckoutDate);
+                if ($coParsed && strtotime($coParsed) > strtotime($checkInDate)) {
+                    $checkOutDate = $coParsed;
+                }
+            }
+
+            // 6. Capacity check if !ignoreCapacity
+            if (!$ignoreCapacity) {
+                $occupied = $this->common_model->CountOccupiedInRoom($roomId, $checkInDate, $checkOutDate);
+                $capacity = (int)$matchedRoom->rooms_capacity;
+                if ($capacity > 0 && $occupied >= $capacity) {
+                    $skippedCount++;
+                    $logs[] = [
+                        'row'     => $rowNum,
+                        'status'  => 'skipped',
+                        'message' => "Row $rowNum: Room '{$matchedRoom->rooms_name}' is currently at full capacity ({$occupied}/{$capacity}). Skipping '{$name}'."
+                    ];
+                    continue;
+                }
+            }
+
+            // 7. Resolve Tariff, Admission Fee, Caution Deposit
+            $tariff = null;
+            foreach ($tariffs as $t) {
+                if ((int)$t->tariffs_building === $bId && (int)$t->tariffs_room_types === $roomTypeId) {
+                    $tariff = $t;
+                    break;
+                }
+            }
+            if (!$tariff) {
+                foreach ($tariffs as $t) {
+                    if ((int)$t->tariffs_rooms === $roomId) {
+                        $tariff = $t;
+                        break;
+                    }
+                }
+            }
+
+            $tariffId = $tariff ? (int)$tariff->tariffs_id : 0;
+            $admFee   = $tariff ? (float)$tariff->tariffs_admission_fees : 0.00;
+            $cautDep  = $tariff ? (float)$tariff->tariffs_caution_deposit : 0.00;
+
+            if ($admFee <= 0 || $cautDep <= 0) {
+                if ($admFee <= 0) $admFee = (float)$matchedBuilding->building_admission_fees;
+                if ($cautDep <= 0) $cautDep = (float)$matchedBuilding->building_caution_deposit;
+            }
+
+            // 8. Insert Inmate
+            $insertData = [
+                'inmates_uid'              => '',
+                'inmates_name'             => $name,
+                'inmates_age'              => $ageInt,
+                'inmates_building'         => $bId,
+                'inmates_room_type'        => $roomTypeId,
+                'inmates_rooms'            => $roomId,
+                'inmates_check_in_date'    => $checkInDate,
+                'inmates_check_out_date'   => $checkOutDate,
+                'inmates_duration_of_stay' => $durationId,
+                'inmates_phone_no'         => $phone,
+                'inmates_email'            => $email,
+                'inmates_whats_app_number' => $whatsapp,
+                'inmates_guardian_name'    => $guardianName,
+                'inmates_relation'         => $relation,
+                'inmates_guardian_contact' => $guardianContact,
+                'inmates_id_proof'         => '',
+                'inmates_photo'            => '',
+                'inmates_place_of_work'    => $work,
+                'inmates_tariffs'          => $tariffId,
+                'inmates_admission_fee'    => $admFee,
+                'inmates_caution_deposit'  => $cautDep,
+                'inmates_status'           => 'active',
+                'inmates_user_id'          => 0,
+                'inmates_approved_at'      => $now,
+                'inmates_created_at'       => $now,
+            ];
+
+            try {
+                $newId = $this->common_model->InsertData('saiyoojyam_inmates', $insertData);
+            } catch (\Throwable $dbEx) {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Database error while saving '{$name}': " . $dbEx->getMessage()
+                ];
+                continue;
+            }
+
+            if ($newId) {
+                $uid = new_booking_id($newId, 'IN');
+                try {
+                    $this->common_model->EditData(['inmates_uid' => $uid], ['inmates_id' => $newId], 'saiyoojyam_inmates');
+                } catch (\Throwable $e) {}
+
+                // Customer table sync
+                if (!empty($email) && $db->tableExists("saiyoojyam_customers")) {
+                    try {
+                        $cust = $db->table("saiyoojyam_customers")->where("customer_email", $email)->get()->getRow();
+                        if ($cust) {
+                            $db->table("saiyoojyam_customers")->where("customer_id", $cust->customer_id)->update([
+                                "customer_name"  => $name,
+                                "customer_phone" => $phone,
+                                "updated_at"     => $now,
+                            ]);
+                        } else {
+                            $db->table("saiyoojyam_customers")->insert([
+                                "customer_name"  => $name,
+                                "customer_email" => $email,
+                                "customer_phone" => $phone,
+                                "created_at"     => $now,
+                                "updated_at"     => $now,
+                            ]);
+                        }
+                    } catch (\Throwable $e) {}
+                }
+
+                // Register into in-memory collections so later rows in the same spreadsheet cannot duplicate this entry
+                $seenFilePhones[$normPhone10] = $rowNum;
+                $seenFilePhones[$phone] = $rowNum;
+                if (!empty($cleanEmail)) {
+                    $seenFileEmails[$cleanEmail] = $rowNum;
+                }
+                $seenFileNameAndRoom[$nrKey] = $rowNum;
+                $seenFileNameAndPhone[$fileNpKey] = $rowNum;
+
+                // Register into database cache so subsequent checks in the loop reflect this newly added resident
+                $inmateStub = (object)[
+                    'inmates_name'     => $name,
+                    'inmates_uid'      => $uid,
+                    'inmates_phone_no' => $phone,
+                    'inmates_email'    => $email,
+                    'inmates_building' => $bId,
+                    'inmates_rooms'    => $roomId
+                ];
+                $existingPhones[$normPhone10] = $inmateStub;
+                $existingPhones[$phone] = $inmateStub;
+                if (!empty($cleanEmail)) {
+                    $existingEmails[$cleanEmail] = $inmateStub;
+                }
+                $existingNameAndRoom[$nrKey] = $inmateStub;
+                $existingNameAndPhone[$dbNpKey] = $inmateStub;
+
+                $importedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'success',
+                    'message' => "Row $rowNum: Resident '{$name}' imported successfully (Ref: {$uid}, Room: {$matchedRoom->rooms_name}, {$matchedBuilding->building_name})."
+                ];
+            } else {
+                $skippedCount++;
+                $logs[] = [
+                    'row'     => $rowNum,
+                    'status'  => 'skipped',
+                    'message' => "Row $rowNum: Could not save resident record for '{$name}'."
+                ];
+            }
+        }
+
+        $overallStatus = ($importedCount > 0);
+        $message = "Import finished: {$importedCount} resident(s) imported, {$skippedCount} row(s) skipped.";
+
+        return $this->response->setJSON([
+            'status'         => $overallStatus,
+            'message'        => $message,
+            'imported_count' => $importedCount,
+            'skipped_count'  => $skippedCount,
+            'total_rows'     => count($rawRows),
+            'logs'           => $logs
+        ]);
+    }
+
+    /**
+     * Helper to parse flexible date formats
+     */
+    private function parseInmateDate($raw)
+    {
+        if (empty($raw)) return null;
+        $raw = trim((string)$raw);
+        if ($raw === '' || $raw === '0000-00-00') return null;
+
+        // Try Y-m-d
+        if (preg_match('/^\d{4}-\d{1,2}-\d{1,2}$/', $raw)) {
+            $ts = strtotime($raw);
+            return $ts ? date('Y-m-d', $ts) : null;
+        }
+
+        // Try d-m-Y or d/m/Y
+        if (preg_match('/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/', $raw, $m)) {
+            $d = (int)$m[1];
+            $mon = (int)$m[2];
+            $y = (int)$m[3];
+            if (checkdate($mon, $d, $y)) {
+                return sprintf('%04d-%02d-%02d', $y, $mon, $d);
+            }
+        }
+
+        $ts = strtotime($raw);
+        return $ts ? date('Y-m-d', $ts) : null;
     }
 }

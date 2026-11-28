@@ -123,6 +123,8 @@ $routes->options('api/auth/(:any)', '\App\Controllers\Api\Auth::options');
 $routes->options('api/auth', '\App\Controllers\Api\Auth::options');
 $routes->options('api/(:any)', '\App\Controllers\Api\Auth::options');
 
+$routes->get('Admin/Inmates/DownloadSample', '\App\Controllers\Admin\Inmates::DownloadSample');
+$routes->post('Admin/Inmates/Import', '\App\Controllers\Admin\Inmates::Import');
 $routes->post('Admin/Inmates/ApproveBooking', '\App\Controllers\Admin\Inmates::ApproveBooking');
 $routes->post('Admin/Inmates/RejectBooking', '\App\Controllers\Admin\Inmates::RejectBooking');
 $routes->match(['GET', 'POST'], 'Admin/Inmates/RegeneratePassword', '\App\Controllers\Admin\Inmates::RegeneratePassword');
